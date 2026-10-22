@@ -260,7 +260,11 @@ function goToScene(studio: Studio, scene: string | undefined) {
 export async function deleteSelection(studio: Studio) {
   const s = studio.state;
   if (!s.scene) return;
-  const cmds = s.selection.flatMap((x) => (x.kind === 'instance' ? [{ name: 'instance.remove', params: { scene: s.scene, id: x.id } }] : x.kind === 'clip' ? [{ name: 'clip.remove', params: { scene: s.scene, id: x.id } }] : []));
+  const clips = s.selection.filter((x) => x.kind === 'clip').map((x) => x.id);
+  const cmds = [
+    ...s.selection.filter((x) => x.kind === 'instance').map((x) => ({ name: 'instance.remove', params: { scene: s.scene, id: x.id } })),
+    ...(clips.length ? [{ name: 'clip.remove', params: { scene: s.scene, ids: clips, ...(s.ripple ? { ripple: true } : {}) } }] : []),
+  ];
   if (cmds.length) {
     await studio.exec(cmds);
     studio.set({ selection: [] });
@@ -309,6 +313,12 @@ function useShortcuts(setPanels: (fn: (p: { left: boolean; right: boolean; timel
       } else if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault();
         void import('../lib/api.js').then(({ api }) => api.save(st.state.pid));
+      } else if (e.key === ' ' && e.shiftKey) {
+        // Play from the selection (FR-TML-05): from the earliest selected clip.
+        e.preventDefault();
+        const scene = st.state.scene ? st.state.project!.scenes[st.state.scene] : undefined;
+        const starts = st.state.selection.filter((x) => x.kind === 'clip').map((x) => scene?.clips.find((c) => c.id === x.id)?.start).filter((v): v is number => v !== undefined);
+        st.set({ ...(starts.length ? { time: Math.min(...starts) } : {}), playing: true });
       } else if (e.key === ' ') {
         e.preventDefault();
         st.set({ playing: !st.state.playing });

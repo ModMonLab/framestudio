@@ -658,3 +658,58 @@ test('a template starts a new scene with the chosen cast; Replace cast keeps its
   await page.waitForTimeout(800);
   await previewMatchesServer(page, 5 * 48000, sid);
 });
+
+test('timeline: box selection, moving several clips, ripple delete, marker rename and numeric timing (FR-TML-02/04/07)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const sfx = st.scenes[sid].tracks.find((t: { kind: string }) => t.kind === 'sfx').id;
+  const add = async (a: number, b: number, name: string) => (await (await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'clip.add', params: { scene: sid, track: sfx, start: a * 48000, end: b * 48000, name, params: {} } }] } })).json()).commands[0].params.id as string;
+  const a = await add(1, 2, 'Cue A');
+  const b = await add(2, 3, 'Cue B');
+  const c = await add(4, 5, 'Cue C');
+  const at = async (id: string) => (await state()).scenes[sid].clips.find((x: { id: string }) => x.id === id);
+  const tl = page.getByRole('region', { name: 'Timeline' });
+  await expect(tl.getByRole('button', { name: /: Cue C$/ })).toBeVisible();
+  await tl.getByRole('button', { name: 'Zoom to fit' }).click();
+  // Box-select A and B by dragging across the empty part of their lane, from before A to inside B.
+  await tl.getByRole('button', { name: /: Cue A$/ }).scrollIntoViewIfNeeded();
+  const ba = (await tl.getByRole('button', { name: /: Cue A$/ }).boundingBox())!;
+  const bb = (await tl.getByRole('button', { name: /: Cue B$/ }).boundingBox())!;
+  await page.mouse.move(ba.x - 12, ba.y + ba.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2 + 2, { steps: 6 });
+  await page.mouse.up();
+  await expect(tl.getByRole('button', { name: /: Cue A$/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(tl.getByRole('button', { name: /: Cue B$/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(tl.getByRole('button', { name: /: Cue C$/ })).toHaveAttribute('aria-pressed', 'false');
+  // Dragging one of them moves both.
+  const b2 = (await tl.getByRole('button', { name: /: Cue B$/ }).boundingBox())!;
+  const px = b2.width; // one second
+  await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b2.x + b2.width / 2 + px / 2, b2.y + b2.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => [(await at(a)).start, (await at(b)).start]).toEqual([1.5 * 48000, 2.5 * 48000]);
+  // Ripple delete: C moves up by the removed length (2 s).
+  await tl.getByRole('button', { name: 'Ripple' }).click();
+  await page.keyboard.press('Delete');
+  await expect.poll(async () => (await at(c)).start).toBe(2 * 48000);
+  expect(await at(a)).toBeUndefined();
+  // Numeric timing in Properties: C starts at 6 s and lasts 0.5 s.
+  await tl.getByRole('button', { name: /: Cue C$/ }).click();
+  await page.getByRole('tab', { name: 'Properties' }).click();
+  await page.getByRole('spinbutton', { name: 'Start' }).fill('6');
+  await page.getByRole('spinbutton', { name: 'Start' }).press('Enter');
+  await expect.poll(async () => (await at(c)).start).toBe(6 * 48000);
+  await page.getByRole('spinbutton', { name: 'Length' }).fill('0.5');
+  await page.getByRole('spinbutton', { name: 'Length' }).press('Enter');
+  await expect.poll(async () => (await at(c)).end).toBe(6.5 * 48000);
+  // Marker rename by double-click.
+  await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'marker.add', params: { scene: sid, name: 'Marker 1', at: 3 * 48000 } }] } });
+  page.once('dialog', (d) => void d.accept('Punchline'));
+  await tl.getByRole('button', { name: 'Marker Marker 1' }).dblclick();
+  await expect.poll(async () => (await state()).scenes[sid].markers[0].name).toBe('Punchline');
+});

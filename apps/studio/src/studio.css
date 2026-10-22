@@ -191,3 +191,8 @@
 .st-library__usages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .st-library__usages li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .st-library__problems { padding: var(--space-3) var(--space-5); background: var(--color-panel); border-bottom: 1px solid var(--color-divider); color: var(--color-warning-text, var(--color-text)); }
+/* Timeline box selection and overview (FR-TML-02/08). */
+.st-marquee { position: absolute; z-index: 5; pointer-events: none; border: 1px solid var(--color-accent); background: color-mix(in srgb, var(--color-accent) 14%, transparent); border-radius: 2px; }
+.st-minimap { position: relative; height: 18px; margin: 0 8px 4px; border-radius: 4px; background: var(--color-subtle); overflow: hidden; cursor: pointer; }
+.st-mini-clip { position: absolute; top: 4px; height: 10px; border-radius: 1px; opacity: .7; }
+.st-mini-view { position: absolute; top: 0; bottom: 0; border: 1.5px solid var(--color-accent); border-radius: 4px; pointer-events: none; }

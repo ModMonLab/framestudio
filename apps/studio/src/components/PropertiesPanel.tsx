@@ -103,8 +103,8 @@ function ClipProps({ scene, clip }: { scene: Scene; clip: Clip }) {
   return (
     <Section title="Timing" open={open.timing!} onToggle={(o) => toggle('timing', o)}>
       <div className="st-grid2">
-        <NumberField label="Start" prefix="In" unit=" s" precision={2} min={0} value={clip.start / 48000} onChange={(v, p) => p === 'commit' && void studio.exec([{ name: 'clip.move', params: { scene: scene.id, id: clip.id, start: snap(v) } }])} />
-        <NumberField label="Length" prefix="Len" unit=" s" precision={2} min={1 / fps} value={(clip.end - clip.start) / 48000} onChange={(v, p) => p === 'commit' && void studio.exec([{ name: 'clip.trim', params: { scene: scene.id, id: clip.id, end: clip.start + snap(v) } }])} />
+        <NumberField label="Start" prefix="In" unit=" s" precision={2} min={0} value={clip.start / 48000} onChange={(v, p) => p === 'commit' && snap(v) !== clip.start && void studio.exec([{ name: 'clip.move', params: { scene: scene.id, ids: [clip.id], delta: snap(v) - clip.start } }])} />
+        <NumberField label="Length" prefix="Len" unit=" s" precision={2} min={1 / fps} value={(clip.end - clip.start) / 48000} onChange={(v, p) => p === 'commit' && void studio.exec([{ name: 'clip.trim', params: { scene: scene.id, id: clip.id, edge: 'end', to: clip.start + snap(v) } }])} />
       </div>
       <ToggleRow label="Enabled" checked={clip.enabled} onChange={(v) => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: clip.id, set: { enabled: v } } }])} />
     </Section>

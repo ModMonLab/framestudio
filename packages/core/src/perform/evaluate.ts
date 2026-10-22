@@ -82,7 +82,7 @@ export interface CameraState {
 
 /** Active camera at t: shot track → camera, then camera-move clips (FR-CAM-02/03). */
 export function cameraAt(scene: Scene, t: number, assets: AssetResolver, aspect?: string): CameraState {
-  const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute).map((tr) => tr.id));
+  const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   const shot = scene.clips.find((c) => c.enabled && shotTracks.has(c.track) && t >= c.start && t < c.end);
   const camId = (shot?.params.camera as string | undefined) ?? scene.defaultCamera;
   const cam = scene.cameras.find((c) => c.id === camId) ?? scene.cameras[0]!;
@@ -91,7 +91,7 @@ export function cameraAt(scene: Scene, t: number, assets: AssetResolver, aspect?
   let width = ov ? ov.width : cam.width;
   let rotation = cam.rotation;
   let shake: [number, number] = [0, 0];
-  const moveTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'camera-move' && !tr.mute).map((tr) => tr.id));
+  const moveTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'camera-move' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   for (const c of scene.clips) {
     if (!c.enabled || !moveTracks.has(c.track) || t < c.start) continue;
     const move = (c.asset ? (assets.manifest(c.asset)?.data as { move?: CameraMove } | undefined)?.move : undefined) ?? (c.params.move as CameraMove | undefined);
@@ -168,7 +168,7 @@ export function viewMatrix(scene: Scene, cs: CameraState, outW: number, outH: nu
 /* ------------------------------------------------------------------ performance */
 
 function activeClips(scene: Scene, owner: string, kind: string, t: number): Clip[] {
-  const tracks = new Set(scene.tracks.filter((tr) => tr.owner === owner && tr.kind === kind && !tr.mute).map((tr) => tr.id));
+  const tracks = new Set(scene.tracks.filter((tr) => tr.owner === owner && tr.kind === kind && !tr.mute && !tr.hidden).map((tr) => tr.id));
   return scene.clips.filter((c) => c.enabled && tracks.has(c.track) && t >= c.start && t < c.end).sort((a, b) => a.start - b.start);
 }
 
@@ -560,7 +560,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
   const style = o.styles[family];
   const issues: string[] = [];
   // Effects and atmosphere clips (FR-FX-01/02) on effect tracks; a freeze holds the picture (sound and captions go on).
-  const fxTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'effect' && !tr.mute).map((tr) => tr.id));
+  const fxTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'effect' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   const fxClips = scene.clips.filter((c) => c.enabled && fxTracks.has(c.track) && c.asset && tIn >= c.start && tIn < c.end).sort((a, b) => a.start - b.start);
   const fxData = (c: Clip) => o.assets.manifest(c.asset!)?.data as { effect?: EffectData; atmosphere?: AtmoData } | undefined;
   const freeze = fxClips.find((c) => fxData(c)?.effect?.type === 'freeze');
@@ -690,7 +690,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
     return out;
   };
   // Shot transitions (FR-FX-03): the incoming shot's transition blends from the previous shot's picture.
-  const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute).map((tr) => tr.id));
+  const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   const shot = scene.clips.find((c) => c.enabled && shotTracks.has(c.track) && t >= c.start && t < c.end);
   const trData = shot?.params.transition ? (o.assets.manifest(String(shot.params.transition))?.data as { transition?: TransitionData } | undefined)?.transition : undefined;
   const trDur = Math.round(Number(shot?.params.transitionS ?? 0.5) * TICKS_PER_SECOND);
@@ -740,7 +740,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
     }
   }
   // World text (signs, screens) is part of the picture, on the stage (FR-TXT-05).
-  const textTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'text' && !tr.mute).map((tr) => tr.id));
+  const textTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'text' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   const textClips = scene.clips.filter((c) => c.enabled && textTracks.has(c.track) && c.asset && tIn >= c.start && tIn < c.end).sort((a, b) => a.start - b.start);
   const textData = (c: Clip) => o.assets.manifest(c.asset!)?.data as { bubble?: BubbleStyle; graphic?: GraphicStyle; world?: WorldTextStyle } | undefined;
   for (const c of textClips) {

@@ -36,6 +36,8 @@ export interface StudioState {
   externalNotice?: string[];
   /** Recipe being applied (opens the recipe dialog, FR-RCP-01). */
   recipe?: { ref: string; name: string };
+  /** Ripple editing (FR-TML-02): moves, trims and deletes shift later clips on the same track. */
+  ripple?: boolean;
   /** Template being applied as a new scene (FR-TPL-01), or a character being recast (FR-TPL-03). */
   template?: { ref: string; name: string };
   recast?: { instance: string };
