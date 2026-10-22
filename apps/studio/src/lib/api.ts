@@ -118,6 +118,7 @@ export const api = {
   versions: (pid: string) => req<{ versions: { id: string; name: string; createdAt: string; revision: number }[] }>('GET', `/api/projects/${pid}/versions`),
   saveVersion: (pid: string, name: string) => req<{ id: string; name: string; createdAt: string; revision: number }>('POST', `/api/projects/${pid}/versions`, { name }),
   compareVersion: (pid: string, vid: string) => req<VersionComparison>('GET', `/api/projects/${pid}/versions/${vid}/compare`),
+  copyVersion: (pid: string, vid: string, path: string) => req<{ id: string; root: string; name: string }>('POST', `/api/projects/${pid}/versions/${vid}/copy`, { path }),
   restoreVersion: (pid: string, vid: string) => req<{ revision: number; label: string }>('POST', `/api/projects/${pid}/versions/${vid}/restore`),
 };
 

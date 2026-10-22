@@ -14,7 +14,7 @@ import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, UserLibrary, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -23,6 +23,8 @@ import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
 
 export const SERVER_VERSION = '0.1.0';
+/** Bump when thumbnail framing or rendering changes so cached thumbnails are rebuilt. */
+const THUMB_VERSION = 1;
 
 export interface ServerOptions {
   contentDir: string;
@@ -40,6 +42,8 @@ export interface ServerOptions {
   logger?: boolean;
   /** User library folder (FR-AST-01). */
   userDir?: string;
+  /** Derived-data cache (thumbnails); defaults to <userDir>/../cache. */
+  cacheDir?: string;
 }
 
 const STATUS: Partial<Record<ErrorCode, number>> = {
@@ -613,6 +617,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   // Library defaults the Studio reads (builder test sets, preview character); content, not code (FR-ARC-06).
   app.get('/api/library/defaults', async () => libraryDefaults);
   const thumbs = new Map<string, Buffer>();
+  const thumbDir = o.cacheDir ? path.join(o.cacheDir, 'thumbnails') : o.userDir ? path.join(path.dirname(o.userDir), 'cache', 'thumbnails') : undefined;
   app.get<{ Querystring: { ref: string; family?: string; w?: string; h?: string; project?: string } }>('/api/library/thumbnail', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
@@ -623,8 +628,12 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const family = req.query.family === 'illustrated' ? 'illustrated' : 'flat';
       const w = Math.max(16, Math.min(512, Number(req.query.w ?? 96)));
       const h = Math.max(16, Math.min(512, Number(req.query.h ?? w)));
-      const key = `${ref}|${family}|${w}x${h}`;
-      let png = thumbs.get(key);
+      // Keyed by content, so a changed asset or preview character renders again (FR-AST-07); kept on disk across runs.
+      const pc0 = libraryDefaults.previewCharacter;
+      const pcm0 = pc0 ? lib.manifest(pc0) : undefined;
+      const key = sha256(`${THUMB_VERSION}|${manifestHash(m)}|${pcm0 ? manifestHash(pcm0) : ''}|${family}|${w}x${h}`);
+      const file = thumbDir ? path.join(thumbDir, `${key}.png`) : undefined;
+      let png = thumbs.get(key) ?? (file && fs.existsSync(file) ? fs.readFileSync(file) : undefined);
       if (!png) {
         const pc = libraryDefaults.previewCharacter;
         const pcm = pc ? lib.manifest(pc) : undefined;
@@ -633,9 +642,16 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         const renderer = await getRenderer();
         const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));
         png = Buffer.from(renderer.png(ev.frame));
-        if (thumbs.size > 2000) thumbs.clear();
-        thumbs.set(key, png);
+        if (file) {
+          try {
+            writeFileAtomic(file, png);
+          } catch {
+            // The cache is derived data; failing to keep it never fails the request.
+          }
+        }
       }
+      if (thumbs.size > 2000) thumbs.clear();
+      thumbs.set(key, png);
       return reply.header('content-type', 'image/png').header('cache-control', 'public, max-age=86400').send(png);
     } catch (e) {
       return sendError(reply, e);
@@ -867,6 +883,22 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         throw e;
       }
       return checkCharacter(manifest, look, lib.byKind('act').filter((x) => lib.latestRef(x.manifest.id) === `${x.manifest.id}@${x.manifest.version}`).map((x) => x.manifest));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; vid: string }; Body: { path: string } }>('/api/projects/:pid/versions/:vid/copy', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!req.body?.path) throw new FrameError('USAGE', 'path is required');
+      const dir = path.resolve(req.body.path);
+      if (fs.existsSync(dir) && fs.readdirSync(dir).length) throw new FrameError('CONFLICT', `${dir} is not empty`, undefined, 'Choose a new folder name.');
+      const v = p.open.store.listVersions().find((x) => x.id === req.params.vid);
+      if (!v) throw new FrameError('NOT_FOUND', `Version ${req.params.vid} not found`);
+      p.open.flush();
+      p.open.store.copyVersionTo(v.id, dir, { projectId: randomId('prj'), name: `${p.open.state.project.name} — ${v.name}` });
+      const copy = hub.open(dir);
+      return { id: copy.id, root: copy.root, name: copy.open.state.project.name };
     } catch (e) {
       return sendError(reply, e);
     }

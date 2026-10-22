@@ -65,3 +65,18 @@ describe('user library, favourites and collections (FR-AST-01/06)', () => {
     expect((await api('PUT', '/api/user/prefs', { favourites: [], collections: [{ id: 'x', name: '' }] })).status).toBe(400);
   });
 });
+
+describe('thumbnail cache (FR-AST-07)', () => {
+  it('keeps rendered thumbnails on disk keyed by content', async () => {
+    const dir = path.join(path.dirname(userDir), 'cache', 'thumbnails');
+    const before = new Set(fs.existsSync(dir) ? fs.readdirSync(dir) : []);
+    const res = await fetch(`${base}/api/library/thumbnail?ref=hair.afro@1&family=flat&w=48`);
+    expect(res.status).toBe(200);
+    const files = fs.readdirSync(dir).filter((f) => !before.has(f));
+    expect(files.length).toBe(1);
+    const again = new Uint8Array(await (await fetch(`${base}/api/library/thumbnail?ref=hair.afro@1&family=flat&w=48`)).arrayBuffer());
+    expect(Buffer.compare(Buffer.from(again), fs.readFileSync(path.join(dir, files[0]!)))).toBe(0);
+    await fetch(`${base}/api/library/thumbnail?ref=hair.afro@1&family=illustrated&w=48`);
+    expect(fs.readdirSync(dir).filter((f) => !before.has(f)).length).toBe(2);
+  });
+});

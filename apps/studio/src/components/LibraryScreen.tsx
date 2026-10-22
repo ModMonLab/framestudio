@@ -48,9 +48,12 @@ export function LibraryScreen() {
   // New project assets (saved parts, imports) refresh the listing.
   const assetCount = Object.keys(project.assets).length;
 
+  const [problems, setProblems] = useState<{ file: string; message: string }[]>([]);
   useEffect(() => {
     api.prefs().then(setPrefs).catch(() => setPrefs(undefined));
-  }, []);
+    // Manifests that failed validation are excluded and reported (FR-AST-02).
+    fetch(`/api/library/problems?project=${encodeURIComponent(pid)}`).then((r) => r.json()).then((r: { problems: { file: string; message: string }[] }) => setProblems(r.problems)).catch(() => undefined);
+  }, [pid]);
   useEffect(() => {
     let live = true;
     const qs = new URLSearchParams({ q, project: pid, limit: '500', family, ...(view ? { view } : {}), ...(source ? { source } : {}) });
@@ -118,6 +121,12 @@ export function LibraryScreen() {
           </div>
         </Panel>
         <div className="st-center-col">
+          {problems.length > 0 && (
+            <details className="st-library__problems" role="status">
+              <summary>{problems.length} asset file(s) could not be loaded and are not offered</summary>
+              <ul className="st-problems">{problems.slice(0, 50).map((x) => <li key={x.file}><span className="fr-mono">{x.file.split(/[\\/]/).slice(-2).join('/')}</span>: {x.message}</li>)}</ul>
+            </details>
+          )}
           <div className="st-library__bar">
             <span className="fr-faint">{shown.length} item{shown.length === 1 ? '' : 's'}{category ? ` in ${category}` : ''}</span>
             <span className="fr-spacer" />

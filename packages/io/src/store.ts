@@ -395,6 +395,24 @@ export class ProjectStore {
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
+  /**
+   * Opens a saved version as a separate project (FR-PER-03 "open as a copy"): a new folder with a new project id and
+   * name, holding the version's files and the media they use.
+   */
+  copyVersionTo(id: string, dir: string, o: { projectId: string; name: string }): ProjectStore {
+    const state = this.loadVersion(id);
+    const copy: ProjectState = { ...state, project: { ...state.project, id: o.projectId as ProjectState['project']['id'], name: o.name } };
+    const target = ProjectStore.create(dir, copy);
+    const media = this.abs('assets/media');
+    if (fs.existsSync(media)) {
+      for (const f of fs.readdirSync(media)) {
+        if (f.startsWith('.')) continue;
+        fs.copyFileSync(path.join(media, f), path.join(target.root, 'assets/media', f));
+      }
+    }
+    return target;
+  }
+
   loadVersion(id: string): ProjectState {
     const dir = this.abs(`versions/${id}`);
     if (!fs.existsSync(path.join(dir, 'version.json'))) throw new FrameError('NOT_FOUND', `Version ${id} not found`);

@@ -186,3 +186,4 @@
 .st-library__big { width: 100%; max-width: 240px; aspect-ratio: 1; background: repeating-conic-gradient(var(--color-subtle) 0 25%, var(--color-canvas) 0 50%) 0 0 / 16px 16px; border-radius: var(--radius-sm); }
 .st-library__usages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .st-library__usages li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.st-library__problems { padding: var(--space-3) var(--space-5); background: var(--color-panel); border-bottom: 1px solid var(--color-divider); color: var(--color-warning-text, var(--color-text)); }
