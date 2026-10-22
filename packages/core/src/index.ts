@@ -1,6 +1,7 @@
 import './commands/structure.js';
 import './commands/stage.js';
 import './commands/timeline.js';
+import './commands/assets.js';
 import { listCommands } from './command.js';
 
 export * from './time.js';
@@ -19,6 +20,7 @@ export * from './perform/character.js';
 export * from './perform/evaluate.js';
 export * from './captions.js';
 export * from './audio.js';
+export * from './sync.js';
 
 /** Machine-readable command reference (`frame describe`, MCP resources; FR-CLI-03, FR-AGT-03). */
 export function describeCommands() {

@@ -4,7 +4,7 @@ import {
   AssetManifest, CURRENT_SCHEMA_VERSION, Episode, FrameError, issues, Locks, migrate, Project, Scene, Take,
   type FileKind, type MediaRef, type Problem, type TSchema,
 } from '@frame/schema';
-import type { ProjectState } from '@frame/core';
+import { allEntityKeys, applyDeltaInPlace, entityValue, type ProjectState } from '@frame/core';
 import { appendLineDurable, readJson, sha256, sha256File, stableStringify, writeFileAtomic, writeJsonAtomic } from './fsutil.js';
 
 export const PROJECT_FILE = 'project.json';
@@ -93,34 +93,11 @@ export class ProjectStore {
   }
 
   private entityValue(state: ProjectState, key: string): unknown {
-    const [kind, ...rest] = key.split('/');
-    const id = rest.join('/');
-    switch (kind) {
-      case 'project':
-        return state.project;
-      case 'locks':
-        return state.locks;
-      case 'episodes':
-        return state.episodes[id] ?? null;
-      case 'scenes':
-        return state.scenes[id] ?? null;
-      case 'takes':
-        return state.takes[id] ?? null;
-      case 'assets':
-        return state.assets[id] ?? null;
-      default:
-        return null;
-    }
+    return entityValue(state, key);
   }
 
   allEntityKeys(state: ProjectState): string[] {
-    return [
-      'project', 'locks',
-      ...Object.keys(state.episodes).map((k) => `episodes/${k}`),
-      ...Object.keys(state.scenes).map((k) => `scenes/${k}`),
-      ...Object.keys(state.takes).map((k) => `takes/${k}`),
-      ...Object.keys(state.assets).map((k) => `assets/${k}`),
-    ];
+    return allEntityKeys(state);
   }
 
   /** Expand engine change keys (including sceneEpisode moves) into entity keys. */
@@ -245,7 +222,7 @@ export class ProjectStore {
     let recovered = 0;
     for (const entry of this.readJournal()) {
       if (entry.revision <= saved) continue;
-      applyEntities(state, entry.entities);
+      applyDeltaInPlace(state, entry.entities);
       revision = entry.revision;
       recovered++;
     }
@@ -432,40 +409,6 @@ function rank(key: string): number {
   return 2;
 }
 
-function applyEntities(state: ProjectState, entities: Record<string, unknown>): void {
-  for (const [key, value] of Object.entries(entities)) {
-    const [kind, ...rest] = key.split('/');
-    const id = rest.join('/');
-    const set = (rec: Record<string, unknown>) => {
-      if (value === null || value === undefined) delete rec[id];
-      else rec[id] = value;
-    };
-    switch (kind) {
-      case 'project':
-        state.project = value as ProjectState['project'];
-        break;
-      case 'locks':
-        state.locks = value as ProjectState['locks'];
-        break;
-      case 'episodes':
-        set(state.episodes);
-        break;
-      case 'scenes':
-        set(state.scenes);
-        break;
-      case 'sceneEpisode':
-        set(state.sceneEpisode);
-        break;
-      case 'takes':
-        set(state.takes);
-        break;
-      case 'assets':
-        set(state.assets);
-        break;
-    }
-  }
-  for (const id of Object.keys(state.sceneEpisode)) if (!state.scenes[id]) delete state.sceneEpisode[id];
-}
 
 function listJson(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];

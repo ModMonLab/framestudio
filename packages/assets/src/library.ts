@@ -142,7 +142,7 @@ export class Library {
     for (const e of this.entries.values()) {
       const m = e.manifest;
       if (this.latest.get(m.id) !== m.version) continue;
-      if (kinds && !kinds.some((k) => m.kind === k || m.category.toLowerCase() === k || m.kind.startsWith(k))) continue;
+      if (kinds && !kinds.some((k) => m.kind === k || m.category.toLowerCase() === k.toLowerCase())) continue;
       if (family && m.families.length && !m.families.includes(family)) continue;
       if (view && m.views.length && !m.views.includes(view)) continue;
       if (source && e.source !== source) continue;

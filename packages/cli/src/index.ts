@@ -1,6 +1,7 @@
 import './project-commands.js';
 import './structure-commands.js';
 import './render-commands.js';
+import './server-commands.js';
 import { FrameError } from '@frame/schema';
 import { bindArgs, exitCodeFor, helpFor, overview, parseArgv, resolve, toFrameError, type CliIO } from './framework.js';
 

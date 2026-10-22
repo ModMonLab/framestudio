@@ -20,7 +20,7 @@ export function fixtureAlignment(text: string, durationS: number): Alignment {
   return { words: words.map((w, i) => ({ text: w, start: i * per, end: i * per + per * 0.9 })), phonemes, method: 'fixture', confidence: 1 };
 }
 
-export function buildSampleScene(family: 'flat' | 'illustrated' = 'flat'): { session: ProjectSession; scene: string; maya: string; leo: string } {
+export function buildSampleScene(family: 'flat' | 'illustrated' = 'flat', opts: { takes?: boolean } = {}): { session: ProjectSession; scene: string; maya: string; leo: string; lines: string[] } {
   const ids = sequentialIds(100);
   const state: ProjectState = createProjectState(ids, { name: 'The Backup Recording', styleFamily: family, frameRate: 24, output: OUTPUT, appVersion: '0.1.0', now: '2026-10-22T00:00:00Z', seed: 42 });
   const session = new ProjectSession(state, 0, { newId: ids, now: () => '2026-10-22T00:00:00Z' });
@@ -46,8 +46,11 @@ export function buildSampleScene(family: 'flat' | 'illustrated' = 'flat'): { ses
   ]);
   const st = () => session.state.scenes[scene]!;
   const lines: [string, string, number, number][] = [[maya, 'Welcome back. Today we are talking about the recording.', 0.4, 4.2], [leo, 'You mean the recording you forgot to start?', 5.0, 3.0]];
+  const lineIds: string[] = [];
   for (const [who, text, start, dur] of lines) {
     const line = apply([{ name: 'line.add', params: { scene, speaker: who, text, start: secondsToTicks(start), durationS: dur } }]).commands[0]!.params.id as string;
+    lineIds.push(line);
+    if (opts.takes === false) continue;
     const take = apply([{ name: 'take.add', params: { take: { line, lineRevision: 1, source: 'generated', fixture: true, status: 'ready', durationS: dur, alignment: fixtureAlignment(text, dur), engine: 'fixture' } } }]).commands[0]!.params.id as string;
     apply([{ name: 'line.chooseTake', params: { scene, id: line, take } }]);
   }
@@ -68,7 +71,7 @@ export function buildSampleScene(family: 'flat' | 'illustrated' = 'flat'): { ses
     { name: 'clip.add', params: { scene, track: shotTrack, start: secondsToTicks(5), end: secondsToTicks(8.4), params: { camera: leoCam } } },
     { name: 'clip.add', params: { scene, track: shotTrack, start: secondsToTicks(8.4), end: secondsToTicks(12), params: { camera: wide } } },
   ]);
-  return { session, scene, maya, leo };
+  return { session, scene, maya, leo, lines: lineIds };
 }
 
 /**

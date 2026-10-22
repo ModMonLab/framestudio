@@ -3,7 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": { "frame": "./src/bin.ts" },
-  "exports": { ".": "./src/index.ts" },
-  "dependencies": { "@frame/schema": "workspace:*", "@frame/core": "workspace:*", "@frame/io": "workspace:*", "@frame/assets": "workspace:*", "@frame/render": "workspace:*" }
+  "bin": {
+    "frame": "./src/bin.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@frame/schema": "workspace:*",
+    "@frame/core": "workspace:*",
+    "@frame/io": "workspace:*",
+    "@frame/assets": "workspace:*",
+    "@frame/render": "workspace:*",
+    "@frame/server": "workspace:*"
+  }
 }

@@ -29,6 +29,7 @@
     "@frame/render": "workspace:*",
     "@frame/rig": "workspace:*",
     "@frame/schema": "workspace:*",
+    "@frame/server": "workspace:*",
     "@frame/voice-client": "workspace:*",
     "@playwright/test": "1.56.1",
     "@types/node": "^22.20.5",
