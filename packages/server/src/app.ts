@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
@@ -21,6 +21,24 @@ import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBat
 import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
+
+/** Rigging assistant build request: a character (default), a prop with states, or a location kit. */
+interface RigBuildBody {
+  kind?: 'character' | 'prop' | 'set';
+  name: string;
+  fileName: string;
+  rights: string;
+  layers: (RigLayer & { group?: string })[];
+  mapping: Record<string, string>;
+  libraryParts?: Record<string, string>;
+  /** Props: height on stage in output pixels. */
+  height?: number;
+  /** Sets: artwork size. */
+  width?: number;
+  artHeight?: number;
+  save?: boolean;
+  place?: { scene: string; x?: number; y?: number };
+}
 
 export const SERVER_VERSION = '0.1.0';
 /** Bump when thumbnail framing or rendering changes so cached thumbnails are rebuilt. */
@@ -484,14 +502,42 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         ...(l.png ? { media: p.open.store.putMedia(l.png, { ext: 'png', mime: 'image/png', width: Math.round(l.bounds[2]), height: Math.round(l.bounds[3]) }).hash } : {}),
         ...(l.paths ? { paths: l.paths } : {}),
         suggestion: suggestTarget(l.name),
+        propSuggestion: suggestPropTarget(l),
+        planeSuggestion: suggestPlane(l),
       }));
-      return { fileName: art.fileName, source: art.source, width: art.width, height: art.height, views: art.views, layers, warnings: art.warnings, targets: RIG_TARGETS.map((t) => ({ value: t, label: RIG_TARGET_LABELS[t] })) };
+      return { fileName: art.fileName, source: art.source, width: art.width, height: art.height, views: art.views, layers, warnings: art.warnings, targets: RIG_TARGETS.map((t) => ({ value: t, label: RIG_TARGET_LABELS[t] })), planes: [...SET_PLANES, 'ignore' as const].map((t) => ({ value: t, label: SET_PLANE_LABELS[t] })) };
     } catch (e) {
       return sendError(reply, e);
     }
   });
+  // Props with states and location kits (FR-IMP-03): dry run returns the manifest; save adds it and can place it.
+  const buildObject = (p: ReturnType<typeof hub.get>, b: RigBuildBody, source: string) => {
+    const common = { name: b.name.trim(), layers: b.layers ?? [], mapping: (b.mapping ?? {}) as Record<string, string>, newId: () => randomUUID(), author: source, date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights };
+    const out = p.open.state.project.output;
+    const res = b.kind === 'prop'
+      ? { ...rigProp({ ...common, ...(b.height ? { height: Number(b.height) } : {}) }), pieces: undefined }
+      : { ...rigSet({ ...common, width: Number(b.width ?? 0), height: Number(b.artHeight ?? 0), output: { width: out.width, height: out.height } }), states: undefined };
+    const errors = res.problems.filter((x) => x.severity === 'error');
+    if (!b.save) return { kind: b.kind, asset: res.asset, mapping: res.mapping, problems: res.problems, states: res.states ?? null, pieces: res.pieces ?? null, ok: errors.length === 0 };
+    if (errors.length) throw new FrameError('VALIDATION_FAILED', `The ${b.kind} cannot be saved yet: ${errors.map((e) => e.message).join('; ')}`, { problems: errors });
+    const ref = `${res.asset.id}@1`;
+    const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest: res.asset } }];
+    const instances: string[] = [];
+    if (b.place && b.kind === 'prop') {
+      instances.push(randomId('ins'));
+      cmds.push({ name: 'instance.add', params: { scene: b.place.scene, id: instances[0], kind: 'prop', asset: ref, name: res.asset.name, transform: { x: b.place.x ?? out.width / 2, y: b.place.y ?? out.height * 0.92 } } });
+    } else if (b.place) {
+      for (const x of res.pieces ?? []) {
+        const id = randomId('ins');
+        instances.push(id);
+        cmds.push({ name: 'instance.add', params: { scene: b.place.scene, id, kind: 'set-piece', asset: ref, name: x.name, transform: { x: x.at[0], y: x.at[1] }, depthPlane: x.plane, params: { part: x.key } } });
+      }
+    }
+    const r = p.open.session.apply({ commands: cmds as never, source, label: `Rig ${res.asset.name}` });
+    return { ref, instances, revision: r.revision };
+  };
   // Builds the character from mapped layers: a dry run returns the manifests and the rig check; save adds them.
-  app.post<{ Params: { pid: string }; Body: { name: string; fileName: string; rights: string; layers: RigLayer[]; mapping: Record<string, RigTarget>; libraryParts?: Record<string, string>; save?: boolean; place?: { scene: string; x?: number; y?: number } } }>('/api/projects/:pid/rigging/build', async (req, reply) => {
+  app.post<{ Params: { pid: string }; Body: RigBuildBody }>('/api/projects/:pid/rigging/build', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
       const b = req.body;
@@ -499,8 +545,9 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (!b.rights?.trim()) throw new FrameError('USAGE', 'State your rights to the artwork', undefined, 'Imports record a statement of rights (FR-IMP-02).');
       for (const l of b.layers ?? []) if (l.media && !p.open.store.findMedia(l.media)) throw new FrameError('NOT_FOUND', `Layer ${l.name} media is missing; read the artwork again`);
       const lib = library(p);
+      if (b.kind === 'prop' || b.kind === 'set') return buildObject(p, b, sourceOf(req));
       for (const ref of Object.values(b.libraryParts ?? {})) if (ref && !lib.has(ref)) throw new FrameError('NOT_FOUND', `${ref} is not in the library`);
-      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: b.mapping ?? {}, libraryParts: b.libraryParts ?? {}, newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
+      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: (b.mapping ?? {}) as Record<string, RigTarget>, libraryParts: b.libraryParts ?? {}, newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
       const local = new Map([...res.parts, res.character].map((m) => [`${m.id}@${m.version}`, m]));
       const look = (r: string) => local.get(r) ?? (lib.manifest(r) as AssetManifest | undefined);
       const check = checkCharacter(res.character, look, lib.byKind('act').map((x) => x.manifest));

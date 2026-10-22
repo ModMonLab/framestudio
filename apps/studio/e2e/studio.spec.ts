@@ -295,6 +295,35 @@ test('rigging assistant: a layered PSD becomes a character with declared view ga
   await previewMatchesServer(page, 0);
 });
 
+test('rigging assistant: a layered SVG becomes a prop with states and is placed (FR-IMP-03)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const svg = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-svg-')), 'lamp.svg');
+  fs.writeFileSync(svg, '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="400"><g id="stand"><rect x="90" y="100" width="20" height="300" fill="#3c3c3c"/></g><g id="state_on"><rect x="40" y="20" width="120" height="90" fill="#fadc5a"/></g><g id="state_off"><rect x="40" y="20" width="120" height="90" fill="#5a5a78"/></g></svg>');
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await page.locator('input[aria-label="Import a file"]').setInputFiles(svg);
+  const imp = page.getByRole('dialog', { name: 'Import lamp.svg' });
+  await imp.getByRole('radio', { name: /rigging assistant/ }).check();
+  await imp.getByRole('button', { name: 'Open rigging assistant' }).click();
+  const dlg = page.getByRole('dialog', { name: /Rigging assistant/ });
+  // No head layer and state layers: the assistant opens as a prop.
+  await expect(dlg.getByRole('button', { name: 'Prop with states' })).toHaveAttribute('aria-pressed', 'true', { timeout: 30_000 });
+  await expect(dlg.getByRole('button', { name: 'State for state_off' })).toContainText('Only when off');
+  await expect(dlg.getByRole('img', { name: /lamp, (on|off)/ })).toHaveCount(2);
+  await expect(dlg.getByText('Rig check passed')).toBeVisible();
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await dlg.getByRole('button', { name: 'Save prop' }).click();
+  await expect(dlg).toBeHidden();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const prop = Object.values(st.assets as Record<string, { id: string; kind: string; name: string; parameters: { key: string; options: string[] }[] }>).find((a) => a.kind === 'prop' && a.name === 'lamp')!;
+  expect(prop.parameters[0]!.options).toEqual(['on', 'off']);
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  expect(st.scenes[sid].instances.some((i: { asset?: string }) => i.asset === `${prop.id}@1`)).toBe(true);
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 0);
+});
+
 test('favourites, collections and the user library in the Assets panel (FR-AST-01/06, FR-AST-04)', async ({ page }) => {
   await openProject(page, sample(false));
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);

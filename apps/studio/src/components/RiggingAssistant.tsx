@@ -2,7 +2,9 @@
  * Rigging assistant (FR-IMP-03, Design System §7.3): layered artwork → a character. Layers are listed by view with a
  * suggested rig target each (by name convention) that the user can change; a live preview shows the rigged result in
  * every drawn view with a test gesture; mouth shapes the drawing lacks can come from a library mouth; the rig check
- * must pass (view gaps are declared, P11) before the character is saved and placed.
+ * must pass (view gaps are declared, P11) before the character is saved and placed. The same artwork can instead
+ * become a prop with states (layers named `state_on`, `state_off` …) or a location kit whose layers are set pieces
+ * on depth planes.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { evaluateFrame, type ProjectState } from '@frame/core';
@@ -15,9 +17,13 @@ import { useStudio } from '../lib/store.js';
 import { useKind } from './BuilderProperties.js';
 import { useCtx } from './Workspace.js';
 
-interface ReadLayer { id: string; name: string; view?: View; group?: string; hidden: boolean; bounds: [number, number, number, number]; media?: string; paths?: unknown[]; suggestion: string }
-interface ReadResult { fileName: string; source: 'psd' | 'svg'; width: number; height: number; views: View[]; layers: ReadLayer[]; warnings: string[]; targets: { value: string; label: string }[] }
+interface ReadLayer { id: string; name: string; view?: View; group?: string; hidden: boolean; bounds: [number, number, number, number]; media?: string; paths?: unknown[]; suggestion: string; propSuggestion: string; planeSuggestion: string }
+interface ReadResult { fileName: string; source: 'psd' | 'svg'; width: number; height: number; views: View[]; layers: ReadLayer[]; warnings: string[]; targets: { value: string; label: string }[]; planes: { value: string; label: string }[] }
 interface BuildResult { character: AssetManifest; parts: AssetManifest[]; views: View[]; mouthShapes: string[]; problems: { severity: 'error' | 'warning'; message: string }[]; check: { ok: boolean; problems: { severity: 'error' | 'warning'; message: string }[]; views: string[]; actions: { compatible: number; total: number } }; ok: boolean }
+
+interface ObjectResult { kind: 'prop' | 'set'; asset: AssetManifest; problems: { severity: 'error' | 'warning'; message: string }[]; states: string[] | null; pieces: { key: string; name: string; plane: string; at: [number, number] }[] | null; ok: boolean }
+type RigKind = 'character' | 'prop' | 'set';
+const KIND_LABEL: Record<RigKind, string> = { character: 'Character', prop: 'Prop with states', set: 'Set' };
 
 const VIEW_LABEL: Record<View, string> = { front: 'Front', three: 'Three-quarter', side: 'Side', back: 'Back' };
 
@@ -29,7 +35,14 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
   const sceneId = useStudio(studio, (s) => s.scene);
   const [read, setRead] = useState<ReadResult>();
   const [error, setError] = useState<string>();
-  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [kind, setKind] = useState<RigKind>('character');
+  const [maps, setMaps] = useState<Record<RigKind, Record<string, string>>>({ character: {}, prop: {}, set: {} });
+  const mapping = maps[kind];
+  const setMapping = (f: (m: Record<string, string>) => Record<string, string>) => setMaps((all) => ({ ...all, [kind]: f(all[kind]) }));
+  const [extraStates, setExtraStates] = useState<string[]>([]);
+  const [newState, setNewState] = useState('');
+  const [height, setHeight] = useState('');
+  const [object, setObject] = useState<ObjectResult>();
   const [name, setName] = useState('');
   const [rights, setRights] = useState('I made this artwork or own the rights to it');
   const [libMouth, setLibMouth] = useState('');
@@ -55,32 +68,60 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
   useEffect(() => {
     setRead(undefined);
     setBuilt(undefined);
+    setObject(undefined);
     setError(undefined);
     if (!file) return;
     setName(file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
     void file.arrayBuffer().then((b) => api.readArtwork(pid, file.name, new Uint8Array(b))).then((r) => {
-      setRead(r as ReadResult);
-      setMapping(Object.fromEntries((r as ReadResult).layers.map((l) => [l.id, l.suggestion])));
+      const rr = r as ReadResult;
+      setRead(rr);
+      setMaps({ character: Object.fromEntries(rr.layers.map((l) => [l.id, l.suggestion])), prop: Object.fromEntries(rr.layers.map((l) => [l.id, l.propSuggestion])), set: Object.fromEntries(rr.layers.map((l) => [l.id, l.planeSuggestion])) });
+      // A file that looks like a prop or a set opens in that mode.
+      const states = rr.layers.filter((l) => l.propSuggestion.startsWith('state:')).length;
+      const heads = rr.layers.filter((l) => l.suggestion === 'head').length;
+      setKind(heads ? 'character' : states ? 'prop' : rr.width > rr.height * 1.3 ? 'set' : 'prop');
     }).catch((e: Error) => setError(e.message));
   }, [file, pid]);
 
-  const layersPayload = useMemo(() => read?.layers.map(({ suggestion: _s, hidden: _h, group: _g, ...l }) => l), [read]);
+  const layersPayload = useMemo(() => read?.layers.map(({ suggestion: _s, propSuggestion: _p, planeSuggestion: _q, hidden: _h, ...l }) => l), [read]);
+  const objectBody = () => ({ kind, name, fileName: read!.fileName, rights, layers: layersPayload, mapping, ...(kind === 'prop' && Number(height) > 0 ? { height: Number(height) } : {}), ...(kind === 'set' ? { width: read!.width, artHeight: read!.height } : {}) });
   // Dry-run build on every change (debounced): manifests for the preview and the rig check.
   useEffect(() => {
     if (!read || !layersPayload || !name.trim()) return;
+    if (kind !== 'character') {
+      const t = setTimeout(() => {
+        api.buildRig(pid, objectBody()).then((r) => setObject(r as ObjectResult)).catch((e: Error) => setError(e.message));
+      }, 250);
+      return () => clearTimeout(t);
+    }
     const t = setTimeout(() => {
       api.buildRig(pid, { name, fileName: read.fileName, rights, layers: layersPayload, mapping, ...(libMouth ? { libraryParts: { mouth: libMouth } } : {}) })
         .then((r) => setBuilt(r as BuildResult))
         .catch((e: Error) => setError(e.message));
     }, 250);
     return () => clearTimeout(t);
-  }, [read, layersPayload, mapping, libMouth, name, rights, pid]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [read, layersPayload, mapping, libMouth, name, rights, pid, kind, height]);
 
   // Preview: the rigged draft on a neutral copy of the current scene, in every drawn view.
   const local = useMemo(() => new Map((built ? [...built.parts, built.character] : []).map((m) => [`${m.id}@${m.version}`, m])), [built]);
   const scene = sceneId ? project.scenes[sceneId] : undefined;
   useEffect(() => {
-    if (!renderer || !styles || !built || !scene) return;
+    if (!renderer || !styles || !scene || kind === 'character' || !object) return;
+    const ref = `${object.asset.id}@1`;
+    const resolve = (r: string) => (r === ref ? object.asset : assets.manifest(r));
+    const shots = object.kind === 'prop' ? (object.states?.length ? object.states : ['default']) : ['set'];
+    shots.forEach((st, i) => {
+      const cv = canvases.current[i];
+      if (!cv) return;
+      const state = objectPreviewState(project, scene, object, st);
+      const set = object.kind === 'set';
+      const ev = evaluateFrame(state, scene.id, 0, { assets: { manifest: resolve }, styles: styles as never, width: set ? 480 : 240, height: set ? 270 : 320, family: project.project.styleFamily, background: '#00000000' });
+      blit(renderer, ev.frame, cv);
+    });
+  });
+  useEffect(() => {
+    if (!renderer || !styles || !built || !scene || kind !== 'character') return;
     const resolve = (r: string) => local.get(r) ?? assets.manifest(r);
     built.views.forEach((v, i) => {
       const cv = canvases.current[i];
@@ -94,6 +135,19 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
   const save = async () => {
     if (!read || !layersPayload) return;
     setBusy(true);
+    if (kind !== 'character') {
+      try {
+        const r = (await api.buildRig(pid, { ...objectBody(), save: true, ...(sceneId ? { place: { scene: sceneId } } : {}) })) as { instances: string[] };
+        toasts.show({ tone: 'success', message: `${name} is saved as ${kind === 'prop' ? 'a prop' : 'a set'}${sceneId ? ' and placed in the scene' : ''}` });
+        if (r.instances.length) studio.set({ selection: r.instances.map((id) => ({ kind: 'instance' as const, id })) });
+        onClose();
+      } catch (e) {
+        toasts.show({ tone: 'error', message: (e as Error).message });
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     try {
       const r = await api.buildRig(pid, { name, fileName: read.fileName, rights, layers: layersPayload, mapping, ...(libMouth ? { libraryParts: { mouth: libMouth } } : {}), save: true, ...(sceneId ? { place: { scene: sceneId, x: project.project.output.width / 2, y: project.project.output.height * 0.92 } } : {}) });
       toasts.show({ tone: 'success', message: `${name} is rigged${sceneId ? ' and placed in the scene' : ''}` });
@@ -106,7 +160,16 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
     }
   };
 
-  const problems = built ? [...built.problems, ...built.check.problems] : [];
+  const problems = kind !== 'character' ? object?.problems ?? [] : built ? [...built.problems, ...built.check.problems] : [];
+  const ready = kind === 'character' ? !!built?.ok : !!object?.ok;
+  const states = useMemo(() => [...new Set([...Object.values(maps.prop).filter((t) => t.startsWith('state:')).map((t) => t.slice(6)), ...extraStates])], [maps.prop, extraStates]);
+  const targetOptions = kind === 'character' ? read?.targets ?? [] : kind === 'set' ? read?.planes ?? [] : [{ value: 'always', label: 'Every state' }, ...states.map((x) => ({ value: `state:${x}`, label: `Only when ${x}` })), { value: 'ignore', label: 'Not used' }];
+  const addState = () => {
+    const v = newState.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+    if (v && !states.includes(v)) setExtraStates((x) => [...x, v]);
+    setNewState('');
+  };
+  const noun = kind === 'character' ? 'character' : kind === 'prop' ? 'prop' : 'set';
   const errors = problems.filter((x) => x.severity === 'error');
   const byView = useMemo(() => {
     const out = new Map<string, ReadLayer[]>();
@@ -121,9 +184,9 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
       onClose={onClose}
       wide
       footer={<>
-        <span className="fr-faint st-grow">{built ? `${built.views.map((v) => VIEW_LABEL[v]).join(', ')} drawn · ${built.mouthShapes.length} of 9 mouth shapes · ${built.check.actions.compatible} compatible actions` : ''}</span>
+        <span className="fr-faint st-grow">{kind === 'prop' && object ? `${object.states?.length ? `States: ${object.states.join(', ')}` : 'No states'}` : kind === 'set' && object ? `${object.pieces?.length ?? 0} set pieces` : kind === 'character' && built ? `${built.views.map((v) => VIEW_LABEL[v]).join(', ')} drawn · ${built.mouthShapes.length} of 9 mouth shapes · ${built.check.actions.compatible} compatible actions` : ''}</span>
         <Button onClick={onClose}>Cancel</Button>
-        <Button variant="primary" loading={busy} onClick={() => void save()} disabled={!built?.ok || !name.trim()} disabledReason={!name.trim() ? 'Name the character' : 'Fix the problems listed first'}>Save character</Button>
+        <Button variant="primary" loading={busy} onClick={() => void save()} disabled={!ready || !name.trim()} disabledReason={!name.trim() ? `Name the ${noun}` : 'Fix the problems listed first'}>Save {noun}</Button>
       </>}
     >
       {error && <p role="alert" className="st-error">{error}</p>}
@@ -131,20 +194,30 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
       {read && (
         <div className="st-rig">
           <div className="st-rig__layers">
-            <div className="st-row">
-              <TextField label="Character name" value={name} onChange={setName} />
+            <div className="st-row" role="group" aria-label="What the artwork is">
+              {(['character', 'prop', 'set'] as RigKind[]).map((k) => <Chip key={k} selected={kind === k} onClick={() => setKind(k)}>{KIND_LABEL[k]}</Chip>)}
             </div>
+            <div className="st-row">
+              <TextField label={`${noun[0]!.toUpperCase()}${noun.slice(1)} name`} value={name} onChange={setName} />
+              {kind === 'prop' && <TextField label="Height on stage (px)" placeholder={String(Math.round(read.height))} value={height} onChange={setHeight} />}
+            </div>
+            {kind === 'prop' && (
+              <div className="st-row">
+                <TextField label="New state" placeholder="e.g. open" value={newState} onChange={setNewState} onKeyDown={(e) => { if (e.key === 'Enter') addState(); }} />
+                <Button onClick={addState} disabled={!newState.trim()} disabledReason="Name the state">Add state</Button>
+              </div>
+            )}
             <TextField label="Your rights to the artwork" value={rights} onChange={setRights} />
             {read.warnings.length > 0 && <ul className="st-problems">{read.warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
             {byView.map(([view, layers]) => (
               <section key={view} aria-label={`${VIEW_LABEL[view as View]} layers`}>
-                <h3 className="st-h3">{VIEW_LABEL[view as View]} <span className="fr-faint">· {layers.length} layers</span></h3>
+                <h3 className="st-h3">{kind === 'character' ? VIEW_LABEL[view as View] : 'Layers'} <span className="fr-faint">· {layers.length} layers</span></h3>
                 <ul className="st-rig__list">
                   {layers.map((l) => (
                     <li key={l.id} className="st-rig__row">
                       <span className="st-rig__thumb" aria-hidden>{l.media ? <img src={api.mediaUrl(pid, l.media)} alt="" /> : <span className="fr-faint">SVG</span>}</span>
                       <span className="st-rig__name" title={l.group ? `${l.group}/${l.name}` : l.name}>{l.name}{l.hidden && <span className="fr-faint"> · hidden</span>}</span>
-                      <span className="st-rig__target"><Select label={`Rig target for ${l.name}`} value={mapping[l.id]} onChange={(v) => setMapping((m) => ({ ...m, [l.id]: v }))} options={read.targets} /></span>
+                      <span className="st-rig__target"><Select label={`${kind === 'set' ? 'Depth plane' : kind === 'prop' ? 'State' : 'Rig target'} for ${l.name}`} value={mapping[l.id]} onChange={(v) => setMapping((m) => ({ ...m, [l.id]: v }))} options={targetOptions} /></span>
                     </li>
                   ))}
                 </ul>
@@ -152,6 +225,16 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
             ))}
           </div>
           <div className="st-rig__side">
+            {kind !== 'character' ? (
+              <div className="st-rig__previews">
+                {object ? (object.kind === 'prop' ? (object.states?.length ? object.states : ['default']) : ['set']).map((st, i) => (
+                  <figure key={st} className="st-builder-view">
+                    <canvas ref={(el) => { canvases.current[i] = el; }} role="img" aria-label={object.kind === 'set' ? `${name} set` : `${name}${st === 'default' ? '' : `, ${st}`}`} />
+                    <figcaption>{object.kind === 'set' ? 'Set' : st === 'default' ? 'As drawn' : st}</figcaption>
+                  </figure>
+                )) : <EmptyState title="Preview">Map at least one layer to see the {noun}.</EmptyState>}
+              </div>
+            ) : (<>
             <div className="st-rig__previews">
               {built?.views.map((v, i) => (
                 <figure key={v} className="st-builder-view">
@@ -170,8 +253,9 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
               <Select label="Library mouth" placeholder="Use the drawn mouth shapes" value={libMouth || undefined} onChange={setLibMouth} options={[{ value: '', label: 'Use the drawn mouth shapes' }, ...(mouths ?? []).map((m) => ({ value: m.ref, label: `Library: ${m.name}` }))]} />
               <p className="fr-hint">Speech needs all nine mouth shapes (mouth_A … mouth_H, mouth_X) in every drawn view, or a library mouth.</p>
             </div>
+            </>)}
             <div aria-live="polite">
-              {built && (errors.length ? <StatusBadge tone="danger">Rig check: {errors.length} problem(s)</StatusBadge> : <StatusBadge tone="success">Rig check passed</StatusBadge>)}
+              {(kind === 'character' ? built : object) && (errors.length ? <StatusBadge tone="danger">Rig check: {errors.length} problem(s)</StatusBadge> : <StatusBadge tone="success">Rig check passed</StatusBadge>)}
               {problems.length > 0 && <ul className="st-problems" aria-label="Rig check problems">{problems.map((x, i) => <li key={i}><StatusBadge tone={x.severity === 'error' ? 'danger' : 'warning'}>{x.severity === 'error' ? 'Error' : 'Warning'}</StatusBadge> {x.message}</li>)}</ul>}
             </div>
           </div>
@@ -188,5 +272,22 @@ function previewState(project: ProjectState, scene: Scene, ref: string, view: Vi
   const inst: Instance = { id, kind: 'character', asset: ref, name: 'Preview', transform: { x: 960, y: 1000, scale: 1, rotation: 0, flipX: false }, depthPlane: scene.stage.depthPlanes[0]!.id, order: 0, parallax: 1, opacity: 1, visible: true, locked: false, params: {}, character: { look: 'default', view, posture: 'standing', auto: { idle: false, listening: false, blinks: false, talkingGestures: false } } };
   const clips: Clip[] = gesture ? [{ id: 'clp_rigpreviewact' as Clip['id'], track, start: 0, end: 96000, asset: gesture, params: {}, blendIn: 0, blendOut: 0, enabled: true, source: 'manual' }] : [];
   const preview: Scene = { ...scene, instances: [inst], tracks: [{ id: track, kind: 'acting', owner: id, name: 'Acting', mute: false, solo: false, lock: false, hidden: false, gainDb: 0 }], clips, markers: [], cameras: [{ ...scene.cameras[0]!, id: scene.defaultCamera, center: { x: 960, y: 640 }, width: 1000, rotation: 0 }], loop: undefined as never };
+  return { ...project, scenes: { ...project.scenes, [scene.id]: preview } };
+}
+
+/** A copy of the scene holding only the rigged prop (in one state) or the set's pieces. */
+function objectPreviewState(project: ProjectState, scene: Scene, o: ObjectResult, propState: string): ProjectState {
+  const ref = `${o.asset.id}@1`;
+  const base = { scale: 1, rotation: 0, flipX: false };
+  const common = { asset: ref, order: 0, parallax: 1, opacity: 1, visible: true, locked: false } as const;
+  const planes = new Set(scene.stage.depthPlanes.map((d) => d.id));
+  const instances: Instance[] = o.kind === 'prop'
+    ? [{ ...common, id: 'ins_rigpreview' as Instance['id'], kind: 'prop', name: 'Preview', transform: { x: 960, y: 1000, ...base }, depthPlane: scene.stage.depthPlanes[0]!.id, params: {}, ...(propState !== 'default' ? { propState } : {}) } as Instance]
+    : (o.pieces ?? []).map((p, i) => ({ ...common, id: `ins_rigpreview${i}` as Instance['id'], kind: 'set-piece', name: p.name, order: i, transform: { x: p.at[0], y: p.at[1], ...base }, depthPlane: planes.has(p.plane) ? p.plane : scene.stage.depthPlanes[0]!.id, params: { part: p.key } }) as Instance);
+  const out = project.project.output;
+  const cam = o.kind === 'prop'
+    ? { center: { x: 960, y: 1000 - Number((o.asset.anchors as { bounds?: number[] }).bounds?.[3] ?? 400) / 2 }, width: Math.max(400, Number((o.asset.anchors as { bounds?: number[] }).bounds?.[3] ?? 400) * 1.4) }
+    : { center: { x: out.width / 2, y: out.height / 2 }, width: out.width };
+  const preview: Scene = { ...scene, instances, tracks: [], clips: [], markers: [], cameras: [{ ...scene.cameras[0]!, id: scene.defaultCamera, ...cam, rotation: 0 }], loop: undefined as never };
   return { ...project, scenes: { ...project.scenes, [scene.id]: preview } };
 }

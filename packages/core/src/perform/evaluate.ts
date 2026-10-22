@@ -3,7 +3,7 @@
  * (FR-RND-01/02). Studio preview, thumbnails, CLI renders and export all call this.
  */
 import type { Camera, Clip, Instance, MouthBlock, Scene, StyleFamily, Take } from '@frame/schema';
-import { composeCharacter, NEUTRAL_FACE, REST_POSE, type FaceState, type FamilyStyle, type MouthLetter, type PartData, type Pose, type ViewArt, buildPath, ellipsePath, resolveFill, resolveColor, buildPalette, evalPoint, type Mapper } from '@frame/rig';
+import { composeCharacter, placedArt, NEUTRAL_FACE, REST_POSE, type FaceState, type FamilyStyle, type MouthLetter, type PartData, type Pose, type ViewArt, buildPath, ellipsePath, resolveFill, resolveColor, buildPalette, evalPoint, type Mapper } from '@frame/rig';
 import type { Frame, GroupItem, Item, Mat } from '@frame/render';
 import type { ProjectState } from '../state.js';
 import { hash32, prng } from '../ids.js';
@@ -399,6 +399,12 @@ function drawPropArt(data: PartData, family: StyleFamily, state: string, colors:
     const byId = new Map<string, string>();
     for (const sh of layer.shapes ?? []) {
       if (sh.when && !Object.entries(sh.when).every(([k, v]) => (Array.isArray(v) ? v.includes(stateMap[k] ?? '') : stateMap[k] === v))) continue;
+      if (sh.art) {
+        // Imported prop artwork (rigging assistant), in stage units around the prop's origin.
+        const placed = placedArt(sh.art, map, sh.opacity);
+        if (placed) items.push(placed);
+        continue;
+      }
       const d = sh.path ? buildPath(sh.path, art.points, params, map, () => {}) : sh.ellipse ? ellipsePath(sh.ellipse, art.points, params, map, () => {}) : '';
       if (sh.id) byId.set(sh.id, d);
       const at = (n: string) => {

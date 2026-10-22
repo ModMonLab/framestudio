@@ -37,5 +37,6 @@ export * from './build-character.js';
 export * from './compare.js';
 export * from './character-check.js';
 export * from './rigging.js';
+export * from './rigging-props.js';
 export * from './compat.js';
 export * from './part-save.js';
