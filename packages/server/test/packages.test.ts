@@ -34,7 +34,7 @@ const bytes = async (url: string) => {
   return { status: res.status, type: res.headers.get('content-type'), disposition: res.headers.get('content-disposition'), data: new Uint8Array(await res.arrayBuffer()) };
 };
 const upload = async (url: string, data: Uint8Array) => {
-  const res = await fetch(base + url, { method: 'POST', headers: { 'content-type': 'application/zip' }, body: data });
+  const res = await fetch(base + url, { method: 'POST', headers: { 'content-type': 'application/zip' }, body: Buffer.from(data) });
   return { status: res.status, json: (await res.json()) as any };
 };
 
