@@ -99,7 +99,7 @@ function drum(out: Float32Array, kind: 'kick' | 'snare' | 'hat' | 'shaker' | 'cl
   let lp = 0;
   for (let i = 0; i < n; i++) {
     const t = i / SR;
-    let v = 0;
+    let v: number;
     if (kind === 'kick') {
       ph += (TAU * (45 + 110 * Math.exp(-t * 30))) / SR;
       v = Math.sin(ph) * Math.exp(-t * 9);
