@@ -83,6 +83,8 @@ export const api = {
   worker: (pid?: string) => req<WorkerStatus>('GET', `/api/worker/status${pid ? `?project=${pid}` : ''}`),
   designVoice: (pid: string, body: { description: string; sampleText: string; candidates: number; language?: string; seed?: number }) => req<JobInfo>('POST', `/api/projects/${pid}/voices/design`, body),
   saveVoice: (pid: string, body: Record<string, unknown>) => req<{ ref: string; revision: number }>('POST', `/api/projects/${pid}/voices`, body),
+  voiceRange: (pid: string, body: { voice: string; emotions?: string[]; text?: string }) => req<JobInfo>('POST', `/api/projects/${pid}/voices/range`, body),
+  voiceVersion: (pid: string, body: { voice: string; accept: unknown[]; updateUsers: boolean }) => req<{ ref: string; revision: number; updated: number }>('POST', `/api/projects/${pid}/voices/version`, body),
   generateTakes: (pid: string, body: { scene: string; lines: string[]; takes: number; seed?: number }) => req<JobInfo>('POST', `/api/projects/${pid}/takes/generate`, body),
   uploadTake: (pid: string, scene: string, line: string, file: File) => {
     const ext = (file.name.split('.').pop() ?? '').toLowerCase();

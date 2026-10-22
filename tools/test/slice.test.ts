@@ -61,6 +61,22 @@ describe.skipIf(!WORKER)('M1 vertical slice with the Voice Worker (AC-01 path, F
       expect(saved.status, JSON.stringify(saved.json)).toBe(200);
     }
 
+    // Emotional range bank for the first voice, saved as version 2 and adopted by its character (FR-VOI-03/10).
+    const st1 = (await api('GET', `/api/projects/${pid}/state`)).json.state;
+    const mayaVoice = st1.scenes[scene].instances.find((i: any) => i.id === maya).character.voice as string;
+    const rangeJob = await api('POST', `/api/projects/${pid}/voices/range`, { voice: mayaVoice, emotions: ['happy', 'sad'] });
+    const range = await waitJob(rangeJob.json.id);
+    expect(range.state, JSON.stringify(range.error)).toBe('succeeded');
+    expect(range.result.candidates.map((c: any) => c.emotion)).toEqual(['happy', 'sad']);
+    const ver = await api('POST', `/api/projects/${pid}/voices/version`, { voice: mayaVoice, accept: range.result.candidates, updateUsers: true });
+    expect(ver.status, JSON.stringify(ver.json)).toBe(200);
+    expect(ver.json.ref).toBe(mayaVoice.replace(/@1$/, '@2'));
+    const st1b = (await api('GET', `/api/projects/${pid}/state`)).json.state;
+    expect(st1b.scenes[scene].instances.find((i: any) => i.id === maya).character.voice).toBe(ver.json.ref);
+    expect(st1b.assets[ver.json.ref].data.references.map((r: any) => r.emotion).sort()).toEqual(['happy', 'neutral', 'sad']);
+    expect(st1b.assets[mayaVoice]).toBeTruthy();
+    await api('POST', `/api/projects/${pid}/commands`, { commands: [{ name: 'line.setDelivery', params: { scene, id: lines[0], delivery: { emotion: 'happy' } } }] });
+
     // Generate takes for both lines (FR-VOI-07) and align them (FR-LIP-01).
     const gj = await api('POST', `/api/projects/${pid}/takes/generate`, { scene, lines, takes: 2 });
     const gen = await waitJob(gj.json.id);
@@ -70,7 +86,7 @@ describe.skipIf(!WORKER)('M1 vertical slice with the Voice Worker (AC-01 path, F
     for (const id of lines) {
       const clip = st.scenes[scene].clips.find((c: any) => c.id === id);
       const take = st.takes[clip.line.take];
-      expect(take).toMatchObject({ status: 'ready', fixture, lineRevision: 1, source: 'generated' });
+      expect(take).toMatchObject({ status: 'ready', fixture, source: 'generated' });
       expect(take.alignment.words.length).toBeGreaterThan(3);
       // Lip sync from the alignment changes mouth shapes over the line.
       const shapes = new Set(mouthTrackFromAlignment(take.alignment, { fps: 24 }).blocks.map((b) => b.shape));

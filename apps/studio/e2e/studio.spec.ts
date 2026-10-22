@@ -78,7 +78,7 @@ test('workspace opens a project, previews with the export renderer, edits throug
 
 test.describe(() => {
   test.skip(!WORKER, 'needs FRAME_TEST_WORKER_URL');
-  test('M1 slice in the Studio: design voices, generate aligned takes, export (FR-VOI-02/07, FR-RND-07)', async ({ page }) => {
+  test('M1 slice in the Studio: design voices, emotional range, generate aligned takes, export (FR-VOI-02/03/07/10, FR-RND-07)', async ({ page }) => {
     await openProject(page, sample(false));
     for (const [who, desc] of [['Maya Bennett', 'Warm, articulate radio host in her thirties'], ['Leo Park', 'Dry, playful co-host in his late twenties']] as const) {
       await page.getByRole('treeitem', { name: new RegExp(who) }).first().click();
@@ -91,6 +91,16 @@ test.describe(() => {
       await expect(dlg.getByText(/fixture worker|not real speech/).first()).toBeVisible();
       await dlg.getByRole('button', { name: 'Save voice' }).click();
       await expect(dlg).toBeHidden();
+      if (who === 'Maya Bennett') {
+        // Emotional range bank → a new voice version adopted by the character (FR-VOI-03, FR-VOI-10).
+        await page.getByRole('button', { name: 'Emotional range…' }).click();
+        const range = page.getByRole('dialog', { name: /^Emotional range/ });
+        await range.getByRole('button', { name: 'Render emotions' }).click();
+        await range.getByRole('switch', { name: 'Accept Happy' }).click({ timeout: 60_000 });
+        await range.getByRole('button', { name: 'Save as version 2' }).click();
+        await expect(range).toBeHidden();
+        await expect(page.getByText(/Emotions: .*happy.* · version 2/)).toBeVisible();
+      }
       await page.getByRole('button', { name: 'Generate takes' }).click();
       await expect(page.getByRole('list', { name: 'Takes' })).toContainText('Chosen', { timeout: 60_000 });
     }

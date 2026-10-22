@@ -13,7 +13,7 @@ import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { decodeAudioFile, renderExport, rmsEnvelope, type OutputPreset } from '@frame/io';
 import { exitCodeFor, FrameError, type CommandBatch, type ErrorCode } from '@frame/schema';
-import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, sourceLabel, toAlignment, type ProjectAccess } from '@frame/voice-client';
+import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
 
@@ -467,6 +467,44 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const cmds = [{ name: 'asset.addLocal', params: { manifest } }, ...(b.assignTo ?? []).map((a) => ({ name: 'instance.update', params: { scene: a.scene, id: a.instance, set: { character: { ...currentCharacter(p, a.scene, a.instance), voice: ref } } } }))];
       const r = p.open.session.apply({ commands: cmds, source: 'user', label: `Save voice ${b.name}` });
       return { ref, revision: r.revision };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  // Emotional range bank (FR-VOI-03): render emotion references from the voice's neutral reference.
+  app.post<{ Params: { pid: string }; Body: { voice: string; emotions?: string[]; text?: string } }>('/api/projects/:pid/voices/range', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const client = workerFor(p);
+      const b = req.body;
+      if (!b?.voice) throw new FrameError('USAGE', 'voice is required');
+      const job = jobs.voice.submit('voice.range', 'Emotional range', (ctx) => rangeCandidates(client, access(p), b.voice, { ...(b.emotions ? { emotions: b.emotions } : {}), ...(b.text ? { text: b.text } : {}) }, { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
+      return reply.code(202).send(publicJob(job));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  // Accepted references become a new voice version (FR-VOI-10); characters move to it only when asked.
+  app.post<{ Params: { pid: string }; Body: { voice: string; accept: RangeCandidate[]; updateUsers?: boolean } }>('/api/projects/:pid/voices/version', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      const voice = p.open.state.assets[b?.voice ?? ''];
+      if (!voice) throw new FrameError('NOT_FOUND', `${b?.voice} is not a voice in this project`, undefined, 'Only voices designed in this project can be versioned here.');
+      if (!Array.isArray(b.accept) || !b.accept.length) throw new FrameError('USAGE', 'accept[] is required');
+      for (const a of b.accept) if (!p.open.store.findMedia(a.media?.hash ?? '')) throw new FrameError('NOT_FOUND', `Reference audio for ${a.emotion} is not in this project`);
+      const next = voiceWithReferences(voice, b.accept, new Date().toISOString().slice(0, 10));
+      const ref = `${next.id}@${next.version}`;
+      const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest: next } }];
+      if (b.updateUsers) {
+        for (const sc of Object.values(p.open.state.scenes)) {
+          for (const i of sc.instances) if (i.character?.voice === b.voice) cmds.push({ name: 'instance.update', params: { scene: sc.id, id: i.id, set: { character: { ...i.character, voice: ref } } } });
+        }
+      }
+      const r = p.open.session.apply({ commands: cmds as never, source: 'user', label: `${voice.name} version ${next.version}` });
+      return { ref, revision: r.revision, updated: cmds.length - 1 };
     } catch (e) {
       return sendError(reply, e);
     }

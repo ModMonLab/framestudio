@@ -183,3 +183,61 @@ export async function generateTakes(client: VoiceClient, p: ProjectAccess, req: 
   ctl.onProgress?.({ progress: 1, message: 'Done' });
   return out;
 }
+
+/* ------------------------------------------------------------------ emotional range bank (FR-VOI-03, FR-VOI-10) */
+
+/** Default emotions of the range bank (FR-VOI-03); neutral is the voice's existing reference. */
+export const RANGE_EMOTIONS = ['happy', 'sad', 'angry', 'nervous', 'whisper', 'excited', 'deadpan'];
+
+export interface RangeCandidate {
+  emotion: string;
+  media: MediaRef;
+  transcript: string;
+  seed: number | null;
+  durationS: number;
+  /** Speaker similarity to the neutral reference (0–1), when the engine reports it. */
+  similarity: number | null;
+  fixture: boolean;
+}
+
+/** Renders reference clips for emotions from the voice's neutral reference (FR-VOI-03). */
+export async function rangeCandidates(client: VoiceClient, p: ProjectAccess, voiceRef: string, req: { emotions?: string[]; text?: string }, ctl: Ctl = {}): Promise<{ candidates: RangeCandidate[]; engine: string }> {
+  const voice = p.voice(voiceRef);
+  const vd = voice?.data as VoiceData | undefined;
+  if (!voice || voice.kind !== 'voice' || !vd) throw new FrameError('NOT_FOUND', `Voice ${voiceRef} not found`);
+  const neutral = vd.references.find((r) => r.emotion === 'neutral' && r.accepted);
+  if (!neutral) throw new FrameError('VALIDATION_FAILED', `${voice.name} has no accepted neutral reference`);
+  const caps = await client.capabilities();
+  const supported = caps.engines[0]?.controls.emotion ?? [];
+  const emotions = (req.emotions ?? RANGE_EMOTIONS).filter((e) => e !== 'neutral');
+  const unsupported = emotions.filter((e) => !supported.includes(e));
+  if (unsupported.length) throw new FrameError('VALIDATION_FAILED', `The voice engine does not support: ${unsupported.join(', ')}`, { supported });
+  const hash = await client.uploadBlob(p.readMedia(neutral.media.hash), `neutral.${neutral.media.ext}`, neutral.media.mime);
+  const text = req.text ?? neutral.transcript;
+  const job = await client.range({ neutralRef: { hash, transcript: neutral.transcript, emotion: 'neutral' }, description: vd.description, emotions, text, language: vd.language });
+  const res = await run(client, job, ctl, [0, 0.9], 'Rendering emotions');
+  const candidates: RangeCandidate[] = [];
+  for (const r of res.refs) {
+    const media = p.storeMedia(await client.blob(r.audioHash), { ext: 'wav', mime: 'audio/wav', durationS: r.durationS, sampleRate: r.sampleRate, channels: 1 });
+    candidates.push({ emotion: r.emotion, media, transcript: r.transcript || text, seed: r.seed, durationS: r.durationS, similarity: r.similarity, fixture: caps.fixture });
+  }
+  ctl.onProgress?.({ progress: 1, message: 'Range ready' });
+  return { candidates, engine: res.engine };
+}
+
+/**
+ * A new voice version with accepted emotion references (FR-VOI-10: changing a voice creates a new version; lines keep
+ * their takes). Accepted references replace earlier ones of the same emotion.
+ */
+export function voiceWithReferences(voice: AssetManifest, accepted: RangeCandidate[], date: string): AssetManifest {
+  const vd = voice.data as VoiceData;
+  const refs = vd.references.filter((r) => !accepted.some((a) => a.emotion === r.emotion));
+  for (const a of accepted) refs.push({ emotion: a.emotion, media: a.media, transcript: a.transcript, ...(a.seed !== null ? { seed: a.seed } : {}), accepted: true, fixture: a.fixture });
+  return {
+    ...voice,
+    version: voice.version + 1,
+    tags: [...new Set([...voice.tags, ...(accepted.some((a) => a.fixture) ? ['fixture'] : [])])],
+    provenance: { ...voice.provenance, date },
+    data: { ...vd, references: refs, auditions: [...vd.auditions, ...accepted.map((a) => ({ text: a.transcript, media: a.media, emotion: a.emotion }))], engineData: {} },
+  } as AssetManifest;
+}

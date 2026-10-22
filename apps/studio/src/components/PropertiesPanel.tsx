@@ -7,6 +7,7 @@ import { Button, Chip, EmptyState, IconButton, NumberField, Panel, Section, Sele
 import { api, type WorkerStatus } from '../lib/api.js';
 import { useStudio, type Mode } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
+import { RangeDialog } from './RangeDialog.js';
 
 type Tab = 'properties' | 'acting' | 'audio';
 const DEFAULT_TAB: Record<Mode, Tab> = { stage: 'properties', direct: 'acting', edit: 'audio' };
@@ -177,6 +178,7 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const [worker, setWorker] = useState<WorkerStatus>();
   const [count, setCount] = useState(2);
   const [newLine, setNewLine] = useState('');
+  const [rangeOpen, setRangeOpen] = useState(false);
   useEffect(() => {
     api.worker(pid).then(setWorker).catch(() => undefined);
   }, [pid]);
@@ -222,7 +224,12 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
     <>
       <Section title="Voice" summary={voiceName ?? 'None'} open={open.voice!} onToggle={(o) => toggle('voice', o)}>
         {voiceName ? <p><b>{voiceName}</b></p> : <p className="fr-hint">{inst.name} has no voice yet.</p>}
-        <Button icon={<Sparkles size={14} />} onClick={() => openVoiceDesigner(inst.id)}>{voiceName ? 'Design another voice…' : 'Design a voice…'}</Button>
+        <div className="st-row">
+          <Button icon={<Sparkles size={14} />} onClick={() => openVoiceDesigner(inst.id)}>{voiceName ? 'Design another voice…' : 'Design a voice…'}</Button>
+          {voiceRef && <Button disabled={!project.assets[voiceRef]} disabledReason="Only voices designed in this project can be extended" onClick={() => setRangeOpen(true)}>Emotional range…</Button>}
+        </div>
+        {voiceRef && project.assets[voiceRef] && <p className="fr-faint">Emotions: {((project.assets[voiceRef]!.data as { references: { emotion: string; accepted: boolean }[] }).references.filter((r) => r.accepted).map((r) => r.emotion).join(', '))} · version {project.assets[voiceRef]!.version}</p>}
+        {voiceRef && <RangeDialog voice={voiceRef} open={rangeOpen} onClose={() => setRangeOpen(false)} />}
       </Section>
       <Section title="Current line" summary={state} open={open.line!} onToggle={(o) => toggle('line', o)}>
         {line?.line ? (
