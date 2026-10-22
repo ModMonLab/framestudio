@@ -91,6 +91,9 @@ class BenchmarkRequest(BaseModel):
 
 
 PAUSE = re.compile(r"\[pause\s+(\d+(?:\.\d+)?)s\]", re.I)
+# A mid-line ellipsis is a beat: about the same 0.4 s the Studio's length estimate allows for it.
+BEAT = re.compile(r"(…|\.\.\.)\s+(?=\S)")
+BEAT_S = 0.4
 
 
 def create_app(cfg: Config | None = None) -> FastAPI:
@@ -152,10 +155,10 @@ def create_app(cfg: Config | None = None) -> FastAPI:
     def synth_with_pauses(req: SynthRequest, refs: list[Ref], job: Job) -> list[Audio]:
         caps = engine.capabilities()["controls"]
         delivery = req.delivery.model_dump(exclude_none=True)
-        if not PAUSE.search(req.text) or caps.get("pauses"):
+        if caps.get("pauses") or not (PAUSE.search(req.text) or BEAT.search(req.text)):
             return engine.synthesize(req.text, req.language, refs, delivery, req.takes, req.seed, job)
         # Engines without pause control: generate segments and join with silence (FR-DLG-08).
-        parts = PAUSE.split(req.text)
+        parts = PAUSE.split(BEAT.sub(lambda m: f"{m.group(1)} [pause {BEAT_S}s] ", req.text))
         segments = [(parts[i].strip(), float(parts[i + 1]) if i + 1 < len(parts) else 0.0) for i in range(0, len(parts), 2)]
         takes: list[Audio] = []
         for k in range(req.takes):

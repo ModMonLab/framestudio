@@ -155,14 +155,14 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-TPL-01 | Done | tools/test/m3-templates.test.ts (all 16 P1 templates, 3 aspect ratios); `frame template apply`; Studio e2e “a template starts a new scene…” | Catalog P1 templates create complete projects or scenes — Templates add a scene with set, cast, framed cameras, shots, music, titles; suggested script in the scene notes |
 | FR-TPL-02 | Done | templateFromScenes; POST …/templates/save scope=episode; `frame template save --episode`; Scene menu; m3-templates.test.ts | Users can save any project or scene as a template (with optional place — Scenes or whole episodes; cast roles shared across scenes; caption style kept |
 | FR-TPL-03 | Done | replaceCastCommands; `frame cast replace`; Layers context menu “Replace cast…”; m3-templates.test.ts; Studio e2e | "Replace cast" swaps a template's characters with the user's character — Clips, gaze and shots stay with the instance; cameras framed on it are reframed |
-| FR-DLG-01 | In progress | Studio Audio tab “Add line at playhead”; CLI apply line.add | Lines are created from the timeline, the Script view, a character's Di — Script view pending |
-| FR-DLG-02 | Not started | — | A line has one canonical record (speaker, text, revision, delivery, ch |
-| FR-DLG-03 | In progress | session.test.ts take outdated/confirm | Editing a line's text increments its revision and marks takes generate |
-| FR-DLG-04 | In progress | validate.ts lineTakeState | Take states: Missing, Queued, Generating, Ready, Failed, Outdated, Mut |
-| FR-DLG-05 | In progress | line.chooseTake, take.remove | Multiple takes per line are kept |
-| FR-DLG-06 | In progress | line.chooseTake clip length | A line's clip length follows the chosen take's measured duration |
-| FR-DLG-07 | Not started | — | Overlapping speech between different speakers is allowed and mixed |
-| FR-DLG-08 | Not started | — | Pauses and beats: lines may contain explicit pause markers (`[pause 0 |
+| FR-DLG-01 | Done | Studio Audio tab “Add line at playhead”; Script view import; CLI `script import`; script.test.ts; e2e “the script view imports a script…” | Lines are created from the timeline, the Script view, a character's Di — Script view pending |
+| FR-DLG-02 | Done | Script view, timeline and Properties all edit the same line clip (line.setText/setSpeaker/setDelivery); e2e “the script view…” | A line has one canonical record (speaker, text, revision, delivery, ch |
+| FR-DLG-03 | Done | session.test.ts take outdated/confirm (take.confirm for recorded/uploaded takes) | Editing a line's text increments its revision and marks takes generate |
+| FR-DLG-04 | Done | validate.ts lineTakeState + TAKE_* problems blocksExport; Script view take column | Take states: Missing, Queued, Generating, Ready, Failed, Outdated, Mut |
+| FR-DLG-05 | Done | line.chooseTake (undoable), take.remove; Script view “Clean up unused takes” | Multiple takes per line are kept |
+| FR-DLG-06 | Done | line.chooseTake clip length + ripple (script.test.ts); SPEAKER_OVERLAP problem | A line's clip length follows the chosen take's measured duration |
+| FR-DLG-07 | Done | script.test.ts “overlapping speech mixes both takes and stacks both captions” | Overlapping speech between different speakers is allowed and mixed |
+| FR-DLG-08 | Done | worker synth_with_pauses ([pause Ns] and mid-line … beats; test_api.py); estimateSpeechSeconds; stripPauseMarkers for captions | Pauses and beats: lines may contain explicit pause markers (`[pause 0 |
 | FR-VOI-01 | In progress | project-local voice assets (asset.addLocal); Layers Voice row | Voice library — Voice library screen pending |
 | FR-VOI-02 | In progress | slice.test.ts; apps/studio/e2e/studio.spec.ts (fixture worker) | Design a voice — Design → candidates → audition → save works end to end; real Qwen3 output not verified here (no GPU) |
 | FR-VOI-03 | Done (fixture path) | Worker /v1/voices/range; `POST /voices/range` job; Studio "Emotional range…" dialog (audition, similarity, accept); `tools/test/slice.test.ts` (happy delivery uses the happy reference) and Studio e2e M1 slice | Emotional range bank — real-engine quality Not verified — requires reference machine (AC-03) |
