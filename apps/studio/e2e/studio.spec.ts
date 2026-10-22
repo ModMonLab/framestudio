@@ -153,3 +153,57 @@ test.describe(() => {
     expect(res.headers()['content-type']).toBe('video/mp4');
   });
 });
+
+test('character builder edits a draft, checks the rig, saves a new character for one instance and undoes (FR-BLD-01..08, FR-CHR-10)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const maya = st.scenes[sid].instances.find((i: { name: string }) => i.name === 'Maya Bennett');
+  await page.getByRole('treeitem', { name: /Maya Bennett/ }).first().click();
+  await page.getByRole('tab', { name: 'Properties' }).click();
+  await page.getByRole('button', { name: 'Open in builder' }).click();
+  await expect(page.getByRole('button', { name: 'Rig check details' })).toContainText('Rig check passed', { timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Rig check details' })).toContainText('4 views · 2 styles · 9 mouth shapes');
+  const saveBtn = page.getByRole('button', { name: 'Save as new character' });
+  await expect(saveBtn).toBeDisabled();
+  // Search matches current values; choosing a hairstyle marks the draft edited.
+  await page.getByRole('textbox', { name: 'Search parts and settings' }).fill('hairstyle');
+  await page.getByRole('treeitem', { name: /Hairstyle/ }).click();
+  await page.getByRole('textbox', { name: 'Search parts and settings' }).fill('');
+  const tiles = page.getByRole('radiogroup', { name: 'Hairstyle' });
+  const current = await tiles.getByRole('radio', { checked: true }).getAttribute('title');
+  const other = tiles.getByRole('radio', { checked: false }).first();
+  const otherName = await other.getAttribute('title');
+  await other.click();
+  await expect(page.getByText(/· edited/).first()).toBeVisible();
+  await expect(page.getByRole('treeitem', { name: new RegExp(`Hairstyle.*${otherName}`) })).toBeVisible();
+  // Builder-local undo/redo.
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(tiles.getByRole('radio', { checked: true })).toHaveAttribute('title', current!);
+  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await expect(tiles.getByRole('radio', { checked: true })).toHaveAttribute('title', otherName!);
+  // Turnaround sheet shows all four views.
+  await page.getByText('Turnaround sheet').click();
+  await expect(page.getByRole('img', { name: /Maya Bennett, (Front|Three-quarter|Side|Back) view/ })).toHaveCount(4);
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  // A library character is saved as a new character used only by this instance.
+  await expect(saveBtn).toBeEnabled({ timeout: 15_000 });
+  await saveBtn.click();
+  const dlg = page.getByRole('dialog', { name: 'Save as a new character' });
+  await dlg.getByRole('radio', { name: /Only Maya Bennett in this scene/ }).click();
+  await dlg.getByRole('button', { name: 'Save character' }).click();
+  await expect(dlg).toBeHidden();
+  await expect(page.getByText(/^v1$/)).toBeVisible();
+  const after = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const inst = after.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id);
+  expect(inst.asset).toMatch(/^user\..+@1$/);
+  expect(after.assets[inst.asset].data.parts.hair).not.toBe(st.assets[inst.asset]?.data?.parts?.hair);
+  // Saved versions export as .framechar.
+  await expect(page.getByRole('button', { name: 'Export…' })).toBeEnabled();
+  // The save is one undoable step in the project history.
+  await page.getByRole('button', { name: 'Back to the workspace' }).click();
+  await page.getByRole('button', { name: /^Undo Save .* as a new character/ }).first().click();
+  await expect.poll(async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id).asset).toBe(maya.asset);
+});

@@ -35,3 +35,4 @@ export function describeCommands() {
 export * from './preview.js';
 export * from './build-character.js';
 export * from './compare.js';
+export * from './character-check.js';

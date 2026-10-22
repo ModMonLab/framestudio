@@ -96,7 +96,36 @@ export const api = {
     return file.arrayBuffer().then((b) => req<JobInfo>('POST', `/api/projects/${pid}/takes/upload?scene=${encodeURIComponent(scene)}&line=${encodeURIComponent(line)}&ext=${encodeURIComponent(ext)}`, new Uint8Array(b), { 'content-type': 'application/octet-stream' }));
   },
   mediaUrl: (pid: string, hash: string) => `/api/projects/${pid}/media/${hash}`,
+  libraryDefaults: () => req<{ builderTests?: { expressions: string[]; gestures: string[]; lipSyncText?: string }; previewCharacter?: string }>('GET', '/api/library/defaults'),
+  checkCharacter: (pid: string, body: { from: string; spec: unknown }) => req<CharacterCheckResult>('POST', `/api/projects/${pid}/characters/check`, body),
+  saveCharacterVersion: (pid: string, body: { from: string; spec: unknown; asNew?: boolean; update?: { scope: 'instance' | 'scene' | 'project'; scene?: string; instance?: string } }) => req<{ ref: string; version: number; isNew: boolean; revision: number }>('POST', `/api/projects/${pid}/characters/versions`, body),
+  usages: (id: string) => req<{ id: string; projects: { project: string; name: string; usages: { ref: string; scene: string; sceneName: string; kind: string; id: string; name: string }[] }[] }>('GET', `/api/library/usages?id=${encodeURIComponent(id)}`),
+  packageExportUrl: (pid: string, format: 'framechar' | 'frameasset' | 'framevoice', refs: string[]) => `/api/projects/${pid}/packages/export?format=${format}&refs=${encodeURIComponent(refs.join(','))}`,
+  projectPackageUrl: (pid: string) => `/api/projects/${pid}/package`,
+  importPackage: (pid: string, file: File, o: { newIds?: boolean; dryRun?: boolean } = {}) =>
+    file.arrayBuffer().then((b) => req<{ format: string; roots: string[]; added: string[]; unchanged: string[]; renamed: { from: string; to: string }[]; missing: string[]; revision: number }>('POST', `/api/projects/${pid}/packages/import?${o.newIds ? 'onConflict=new-id&' : ''}${o.dryRun ? 'dryRun=true' : ''}`, new Uint8Array(b), { 'content-type': 'application/zip' })),
+  versions: (pid: string) => req<{ versions: { id: string; name: string; createdAt: string; revision: number }[] }>('GET', `/api/projects/${pid}/versions`),
+  saveVersion: (pid: string, name: string) => req<{ id: string; name: string; createdAt: string; revision: number }>('POST', `/api/projects/${pid}/versions`, { name }),
+  compareVersion: (pid: string, vid: string) => req<VersionComparison>('GET', `/api/projects/${pid}/versions/${vid}/compare`),
+  restoreVersion: (pid: string, vid: string) => req<{ revision: number; label: string }>('POST', `/api/projects/${pid}/versions/${vid}/restore`),
 };
+
+export interface CharacterCheckResult {
+  ok: boolean;
+  families: string[];
+  views: string[];
+  mouthShapes: number;
+  actions: { compatible: number; total: number };
+  problems: { severity: 'error' | 'warning'; part?: string; message: string }[];
+}
+
+export interface VersionComparison {
+  identical: boolean;
+  project: string[];
+  scenes: { id: string; name: string; change: 'added' | 'removed' | 'changed'; clips?: { added: number; removed: number; changed: number }; instances?: { added: number; removed: number; changed: number }; versions?: { instance: string; from: string; to: string }[] }[];
+  assets: { added: string[]; removed: string[] };
+  takes: { added: number; removed: number };
+}
 
 export type ServerEvent =
   | { type: 'hello'; version: string; project?: string; revision?: number }

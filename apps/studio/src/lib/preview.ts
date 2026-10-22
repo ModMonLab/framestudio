@@ -71,6 +71,11 @@ export class AssetCache {
     return undefined;
   };
 
+  /** True when the server reported the ref as not found. */
+  isMissing(ref: string): boolean {
+    return this.map.get(ref) === null;
+  }
+
   get loading(): boolean {
     return this.pending.size > 0;
   }

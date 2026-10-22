@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { assetUsages, compareStates, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { assetUsages, checkCharacter, compareStates, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import {
@@ -438,6 +438,8 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return {};
     }
   })();
+  // Library defaults the Studio reads (builder test sets, preview character); content, not code (FR-ARC-06).
+  app.get('/api/library/defaults', async () => libraryDefaults);
   const thumbs = new Map<string, Buffer>();
   app.get<{ Querystring: { ref: string; family?: string; w?: string; h?: string; project?: string } }>('/api/library/thumbnail', async (req, reply) => {
     try {
@@ -670,6 +672,29 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       // Applied as one undoable step (unlike an external reload, history is kept).
       const r = p.open.session.restore(snap, `Restore version "${name}"`, sourceOf(req));
       return { revision: r.revision, label: r.label };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Live rig check of a character draft (FR-BLD-08): validates the changes and checks every part it draws.
+  app.post<{ Params: { pid: string }; Body: { from: string; spec?: Omit<CharacterSpec, 'from' | 'name'> & { name?: string } } }>('/api/projects/:pid/characters/check', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const lib = library(p);
+      const look = (r: string) => lib.manifest(r) as AssetManifest | undefined;
+      const base = look(req.body?.from ?? '');
+      if (!base || base.kind !== 'chr') throw new FrameError('NOT_FOUND', `${req.body?.from} is not a character`);
+      let manifest: AssetManifest;
+      try {
+        manifest = buildCharacter({ ...(req.body.spec ?? {}), from: req.body.from, name: req.body.spec?.name ?? base.name }, { manifest: look }, { id: base.id, date: '', author: '' });
+      } catch (e) {
+        if (e instanceof FrameError && e.code === 'VALIDATION_FAILED') {
+          const list = ((e.details as { problems?: string[] } | undefined)?.problems ?? [e.message]).map((message) => ({ severity: 'error' as const, message }));
+          return { ok: false, families: [], views: [], mouthShapes: 0, actions: { compatible: 0, total: 0 }, problems: list };
+        }
+        throw e;
+      }
+      return checkCharacter(manifest, look, lib.byKind('act').filter((x) => lib.latestRef(x.manifest.id) === `${x.manifest.id}@${x.manifest.version}`).map((x) => x.manifest));
     } catch (e) {
       return sendError(reply, e);
     }

@@ -15,6 +15,22 @@
     "frameRate": 24,
     "styleFamily": "flat",
     "captionStyle": "txt.podcast-captions@1",
-    "previewCharacter": "chr.maya-bennett@1"
+    "previewCharacter": "chr.maya-bennett@1",
+    "builderTests": {
+      "expressions": [
+        "exp.smile@1",
+        "exp.surprised@1",
+        "exp.sad@1",
+        "exp.skeptical@1",
+        "exp.embarrassed@1",
+        "exp.angry@1"
+      ],
+      "gestures": [
+        "act.calm-talk@1",
+        "act.point-at@1",
+        "act.wave-hello@1"
+      ],
+      "lipSyncText": "Hello, this is a lip sync test."
+    }
   }
 }

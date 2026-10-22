@@ -48,6 +48,8 @@ export interface EvaluatedFrame {
   issues: string[];
   /** Screen-space boxes per instance (selection handles, hit testing). */
   boxes: Record<string, { x: number; y: number; w: number; h: number }>;
+  /** Current mouth shape per speaking character (builder lip-sync readout, FR-LIP-03). */
+  mouths: Record<string, MouthLetter | null>;
 }
 
 const sec = (t: number) => t / TICKS_PER_SECOND;
@@ -428,6 +430,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
   const designAspect = state.project.output.width / state.project.output.height;
   const fps = state.project.frameRate;
   const boxes: EvaluatedFrame['boxes'] = {};
+  const mouths: EvaluatedFrame['mouths'] = {};
   const planeOrder = new Map(scene.stage.depthPlanes.map((p) => [p.id, p.order]));
 
   const visibleInstances = scene.instances.filter((i) => i.visible && i.kind !== 'group');
@@ -459,6 +462,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
         continue;
       }
       const perf = perform(state, scene, inst, t, o.assets, fps);
+      mouths[inst.id] = perf.mouth;
       const { spec, missing } = resolveCharacter(man, inst.character.look, family, style, o.assets, perf.extraParts);
       for (const mref of missing) issues.push(`${inst.name}: missing asset ${mref}`);
       const composed = composeCharacter(spec, { view: inst.character.view, flip: tr.flipX, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
@@ -507,6 +511,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
     view,
     issues,
     boxes,
+    mouths,
   };
 }
 
