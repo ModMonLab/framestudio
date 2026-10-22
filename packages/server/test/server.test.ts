@@ -191,6 +191,40 @@ describe('Frame Server (FR-ARC-01..05)', () => {
     await expect.poll(async () => (await api('GET', `/api/jobs/${big.json.id}`)).json.state, { timeout: 30_000, interval: 200 }).toBe('cancelled');
   }, 150_000);
 
+  it('clones a voice only with consent, stores the consent, and normalises uploads on request (FR-VOI-04, FR-VOI-06)', async () => {
+    const { encodeWav } = await import('@frame/io');
+    const pid = (await api('POST', '/api/projects/open', { path: project() })).json.id;
+    const st = (await api('GET', `/api/projects/${pid}/state`)).json;
+    const scene = Object.keys(st.state.scenes)[0]!;
+    const sr = 16000;
+    const tone = (s: number, amp: number) => encodeWav({ sampleRate: sr, channels: 1, data: [new Float32Array(sr * s).map((_x, i) => amp * Math.sin((2 * Math.PI * 180 * i) / sr))] });
+    const upload = async (bytes: Uint8Array) => (await (await fetch(`${base}/api/projects/${pid}/media?ext=wav`, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: bytes as BodyInit })).json() as any).hash as string;
+    const short = await upload(tone(2, 0.3));
+    const long = await upload(tone(4, 0.3));
+    const consent = { statement: 'own-voice', speakerName: 'Test Speaker' };
+    expect((await api('POST', `/api/projects/${pid}/voices/clone`, { name: 'Me', media: long, transcript: 'Hello there.' })).json.error.code).toBe('CONSENT_REQUIRED');
+    expect((await api('POST', `/api/projects/${pid}/voices/clone`, { name: 'Me', media: long, transcript: 'Hello there.', consent }, { 'x-frame-agent': 'tester' })).json.error.code).toBe('PERMISSION_REQUIRED');
+    expect((await api('POST', `/api/projects/${pid}/voices/clone`, { name: 'Me', media: short, transcript: 'Hi.', consent })).json.error.message).toMatch(/at least 3 s/);
+    const job = await api('POST', `/api/projects/${pid}/voices/clone`, { name: 'Me', media: long, transcript: 'Hello there, this is me.', consent });
+    let j: any;
+    await expect.poll(async () => (j = (await api('GET', `/api/jobs/${job.json.id}`)).json).state, { timeout: 20_000 }).toBe('succeeded');
+    const voice = (await api('GET', `/api/projects/${pid}/state`)).json.state.assets[j.result.ref];
+    expect(voice.data).toMatchObject({ method: 'clone', consent: { statement: 'own-voice', speakerName: 'Test Speaker', confirmedBy: 'Studio user' }, references: [{ emotion: 'neutral', transcript: 'Hello there, this is me.', fixture: false }] });
+    expect(j.result.note).toMatch(/10–30 s/);
+    // Without a transcript and no worker: a clear failure.
+    const nt = await api('POST', `/api/projects/${pid}/voices/clone`, { name: 'Me 2', media: long, consent });
+    await expect.poll(async () => (j = (await api('GET', `/api/jobs/${nt.json.id}`)).json).state, { timeout: 20_000 }).toBe('failed');
+    // Normalised upload: peak at −1 dBFS.
+    const who = (await api('POST', `/api/projects/${pid}/commands`, { commands: [{ name: 'instance.add', params: { scene, kind: 'character', asset: 'chr.maya-bennett@1', name: 'Host', character: { look: 'on-air', view: 'front', posture: 'standing', auto: { idle: false, listening: false, blinks: false, talkingGestures: false } } } }] })).json.commands[0].params.id;
+    const line = (await api('POST', `/api/projects/${pid}/commands`, { commands: [{ name: 'line.add', params: { scene, speaker: who, text: 'Quiet take.', start: 0 } }] })).json.commands[0].params.id;
+    const up = await fetch(`${base}/api/projects/${pid}/takes/upload?scene=${scene}&line=${line}&ext=wav&normalise=true&source=recorded`, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: tone(1, 0.1) as BodyInit });
+    const uj = ((await up.json()) as any).id;
+    await expect.poll(async () => (j = (await api('GET', `/api/jobs/${uj}`)).json).state, { timeout: 20_000 }).toBe('succeeded');
+    expect(j.result.normalisedDb).toBeCloseTo(19, 0);
+    const take = (await api('GET', `/api/projects/${pid}/state`)).json.state.takes[j.result.take];
+    expect(take.source).toBe('recorded');
+  });
+
   it('reports worker status honestly when none is configured or reachable (FR-VOI-12)', async () => {
     expect((await api('GET', '/api/worker/status')).json.state).toBe('misconfigured');
     const s2 = await createServer({ contentDir: path.join(repo, 'content'), workerUrl: 'http://127.0.0.1:9' });

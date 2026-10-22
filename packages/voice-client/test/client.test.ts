@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FrameError } from '@frame/schema';
-import { VoiceClient, nextTakeNumber, sourceLabel, takeDrafts, toAlignment, type WorkerJob } from '../src/index.js';
+import { VoiceClient, nextTakeNumber, resolveDelivery, sourceLabel, takeDrafts, toAlignment, type WorkerJob } from '../src/index.js';
 
 function fakeFetch(routes: Record<string, (init: RequestInit) => { status?: number; body: unknown }>) {
   const calls: { url: string; init: RequestInit }[] = [];
@@ -79,5 +79,17 @@ describe('take helpers', () => {
     const a = toAlignment({ words: [{ text: 'hi', start: -0.01, end: 0.2 }], phonemes: [], confidence: 1.3, method: 'fixture' });
     expect(a.words[0]!.start).toBe(0);
     expect(a.confidence).toBe(1);
+  });
+});
+
+describe('delivery presets (Catalog Q2, FR-VOI-08)', () => {
+  const all = { emotion: ['neutral', 'happy', 'deadpan'], pace: { min: 0.5, max: 2 }, instruction: true };
+  it('a preset supplies defaults and the line overrides them', () => {
+    expect(resolveDelivery({ preset: 'delivery.deadpan' }, { emotion: 'deadpan', instruction: 'flat, deadpan' }, all)).toEqual({ emotion: 'deadpan', instruction: 'flat, deadpan' });
+    expect(resolveDelivery({ preset: 'delivery.deadpan', emotion: 'happy', pace: 1.2 }, { emotion: 'deadpan', instruction: 'flat' }, all)).toEqual({ emotion: 'happy', pace: 1.2, instruction: 'flat' });
+  });
+  it('sends only controls the engine reports', () => {
+    expect(resolveDelivery({ pace: 1.3, instruction: 'whisper' }, { emotion: 'angry' }, { emotion: ['neutral'], pace: null, instruction: false })).toEqual({});
+    expect(resolveDelivery({ pace: 1 }, undefined, all)).toEqual({});
   });
 });

@@ -352,3 +352,12 @@ export function rmsEnvelope(a: PcmAudio, windowS = 0.02): number[] {
   }
   return out;
 }
+
+/** Peak-normalises audio to `targetDb` dBFS (FR-VOI-06 optional upload normalisation). Silence is returned unchanged. */
+export function normalisePeak(a: PcmAudio, targetDb = -1): { audio: PcmAudio; gainDb: number } {
+  let peak = 0;
+  for (const ch of a.data) for (let i = 0; i < ch.length; i++) peak = Math.max(peak, Math.abs(ch[i]!));
+  if (peak < 1e-6) return { audio: a, gainDb: 0 };
+  const g = Math.pow(10, targetDb / 20) / peak;
+  return { audio: { ...a, data: a.data.map((ch) => ch.map((v) => v * g)) }, gainDb: Math.round(20 * Math.log10(g) * 100) / 100 };
+}

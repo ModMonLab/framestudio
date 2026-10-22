@@ -1,14 +1,16 @@
 /** Properties panel (Design System §7.1): Properties / Acting / Audio tabs with collapsible sections. */
 import { useEffect, useRef, useState } from 'react';
-import { Pause, Play, Plus, Sparkles, Upload, UserCog } from 'lucide-react';
+import { Mic, Pause, Play, Plus, Sparkles, Upload, UserCog } from 'lucide-react';
 import { lineTakeState, lookAt, trackFor, type ProjectState } from '@frame/core';
 import type { Clip, Instance, Scene, Take } from '@frame/schema';
-import { Button, Chip, EmptyState, IconButton, NumberField, Panel, Section, Segmented, Select, SliderRow, StatusBadge, Tabs, TextArea, ToggleRow, useSectionState, useToasts, type EditPhase } from '@frame/ui';
+import { Button, Chip, Dialog, EmptyState, IconButton, NumberField, Panel, Section, Segmented, Select, SliderRow, StatusBadge, Tabs, TextArea, ToggleRow, useSectionState, useToasts, type EditPhase } from '@frame/ui';
 import { api, type WorkerStatus } from '../lib/api.js';
 import { useStudio, type Mode } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
 import { RangeDialog } from './RangeDialog.js';
 import { NotesEditor } from './NotesEditor.js';
+import { Recorder } from './Recorder.js';
+import { CloneDialog } from './CloneDialog.js';
 
 type Tab = 'properties' | 'acting' | 'audio';
 const DEFAULT_TAB: Record<Mode, Tab> = { stage: 'properties', direct: 'acting', edit: 'audio' };
@@ -392,6 +394,16 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const [count, setCount] = useState(2);
   const [newLine, setNewLine] = useState('');
   const [rangeOpen, setRangeOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  const [normalise, setNormalise] = useState(false);
+  // Seed policy (FR-VOI-07): new random seeds, a fixed seed, or the chosen take's seed.
+  const [seedPolicy, setSeedPolicy] = useState<'random' | 'fixed' | 'reuse'>('random');
+  const [fixedSeed, setFixedSeed] = useState(1);
+  const [presets, setPresets] = useState<{ ref: string; name: string }[]>([]);
+  useEffect(() => {
+    api.library('', 'delivery', pid, 50).then((r) => setPresets(r.results.map((h) => ({ ref: h.ref, name: h.name })))).catch(() => setPresets([]));
+  }, [pid]);
   useEffect(() => {
     api.worker(pid).then(setWorker).catch(() => undefined);
   }, [pid]);
@@ -402,6 +414,7 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const voiceName = voiceRef ? project.assets[voiceRef]?.name ?? assets.manifest(voiceRef)?.name : undefined;
   const takes = line ? Object.values(project.takes).filter((t) => t.line === line.id).sort((a, b) => b.number - a.number) : [];
   const state = line ? lineTakeState(project, line) : undefined;
+  const chosenSeed = line?.line?.take ? project.takes[line.line.take]?.seed : undefined;
   const generating = Object.values(jobs).some((j) => j.kind === 'takes.generate' && (j.state === 'queued' || j.state === 'running'));
   const workerOk = worker?.state === 'connected' || worker?.state === 'busy';
   const engine = worker?.capabilities?.engines[0];
@@ -410,7 +423,7 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const upload = async (f: File) => {
     if (!line) return;
     try {
-      await api.uploadTake(pid, scene.id, line.id, f);
+      await api.uploadTake(pid, scene.id, line.id, f, { normalise });
     } catch (e) {
       studio.set({ lastError: { message: (e as Error).message } });
     }
@@ -418,7 +431,8 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const generate = async () => {
     if (!line) return;
     try {
-      await api.generateTakes(pid, { scene: scene.id, lines: [line.id], takes: count });
+      const seed = seedPolicy === 'fixed' ? fixedSeed : seedPolicy === 'reuse' ? chosenSeed : undefined;
+      await api.generateTakes(pid, { scene: scene.id, lines: [line.id], takes: count, ...(seed !== undefined ? { seed } : {}) });
     } catch (e) {
       studio.set({ lastError: { message: (e as Error).message } });
     }
@@ -439,10 +453,12 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
         {voiceName ? <p><b>{voiceName}</b></p> : <p className="fr-hint">{inst.name} has no voice yet.</p>}
         <div className="st-row">
           <Button icon={<Sparkles size={14} />} onClick={() => openVoiceDesigner(inst.id)}>{voiceName ? 'Design another voice…' : 'Design a voice…'}</Button>
+          <Button icon={<Mic size={14} />} onClick={() => setCloning(true)}>Clone a voice…</Button>
           {voiceRef && <Button disabled={!project.assets[voiceRef]} disabledReason="Only voices designed in this project can be extended" onClick={() => setRangeOpen(true)}>Emotional range…</Button>}
         </div>
         {voiceRef && project.assets[voiceRef] && <p className="fr-faint">Emotions: {((project.assets[voiceRef]!.data as { references: { emotion: string; accepted: boolean }[] }).references.filter((r) => r.accepted).map((r) => r.emotion).join(', '))} · version {project.assets[voiceRef]!.version}</p>}
         {voiceRef && <RangeDialog voice={voiceRef} open={rangeOpen} onClose={() => setRangeOpen(false)} />}
+        {cloning && <CloneDialog scene={scene.id} instance={inst.id} onClose={() => setCloning(false)} />}
       </Section>
       <Section title="Current line" summary={state} open={open.line!} onToggle={(o) => toggle('line', o)}>
         {line?.line ? (
@@ -462,22 +478,48 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
             </div>
             {worker?.fixture && <p className="fr-hint">The connected worker produces fixture audio — not real speech.</p>}
             <input ref={fileRef} type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,.aac,.webm,audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f); }} />
-            <Button icon={<Upload size={14} />} disabled={line.line.muted} disabledReason="This line is muted" onClick={() => fileRef.current?.click()}>Upload take…</Button>
+            <div className="st-row">
+              <Button icon={<Upload size={14} />} disabled={line.line.muted} disabledReason="This line is muted" onClick={() => fileRef.current?.click()}>Upload take…</Button>
+              <Button icon={<Mic size={14} />} disabled={line.line.muted} disabledReason="This line is muted" onClick={() => setRecording(true)}>Record take…</Button>
+            </div>
+            <ToggleRow label="Normalise uploads and recordings" description="Peaks to −1 dBFS; the original file is kept" checked={normalise} onChange={setNormalise} />
+            {recording && (
+              <Dialog title={`Record a take · ${inst.name}`} open onClose={() => setRecording(false)} footer={<Button onClick={() => setRecording(false)}>Close</Button>}>
+                <p className="st-rec-script">“{line.line.text}”</p>
+                <Recorder useLabel="Use as a take" onUse={(r) => { setRecording(false); void api.uploadTake(pid, scene.id, line.id, new File([r.wav as BlobPart], `recording-${r.number}.wav`), { normalise, recorded: true }).catch((e: Error) => studio.set({ lastError: { message: e.message } })); }} />
+              </Dialog>
+            )}
           </>
         ) : <p className="fr-hint">{inst.name} has no lines in this scene.</p>}
         <TextArea label="New line" value={newLine} onChange={setNewLine} rows={2} placeholder={`New line for ${inst.name}`} />
         <Button icon={<Plus size={14} />} disabled={!newLine.trim()} disabledReason="Type the line first" onClick={() => void addLine()}>Add line at playhead</Button>
       </Section>
       {line?.line && (
-        <Section title="Delivery" summary={line.line.delivery.emotion ?? 'Neutral'} open={open.delivery!} onToggle={(o) => toggle('delivery', o)}>
+        <Section title="Delivery" summary={presets.find((x) => x.ref === line.line!.delivery.preset)?.name ?? line.line.delivery.emotion ?? 'Neutral'} open={open.delivery!} onToggle={(o) => toggle('delivery', o)}>
+          {presets.length > 0 && <Select label="Delivery preset" value={line.line.delivery.preset ?? ''} options={[{ value: '', label: 'Custom' }, ...presets.map((x) => ({ value: x.ref, label: x.name }))]} onChange={(v) => void studio.exec([{ name: 'line.setDelivery', params: { scene: scene.id, id: line.id, delivery: v ? { preset: v } : {} } }], v ? `Delivery ${presets.find((x) => x.ref === v)?.name}` : 'Custom delivery')} />}
           {engine ? (
             <Select label="Emotion" value={line.line.delivery.emotion ?? 'neutral'} options={engine.controls.emotion.map((e) => ({ value: e, label: e[0]!.toUpperCase() + e.slice(1) }))} onChange={(v) => void studio.exec([{ name: 'line.setDelivery', params: { scene: scene.id, id: line.id, delivery: { ...line.line!.delivery, emotion: v } } }])} />
           ) : <p className="fr-hint">Delivery options appear when the voice worker is connected (they depend on its engine).</p>}
-          {engine && !engine.controls.pace && <p className="fr-faint">Pace is not supported by {engine.label}.</p>}
-          {engine && !engine.controls.instruction && <p className="fr-faint">Instruction text is not supported by {engine.label}.</p>}
+          {engine?.controls.pace ? <SliderRow label="Pace" value={line.line.delivery.pace ?? 1} min={0.5} max={2} step={0.05} defaultValue={1} format={(v) => `${v.toFixed(2)}×`} onChange={(v, ph) => ph === 'commit' && void studio.exec([{ name: 'line.setDelivery', params: { scene: scene.id, id: line.id, delivery: { ...line.line!.delivery, pace: v } } }], 'Change pace')} />
+            : engine && <p className="fr-faint">Pace is not supported by {engine.label}.</p>}
+          {engine?.controls.instruction ? <InstructionField key={`${line.id}:${line.line.delivery.instruction ?? ''}`} value={line.line.delivery.instruction ?? ''} onCommit={(v) => { const { instruction: _old, ...rest } = line.line!.delivery; void studio.exec([{ name: 'line.setDelivery', params: { scene: scene.id, id: line.id, delivery: v ? { ...rest, instruction: v } : rest } }], 'Change instruction'); }} />
+            : engine && <p className="fr-faint">Instruction text is not supported by {engine.label}.</p>}
+          <Select label="Seeds" value={seedPolicy} onChange={(v) => setSeedPolicy(v as typeof seedPolicy)} options={[{ value: 'random', label: 'New random seeds' }, { value: 'fixed', label: 'Fixed seed' }, { value: 'reuse', label: "Reuse the chosen take's seed", disabled: chosenSeed === undefined, disabledReason: 'The chosen take has no seed' }]} />
+          {seedPolicy === 'fixed' && <NumberField label="Seed" prefix="Seed" precision={0} min={0} max={2 ** 31 - 1} value={fixedSeed} onChange={(v, ph) => ph === 'commit' && setFixedSeed(Math.round(v))} />}
+          <p className="fr-faint">{seedPolicy === 'random' ? 'Each generation explores new variations.' : 'The same seed and settings reproduce the same takes on the same engine and model.'}</p>
         </Section>
       )}
     </>
+  );
+}
+
+/** Instruction text for engines that accept it (FR-VOI-07); one command per edit. */
+function InstructionField({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
+  const [text, setText] = useState(value);
+  return (
+    <div onBlur={() => text.trim() !== value && onCommit(text.trim())}>
+      <TextArea label="Instruction" value={text} onChange={setText} rows={2} placeholder="e.g. dry, sarcastic" />
+    </div>
   );
 }
 

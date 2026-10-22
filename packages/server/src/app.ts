@@ -13,13 +13,13 @@ import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
-  decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
+  decodeAudioFile, encodeWav, normalisePeak, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
   projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, templateCommandsForLibrary, replaceCastCommands, projectFromTemplateCommands, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
   scriptPdf, styleFamilyBlockers, ProjectStore, AppSettingsStore, type AppSettings, RecentProjects, duplicateProject, moveToTrash, revealInFileManager,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
-import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
+import { VoiceClient, designCandidates, designedVoiceManifest, clonedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
 
@@ -1386,6 +1386,51 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
+  // Clone a voice from a recording (FR-VOI-04): consent is mandatory and stored in the voice; agents need permission.
+  app.post<{ Params: { pid: string }; Body: { name: string; description?: string; language?: string; media: string; transcript?: string; consent: { statement: 'own-voice' | 'documented-consent'; speakerName: string; confirmedBy?: string; notes?: string }; assignTo?: { scene: string; instance: string }[] } }>('/api/projects/:pid/voices/clone', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      if (req.headers['x-frame-agent'] && !p.open.state.project.permissions.agent.cloneVoices) throw new FrameError('PERMISSION_REQUIRED', 'Agents may not clone voices in this project', undefined, 'A person can allow it in Project settings ▸ Agent permissions.');
+      if (!b?.name?.trim() || !b.media) throw new FrameError('USAGE', 'name and media (the uploaded recording) are required');
+      if (!b.consent || (b.consent.statement !== 'own-voice' && b.consent.statement !== 'documented-consent') || !b.consent.speakerName?.trim()) throw new FrameError('CONSENT_REQUIRED', 'Confirm it is your own voice or that you have the speaker\'s documented consent, and give the speaker\'s name');
+      const file = p.open.store.findMedia(b.media);
+      if (!file) throw new FrameError('NOT_FOUND', 'The recording is not in this project');
+      let pcm;
+      try {
+        pcm = decodeAudioFile(file);
+      } catch (e) {
+        throw new FrameError('VALIDATION_FAILED', `The recording could not be decoded: ${(e as Error).message}`);
+      }
+      const durationS = (pcm.data[0]?.length ?? 0) / pcm.sampleRate;
+      if (durationS < 3) throw new FrameError('VALIDATION_FAILED', `The recording is ${durationS.toFixed(1)} s; cloning needs at least 3 s (10–30 s is best)`);
+      const ext = path.extname(file).slice(1);
+      const media = { hash: b.media, ext, mime: MIME[ext] ?? 'audio/wav', bytes: fs.statSync(file).size, durationS: Math.round(durationS * 1000) / 1000, sampleRate: pcm.sampleRate, channels: pcm.channels };
+      const source = sourceOf(req);
+      const job = jobs.voice.submit('voice.clone', `Clone voice ${b.name.trim()}`, async (ctx) => {
+        let transcript = b.transcript?.trim();
+        if (!transcript) {
+          // Auto-transcription on the worker when no transcript is given.
+          ctx.progress(0.2, 'Transcribing');
+          const client = workerFor(p);
+          const hash = await client.uploadBlob(new Uint8Array(fs.readFileSync(file)), `ref.${ext}`, media.mime);
+          const tj = await client.transcribe({ audioHash: hash, language: b.language ?? 'en' });
+          transcript = (await client.wait(tj, { signal: ctx.signal, onProgress: (j) => ctx.progress(0.2 + j.progress * 0.6, 'Transcribing') })).text.trim();
+          if (!transcript) throw new FrameError('VALIDATION_FAILED', 'No speech was recognised in the recording; type what is said instead');
+        }
+        const date = new Date().toISOString().slice(0, 10);
+        const manifest = clonedVoiceManifest({ id: `user.${randomUUID()}`, name: b.name.trim(), description: b.description ?? '', language: b.language ?? 'en', media, transcript, date, consent: { statement: b.consent.statement, speakerName: b.consent.speakerName.trim(), confirmedBy: b.consent.confirmedBy?.trim() || (source === 'user' ? 'Studio user' : source), date, ...(b.consent.notes ? { notes: b.consent.notes } : {}) } });
+        const ref = `${manifest.id}@1`;
+        const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest } }];
+        for (const a of b.assignTo ?? []) cmds.push({ name: 'instance.update', params: { scene: a.scene, id: a.instance, set: { character: { ...currentCharacter(p, a.scene, a.instance), voice: ref } } } });
+        p.open.session.apply({ commands: cmds as never, source, label: `Clone voice ${b.name.trim()}` });
+        return { ref, transcript, durationS: media.durationS, ...(durationS < 10 ? { note: 'Recordings of 10–30 s give a closer likeness.' } : {}) };
+      }, p.id);
+      return reply.code(202).send(publicJob(job));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
   app.post<{ Params: { pid: string }; Body: { name: string; description: string; language?: string; sampleText: string; candidate: { media: { hash: string; ext: string; mime: string; bytes: number; durationS?: number }; seed: number | null; durationS: number; fixture: boolean }; assignTo?: { scene: string; instance: string }[]; versionOf?: string; updateUsers?: boolean } }>('/api/projects/:pid/voices', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
@@ -1594,7 +1639,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
 
   // Upload a take for a line (FR-VOI-06): store, decode and measure, lip sync from the amplitude envelope at once
   // (FR-LIP-02), then forced alignment when a worker is reachable (FR-LIP-01).
-  app.post<{ Params: { pid: string }; Querystring: { scene: string; line: string; ext: string; choose?: string }; Body: Buffer }>('/api/projects/:pid/takes/upload', async (req, reply) => {
+  app.post<{ Params: { pid: string }; Querystring: { scene: string; line: string; ext: string; choose?: string; normalise?: string; source?: string }; Body: Buffer }>('/api/projects/:pid/takes/upload', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
       const { scene, line, ext } = req.query;
@@ -1614,10 +1659,19 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         }
         const durationS = (pcm.data[0]?.length ?? 0) / pcm.sampleRate;
         if (durationS < 0.1) throw new FrameError('VALIDATION_FAILED', 'The audio is shorter than 0.1 s');
-        const media = { ...media0, durationS: Math.round(durationS * 1000) / 1000, sampleRate: pcm.sampleRate, channels: pcm.channels };
+        // Optional normalisation (FR-VOI-06): peaks to −1 dBFS, stored as a new WAV; the original stays in the store.
+        let base = media0;
+        let normalisedDb: number | undefined;
+        if (req.query.normalise === 'true') {
+          const n = normalisePeak(pcm, -1);
+          pcm = n.audio;
+          normalisedDb = n.gainDb;
+          base = p.open.store.putMedia(encodeWav(n.audio), { ext: 'wav', mime: 'audio/wav' });
+        }
+        const media = { ...base, durationS: Math.round(durationS * 1000) / 1000, sampleRate: pcm.sampleRate, channels: pcm.channels };
         const ln = p.open.state.scenes[scene]!.clips.find((c) => c.id === line)!.line!;
         const alignment = { method: 'amplitude' as const, words: [], phonemes: [], confidence: 0, envelope: { windowS: 0.02, values: rmsEnvelope(pcm, 0.02) } };
-        const r = p.open.session.apply({ source: sourceOf(req), label: 'Upload take', commands: [{ name: 'take.add', params: { take: { line, lineRevision: ln.revision, source: 'uploaded', fixture: false, status: 'ready', media, durationS: media.durationS, alignment } } }] });
+        const r = p.open.session.apply({ source: sourceOf(req), label: 'Upload take', commands: [{ name: 'take.add', params: { take: { line, lineRevision: ln.revision, source: req.query.source === 'recorded' ? 'recorded' : 'uploaded', fixture: false, status: 'ready', media, durationS: media.durationS, alignment } } }] });
         const takeId = (r.commands[0]!.params as { id: string }).id;
         if (req.query.choose !== 'false') p.open.session.apply({ source: sourceOf(req), label: 'Choose uploaded take', commands: [{ name: 'line.chooseTake', params: { scene, id: line, take: takeId } }] });
         ctx.progress(0.5, 'Aligning');
@@ -1625,7 +1679,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         let note: string | undefined;
         try {
           const client = workerFor(p);
-          const hash = await client.uploadBlob(bytes, `take.${ext}`, MIME[ext.toLowerCase()] ?? 'application/octet-stream');
+          const hash = await client.uploadBlob(new Uint8Array(fs.readFileSync(p.open.store.findMedia(base.hash)!)), `take.${base.ext}`, base.mime);
           const aj = await client.align({ audioHash: hash, transcript: ln.text.replace(/\[pause\s+\d+(?:\.\d+)?s\]/gi, ' ').replace(/\s+/g, ' ').trim(), language: 'en' });
           const al = await client.wait(aj, { signal: ctx.signal, onProgress: (j) => ctx.progress(0.5 + j.progress * 0.5, 'Aligning') });
           p.open.session.apply({ source: sourceOf(req), label: 'Align take', commands: [{ name: 'take.update', params: { id: takeId, set: { alignment: toAlignment(al) } } }] });
@@ -1634,7 +1688,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
           // Without an aligner the amplitude fallback stays in place (marked approximate).
           note = `Lip sync uses the audio level until the take is aligned: ${(e as Error).message}`;
         }
-        return { take: takeId, durationS: media.durationS, aligned, ...(note ? { note } : {}) };
+        return { take: takeId, durationS: media.durationS, aligned, ...(normalisedDb !== undefined ? { normalisedDb } : {}), ...(note ? { note } : {}) };
       }, p.id);
       return reply.code(202).send(publicJob(job));
     } catch (e) {

@@ -16,6 +16,7 @@ import { PropertiesPanel } from './PropertiesPanel.js';
 import { Timeline } from './Timeline.js';
 import { EpisodeView } from './EpisodeView.js';
 import { ScriptView } from './ScriptView.js';
+import { VoiceLibrary } from './VoiceLibrary.js';
 import { ProjectSettingsDialog } from './ProjectSettings.js';
 import { ExportDialog } from './ExportDialog.js';
 import { JobsButton } from './JobsButton.js';
@@ -52,7 +53,7 @@ export function useCtx(): Ctx {
 const SAVE_LABEL = { saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', error: 'Not saved' } as const;
 const SAVE_TONE = { saved: 'success', saving: 'info', unsaved: 'warning', error: 'danger' } as const;
 
-export function Workspace({ pid, builder, part, screen }: { pid: string; builder?: { scene: string; instance: string }; part?: string; screen?: 'library' }) {
+export function Workspace({ pid, builder, part, screen }: { pid: string; builder?: { scene: string; instance: string }; part?: string; screen?: 'library' | 'voices' }) {
   const studio = useMemo(() => new Studio(pid), [pid]);
   const assets = useMemo(() => new AssetCache(pid), [pid]);
   const [failed, setFailed] = useState<string>();
@@ -103,7 +104,7 @@ export function Workspace({ pid, builder, part, screen }: { pid: string; builder
   const ctx: Ctx = { studio, assets, openExport: () => setExportOpen(true), openVoiceDesigner: (i) => setVoiceFor(i), openVersions: () => setVersionsOpen(true), importPackage: () => pkgInput.current?.click() };
   return (
     <StudioCtx.Provider value={ctx}>
-      <ContextMenuHost>{screen === 'library' ? <LibraryScreen /> : part ? <PartEditor key={part} partRef={part} /> : builder ? <Builder scene={builder.scene} instance={builder.instance} /> : <Shell />}</ContextMenuHost>
+      <ContextMenuHost>{screen === 'library' ? <LibraryScreen /> : screen === 'voices' ? <VoiceLibrary /> : part ? <PartEditor key={part} partRef={part} /> : builder ? <Builder scene={builder.scene} instance={builder.instance} /> : <Shell />}</ContextMenuHost>
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <VoiceDesigner open={voiceFor !== null} instance={voiceFor ?? undefined} onClose={() => setVoiceFor(null)} />
       <VersionsDialog pid={pid} open={versionsOpen} onClose={() => setVersionsOpen(false)} />
@@ -260,6 +261,7 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
     ] },
     { id: 'scene', label: 'Scene', items: [
       { id: 'voice', label: 'Design a voice…', onSelect: () => openVoiceDesigner(undefined) },
+      { id: 'voices', label: 'Voice library', onSelect: () => (location.hash = `#/p/${encodeURIComponent(studio.state.pid)}/voices`) },
       { id: 'set-save', label: 'Save set…', disabled: !scene?.instances.some((i) => i.kind === 'set-piece'), disabledReason: 'Place a kit in this scene first', onSelect: () => saveSceneAsSet(studio, (message) => toasts.show({ tone: 'success', message })) },
       { id: 'tpl-save-ep', label: 'Save episode as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message }), 'episode') },
       { id: 'episode-view', label: 'Episode view', checked: !!studio.state.episodeView, onSelect: () => studio.set({ episodeView: !studio.state.episodeView, scriptView: false }) },

@@ -163,17 +163,17 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-DLG-06 | Done | line.chooseTake clip length + ripple (script.test.ts); SPEAKER_OVERLAP problem | A line's clip length follows the chosen take's measured duration |
 | FR-DLG-07 | Done | script.test.ts “overlapping speech mixes both takes and stacks both captions” | Overlapping speech between different speakers is allowed and mixed |
 | FR-DLG-08 | Done | worker synth_with_pauses ([pause Ns] and mid-line … beats; test_api.py); estimateSpeechSeconds; stripPauseMarkers for captions | Pauses and beats: lines may contain explicit pause markers (`[pause 0 |
-| FR-VOI-01 | In progress | project-local voice assets (asset.addLocal); Layers Voice row | Voice library — Voice library screen pending |
+| FR-VOI-01 | Done | Voice library screen (`#/p/<pid>/voices`, Scene ▸ Voice library): project, user and bundled voices with description, method, language, versions, consent, users, a play button per reference, assign to a character; Studio e2e “records a take and clones a voice…” | Voice library |
 | FR-VOI-02 | In progress | slice.test.ts; apps/studio/e2e/studio.spec.ts (fixture worker) | Design a voice — Design → candidates → audition → save works end to end; real Qwen3 output not verified here (no GPU) |
 | FR-VOI-03 | Done (fixture path) | Worker /v1/voices/range; `POST /voices/range` job; Studio "Emotional range…" dialog (audition, similarity, accept); `tools/test/slice.test.ts` (happy delivery uses the happy reference) and Studio e2e M1 slice | Emotional range bank — real-engine quality Not verified — requires reference machine (AC-03) |
-| FR-VOI-04 | Not started | — | Clone a voice |
-| FR-VOI-05 | Not started | — | Record in browser |
-| FR-VOI-06 | In progress | server.test.ts upload (decode, measure, amplitude envelope, coded failure); slice.test.ts upload aligned by the worker; Studio “Upload take…” | Upload — Optional loudness normalisation on upload pending |
-| FR-VOI-07 | In progress | slice.test.ts; studio e2e “Generate takes” | Generate takes — Generation, takes list, choose; seed policy UI pending |
-| FR-VOI-08 | In progress | voice-client workflow sends only reported controls; Studio delivery shows only worker emotions and states unsupported pace/instruction | Honest capabilities — Delivery presets (Q2) pending |
+| FR-VOI-04 | Done (fixture path) | `POST /voices/clone` (consent statement and speaker name mandatory, agents need the `cloneVoices` permission, ≥3 s, auto-transcription on the worker when no transcript); Studio Clone dialog; `server.test.ts` “clones a voice only with consent…”; Studio e2e | Clone a voice — real-engine likeness Not verified — requires reference machine |
+| FR-VOI-05 | Done | Studio Recorder: microphone choice, noise-floor check, count-in, level meter, numbered takes, auto-trim with manual trim, WAV encode; used for takes and cloning; Studio e2e with Chromium's fake microphone (test tones, not speech) | Record in browser |
+| FR-VOI-06 | Done | server.test.ts upload (decode, measure, amplitude envelope, coded failure; `normalise=true` peaks to −1 dBFS keeping the original); slice.test.ts upload aligned by the worker; Studio “Upload take…” with the Normalise toggle | Upload |
+| FR-VOI-07 | Done | slice.test.ts; studio e2e “Generate takes”; seed policy (random, fixed, reuse the chosen take's seed) in the Current line section | Generate takes |
+| FR-VOI-08 | Done | `resolveDelivery` sends only reported controls (voice-client `client.test.ts`); 12 delivery presets (Q2) whose settings the line can override; Studio delivery shows only worker emotions and states unsupported pace/instruction | Honest capabilities |
 | FR-VOI-09 | Done | session.test.ts outdated takes; workflow.ts never auto-selects stale; Studio “Previous text” badge | Stale results |
 | FR-VOI-10 | Done | Accepting range references (`POST /voices/version`) or redesigning (`POST /voices` with `versionOf`) saves version n+1 (next free number); characters switch only when asked; existing takes keep their voice version. Evidence: `tools/test/slice.test.ts`, Studio e2e M1 slice | Versions |
-| FR-VOI-11 | Not started | — | Starter voices |
+| FR-VOI-11 | Blocked | Needs real voice-model output: starter voices must be generated and reviewed on the reference machine (no GPU here; fixture audio must never ship as a voice) | Starter voices |
 | FR-VOI-12 | Done | server.test.ts worker status; Studio WorkerBadge (connected/busy/offline/not set up with hint) | Worker status |
 | FR-VWK-01 | In progress | services/voice-worker (FastAPI), README, Dockerfile, setup-wsl.sh | The Voice Worker is a separate service the owner runs (WSL2/Docker on — Install not verified on the reference machine |
 | FR-VWK-02 | Not verified | engines/qwen3.py against qwen-tts 0.1.1 API (decision 0006) | Engines — Requires reference GPU (owner checklist §1) |
@@ -227,7 +227,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | CAT-06 | Not verified | — | Quality bar — Human visual review (owner); all items review: pending |
 | CAT-07 | In progress | catalog/*.yaml; packages/assets/test/catalog.test.ts | Content pipeline — Content pipeline pending |
 | CAT-08 | In progress | tools/content/sounds.ts, music.ts; tools/test/content-audio.test.ts (music −16 LUFS, ambience −30 LUFS, cues/SFX peak −3 dBFS, seamless loops) | Sound assets — Synthesised placeholders awaiting a listening review: 20/20 music, 12/12 cues, 20/20 ambience, 60/60 SFX |
-| CAT-09 | Not started | — | Starter voices |
+| CAT-09 | Blocked | See FR-VOI-11: starter voices need real model output and review | Starter voices |
 | CAT-10 | Done | packages/assets/src/coverage.ts; packages/assets/test/coverage.test.ts; `pnpm catalog:coverage` → docs/catalog/coverage.md | Coverage report — Report exists; currently 0 % green (release needs 100 %) |
 | UI-01 | In progress | apps/studio (shell, rail, resizable panels, canvas, timeline, properties); studio e2e | The Studio implements the shell, modes, rail, panels, canvas, timeline — Panel collapse shortcuts exist (\\ and View menu); 125 % zoom check pending |
 | UI-02 | In progress | apps/studio Workspace + Builder | The Studio workspace and Character builder match the reference screens — Visual comparison with mockups pending owner sign-off |

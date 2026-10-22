@@ -334,3 +334,14 @@
 .st-meter-hold { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--color-text); }
 .st-meter-clip { position: absolute; right: -40px; top: -4px; font-size: 9px; font-weight: 700; color: #fff; background: var(--color-danger); border: 0; border-radius: 3px; padding: 1px 4px; cursor: pointer; }
 .st-duck { position: absolute; left: 0; top: 0; pointer-events: none; } .st-duck path { stroke: var(--color-warning); stroke-width: 1.5; }
+
+/* Recorder (FR-VOI-05) */
+.st-recorder { display: flex; flex-direction: column; gap: var(--space-3); }
+.st-rec-meter { height: 6px; background: var(--color-field); border-radius: 3px; overflow: hidden; }
+.st-rec-meter > div { height: 100%; background: var(--color-success); transition: width 60ms linear; }
+.st-rec-meter > div.st-rec-hot { background: var(--color-danger); }
+.st-rec-script { font-size: 1.1em; margin: 0 0 var(--space-3); }
+.st-dialog-h { margin: var(--space-3) 0 0; font-size: inherit; font-weight: 600; }
+.st-voices { flex: 1; min-height: 0; display: grid; grid-template-columns: 320px 1fr; gap: 1px; background: var(--color-divider); }
+.st-voices > .fr-panel { background: var(--color-panel); min-height: 0; }
+.st-voice-ref { display: flex; align-items: center; gap: var(--space-3); min-height: var(--size-row); padding: 0 var(--space-3); }

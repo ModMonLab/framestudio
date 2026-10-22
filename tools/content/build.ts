@@ -31,6 +31,7 @@ import { BEDROOM_KIT, CITY_STREET_KIT, CLASSROOM_KIT, FOREST_KIT, GYM_KIT, HOSPI
 import type { KitParts } from './parts/props.js';
 import { PATTERNS } from './parts/patterns.js';
 import { SETS } from './set-specs.js';
+import { DELIVERIES } from './voice-specs.js';
 
 type Mark = { name: string; x: number; y: number; facing: 'left' | 'right' | 'front' };
 const MORE_KITS: Record<string, { parts: KitParts; marks: Mark[]; ambience?: string; props: string[] }> = {
@@ -236,6 +237,7 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'stage': return { data: { lifeStage: { headRatio: { flat: STAGES[s]!.flat, illustrated: STAGES[s]!.illustrated }, heightScale: STAGES[s]!.height } } };
     case 'skin': return { data: { skinTone: { base: SKIN_TONES[s], undertone: item.undertone?.toLowerCase() } } };
     case 'exp': return EXPRESSIONS[s] ? { data: { expression: EXPRESSIONS[s] }, families: ['flat', 'illustrated'], views: ['front', 'three', 'side'], viewExemptions: { back: 'Faces are not visible from behind; expressions still drive head attitude.' }, capabilities: ['rig.biped@1'] } : undefined;
+    case 'delivery': return DELIVERIES[s] ? { data: { delivery: DELIVERIES[s] } } : undefined;
     case 'set': return SETS[s] ? { data: { set: SETS[s] }, families: ['flat', 'illustrated'], views: ['front'], dependencies: [SETS[s]!.kit, ...new Set(SETS[s]!.props.map((p) => p.ref))] } : undefined;
     case 'pattern': return PATTERNS[s] ? { data: { pattern: PATTERNS[s] }, families: ['flat', 'illustrated'], ...(PATTERNS[s]!.image ? { tags: ['image'] } : !PATTERNS[s]!.layers.length ? { tags: ['plain'] } : {}) } : undefined;
     case 'act': {

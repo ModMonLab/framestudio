@@ -26,7 +26,7 @@ function App() {
   const route = useRoute();
   if (route[0] === 'settings') return <SettingsScreen />;
   if (route[0] === 'help') return <HelpScreen {...(route[1] ? { topic: route[1] } : {})} />;
-  if (route[0] === 'p' && route[1]) return <Workspace key={route[1]} pid={route[1]} builder={route[2] === 'builder' && route[3] && route[4] ? { scene: route[3], instance: route[4] } : undefined} part={route[2] === 'part' && route[3] ? route[3] : undefined} screen={route[2] === 'library' ? 'library' : undefined} />;
+  if (route[0] === 'p' && route[1]) return <Workspace key={route[1]} pid={route[1]} builder={route[2] === 'builder' && route[3] && route[4] ? { scene: route[3], instance: route[4] } : undefined} part={route[2] === 'part' && route[3] ? route[3] : undefined} screen={route[2] === 'library' ? 'library' : route[2] === 'voices' ? 'voices' : undefined} />;
   return <Home />;
 }
 

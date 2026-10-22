@@ -1045,3 +1045,51 @@ test('the camera frame is dragged on the whole stage; aspect ratios preview with
   const c = (await page.getByTestId('stage-canvas').boundingBox())!;
   expect(c.height).toBeGreaterThan(c.width);
 });
+
+test.describe(() => {
+  // The config's fake microphone (Chromium's test beeps) exercises the recorder without a real device. Not speech.
+  test.use({ permissions: ['microphone'] });
+  test('records a take and clones a voice with consent; the voice library lists it with its consent and users (FR-VOI-01/04/05)', async ({ page }) => {
+    await openProject(page, sample(false));
+    await page.getByRole('treeitem', { name: /Maya Bennett/ }).first().click();
+    await page.getByRole('tab', { name: 'Audio' }).click();
+    // Record a take for the current line.
+    await page.getByRole('button', { name: 'Record take…' }).click();
+    const rec = page.getByRole('dialog', { name: /^Record a take/ });
+    await rec.getByRole('button', { name: 'Record', exact: true }).click();
+    await expect(rec.getByText(/^Recording 1$/)).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(2500);
+    await rec.getByRole('button', { name: 'Stop' }).click();
+    await rec.getByRole('button', { name: 'Use as a take' }).click();
+    await expect(rec).toBeHidden();
+    await expect(page.getByRole('list', { name: 'Takes' })).toContainText('Chosen', { timeout: 30_000 });
+    // Clone: blocked until the consent section is complete.
+    await page.getByRole('button', { name: 'Clone a voice…' }).click();
+    const dlg = page.getByRole('dialog', { name: 'Clone a voice' });
+    await dlg.getByRole('button', { name: 'Record', exact: true }).click();
+    await expect(dlg.getByText(/^Recording 1$/)).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(5000);
+    await dlg.getByRole('button', { name: 'Stop' }).click();
+    await dlg.getByRole('button', { name: 'Use this recording' }).click();
+    await expect(dlg.getByText(/Using Recording 1/)).toBeVisible();
+    await dlg.getByLabel('What is said in the recording').fill('Test tones from the fake microphone.');
+    await expect(dlg.getByRole('button', { name: 'Clone voice' })).toBeDisabled();
+    await dlg.getByRole('radio', { name: 'This is my own voice' }).check();
+    await dlg.getByRole('textbox', { name: "Speaker's name" }).fill('Test Speaker');
+    await dlg.getByRole('checkbox', { name: 'I confirm the statement above' }).check();
+    await dlg.getByRole('button', { name: 'Clone voice' }).click();
+    await expect(dlg).toBeHidden();
+    await expect(page.getByText("Maya Bennett's voice", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    // The voice library.
+    const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+    await page.goto(`/#/p/${encodeURIComponent(pid)}/voices`);
+    const list = page.getByRole('list', { name: 'Voices' });
+    await list.getByRole('button', { name: /Maya Bennett's voice/ }).click();
+    const details = page.getByRole('complementary', { name: 'Voice details' });
+    await expect(details.getByText('Cloned')).toBeVisible();
+    await expect(details.getByText(/Consent: own voice of Test Speaker/)).toBeVisible();
+    await expect(details.getByText(/Maya Bennett · /)).toBeVisible();
+    const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+});
