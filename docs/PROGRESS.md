@@ -1,13 +1,13 @@
 # Frame — implementation progress
-Last updated: 2026-10-22 · Session 1
+Last updated: 2026-10-22 · Session 1 (in progress)
 
-## Current milestone: M0 — Foundations
+## Current milestone: M1 — Vertical slice
 
 ## Status by milestone
 | Milestone | Status | Exit evidence |
 |---|---|---|
-| M0 Foundations | In progress | — |
-| M1 Vertical slice | Not started | — |
+| M0 Foundations | Done | Schemas published (`frame schema <type>`, packages/schema); component stories in both themes (apps/gallery, 40 screenshots + axe); `frame init` + `frame validate` (packages/cli/test/cli.test.ts); CI workflow with golden-frame harness (packages/render/test) |
+| M1 Vertical slice | In progress | — |
 | M2 Builder and assets | Not started | — |
 | M3 Direction | Not started | — |
 | M4 Agents | Not started | — |
@@ -20,37 +20,37 @@ The Notes column starts with the requirement's short title from the SRS.
 
 | ID | Status | Evidence | Notes |
 |---|---|---|---|
-| FR-ARC-01 | Not started | — | The project files on disk are the source of truth |
-| FR-ARC-02 | Not started | — | Every edit is a command with a name, parameters, inverse, and the proj |
+| FR-ARC-01 | In progress | packages/io (store), packages/cli (local mode) | The project files on disk are the source of truth — Server not yet built |
+| FR-ARC-02 | Done | packages/core/test/session.test.ts | Every edit is a command with a name, parameters, inverse, and the proj — Commands serialisable, inverse patches, revision |
 | FR-ARC-03 | Not started | — | The server publishes project changes over WebSocket |
-| FR-ARC-04 | Not started | — | Optimistic concurrency: a command carries the base revision |
+| FR-ARC-04 | Done | packages/core/test/session.test.ts (optimistic concurrency); packages/cli/test/cli.test.ts (exit 3) | Optimistic concurrency: a command carries the base revision — Server endpoint follows in M1 |
 | FR-ARC-05 | Not started | — | Long work (render, import, generation, alignment, thumbnailing) runs a |
-| FR-ARC-06 | Not started | — | The engine knows no bundled names: no runtime branch may depend on a s |
-| FR-DAT-01 | Not started | — | IDs: assets use catalog-style dotted IDs (`hair |
-| FR-DAT-02 | Not started | — | Asset versions are integers |
-| FR-DAT-03 | Not started | — | Project time is stored as **integer ticks** at 48 000 ticks per second |
-| FR-DAT-04 | Not started | — | Project frame rate is chosen at creation (24, 25, 30 |
-| FR-DAT-05 | Not started | — | Every file carries `schemaVersion` |
-| FR-DAT-06 | Not started | — | A project folder is self-describing: `locks/` lists every referenced l |
-| FR-DAT-07 | Not started | — | Media is content-addressed (SHA-256) |
-| FR-DAT-08 | Not started | — | JSON files are written atomically (temp file + rename), pretty-printed |
-| FR-DAT-09 | Not started | — | A project may contain multiple **episodes** |
+| FR-ARC-06 | Done | tools/test/architecture.test.ts | The engine knows no bundled names: no runtime branch may depend on a s |
+| FR-DAT-01 | Done | packages/schema/src/common.ts; core ids.ts | IDs: assets use catalog-style dotted IDs (`hair |
+| FR-DAT-02 | In progress | AssetRef schema | Asset versions are integers — Library immutability enforced with asset library (M2) |
+| FR-DAT-03 | Done | packages/core/src/time.ts; session tests | Project time is stored as **integer ticks** at 48 000 ticks per second |
+| FR-DAT-04 | Done | session.test.ts “changing frame rate re-snaps”; CLI settings test | Project frame rate is chosen at creation (24, 25, 30 |
+| FR-DAT-05 | Done | packages/io/test/store.test.ts “refuses a newer schema”; packages/schema/src/migrate.ts | Every file carries `schemaVersion` |
+| FR-DAT-06 | In progress | locks schema + store | A project folder is self-describing: `locks/` lists every referenced l — Lock population from library in M2 |
+| FR-DAT-07 | Done | store.test.ts “stores media content-addressed” | Media is content-addressed (SHA-256) |
+| FR-DAT-08 | Done | store.test.ts “stable key order”; fsutil.ts atomic writes | JSON files are written atomically (temp file + rename), pretty-printed |
+| FR-DAT-09 | Done | core structure commands; store tests | A project may contain multiple **episodes** |
 | FR-DAT-10 | Not started | — | Packages are zip archives with a `manifest |
 | FR-DAT-11 | Not started | — | Importing a package never overwrites existing assets of the same `id@v |
-| FR-DAT-12 | Not started | — | Every format has a published JSON Schema in `@frame/schema` and docume |
-| FR-PRJ-01 | Not started | — | Create |
-| FR-PRJ-02 | Not started | — | Episodes |
-| FR-PRJ-03 | Not started | — | Scenes |
+| FR-DAT-12 | In progress | `frame schema <type>`; packages/schema | Every format has a published JSON Schema in `@frame/schema` and docume — docs/formats/ pending |
+| FR-PRJ-01 | In progress | `frame init` | Create — Templates/package sources in M2/M3 |
+| FR-PRJ-02 | Done | session.test.ts (duplicate/delete); cli episode group | Episodes |
+| FR-PRJ-03 | Done | session.test.ts (duration safety); cli scene group | Scenes — Tree drag reorder in Studio M1 |
 | FR-PRJ-04 | Not started | — | Notes and script |
 | FR-PRJ-05 | Not started | — | Project settings |
 | FR-PRJ-06 | Not started | — | Browser |
-| FR-PRJ-07 | Not started | — | Open folder |
-| FR-PER-01 | Not started | — | Autosave |
-| FR-PER-02 | Not started | — | Undo/redo |
-| FR-PER-03 | Not started | — | Versions (snapshots) |
-| FR-PER-04 | Not started | — | Crash recovery |
-| FR-PER-05 | Not started | — | External changes |
-| FR-PER-06 | Not started | — | Validation |
+| FR-PRJ-07 | In progress | store.test.ts “invalid folders” | Open folder — Studio open-folder UI |
+| FR-PER-01 | In progress | packages/io/src/project.ts (debounced autosave + status) | Autosave — Studio badge in M1 |
+| FR-PER-02 | In progress | session.test.ts (undo ≥200, labels) | Undo/redo — Studio single-step drags in M1 |
+| FR-PER-03 | In progress | store.test.ts versions; `frame versions` | Versions (snapshots) — Compare summary pending |
+| FR-PER-04 | Done | store.test.ts recovery; crash.test.ts | Crash recovery |
+| FR-PER-05 | In progress | store.test.ts “detects external changes” | External changes — Reload/merge UI pending |
+| FR-PER-06 | In progress | packages/core/src/validate.ts | Validation — Problems panel UI pending |
 | FR-PER-07 | Not started | — | Clipboard |
 | FR-AST-01 | Not started | — | Library sources |
 | FR-AST-02 | Not started | — | Manifests |
@@ -126,7 +126,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-CAM-04 | Not started | — | Shot recipes |
 | FR-CAM-05 | Not started | — | Auto-coverage |
 | FR-CAM-06 | Not started | — | Aspect ratios |
-| FR-CAM-07 | Not started | — | Conflict rules |
+| FR-CAM-07 | In progress | validate.ts + session.test.ts conflict rules | Conflict rules — Timeline hatching in M1 |
 | FR-FX-01 | Not started | — | Apply Catalog K1 effects as clips attached to screen, stage point, obj |
 | FR-FX-02 | Not started | — | Atmosphere (Catalog J1) as scene layers with intensity, colour and tim |
 | FR-FX-03 | Not started | — | Transitions (Catalog K2) between shots and between scenes with duratio |
@@ -157,10 +157,10 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-TPL-03 | Not started | — | "Replace cast" swaps a template's characters with the user's character |
 | FR-DLG-01 | Not started | — | Lines are created from the timeline, the Script view, a character's Di |
 | FR-DLG-02 | Not started | — | A line has one canonical record (speaker, text, revision, delivery, ch |
-| FR-DLG-03 | Not started | — | Editing a line's text increments its revision and marks takes generate |
-| FR-DLG-04 | Not started | — | Take states: Missing, Queued, Generating, Ready, Failed, Outdated, Mut |
-| FR-DLG-05 | Not started | — | Multiple takes per line are kept |
-| FR-DLG-06 | Not started | — | A line's clip length follows the chosen take's measured duration |
+| FR-DLG-03 | In progress | session.test.ts take outdated/confirm | Editing a line's text increments its revision and marks takes generate |
+| FR-DLG-04 | In progress | validate.ts lineTakeState | Take states: Missing, Queued, Generating, Ready, Failed, Outdated, Mut |
+| FR-DLG-05 | In progress | line.chooseTake, take.remove | Multiple takes per line are kept |
+| FR-DLG-06 | In progress | line.chooseTake clip length | A line's clip length follows the chosen take's measured duration |
 | FR-DLG-07 | Not started | — | Overlapping speech between different speakers is allowed and mixed |
 | FR-DLG-08 | Not started | — | Pauses and beats: lines may contain explicit pause markers (`[pause 0 |
 | FR-VOI-01 | Not started | — | Voice library |
@@ -189,8 +189,8 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-LIP-04 | Not started | — | Editing |
 | FR-LIP-05 | Not started | — | Views |
 | FR-LIP-06 | Not started | — | Accuracy |
-| FR-RND-01 | Not started | — | One renderer |
-| FR-RND-02 | Not started | — | Determinism |
+| FR-RND-01 | In progress | packages/render (CanvasKit) | One renderer |
+| FR-RND-02 | In progress | render.test.ts determinism | Determinism |
 | FR-RND-03 | Not started | — | Preview |
 | FR-RND-04 | Not started | — | Export settings |
 | FR-RND-05 | Not started | — | Snapshot |
@@ -199,17 +199,17 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-RND-08 | Not started | — | Validation before export |
 | FR-RND-09 | Not started | — | Quality |
 | FR-RND-10 | Not started | — | Batch |
-| FR-CLI-01 | Not started | — | A `frame` command provides every Studio capability that does not requi |
-| FR-CLI-02 | Not started | — | Global options: `--project <path>`, `--json` (structured output on std |
-| FR-CLI-03 | Not started | — | Discoverability: `frame help`, `frame <cmd> --help`, `frame schema <ty |
-| FR-CLI-04 | Not started | — | Exit codes: 0 success |
-| FR-CLI-05 | Not started | — | Command groups |
-| FR-CLI-06 | Not started | — | Every mutating command accepts `--dry-run` and returns the list of res |
-| FR-CLI-07 | Not started | — | Output of `--json` commands conforms to published schemas and is stabl |
+| FR-CLI-01 | In progress | packages/cli | A `frame` command provides every Studio capability that does not requi — Server mode pending |
+| FR-CLI-02 | In progress | framework.ts global options | Global options: `--project <path>`, `--json` (structured output on std — --server pending |
+| FR-CLI-03 | Done | cli.test.ts describe/schema/help | Discoverability: `frame help`, `frame <cmd> --help`, `frame schema <ty |
+| FR-CLI-04 | Done | cli.test.ts exit codes | Exit codes: 0 success |
+| FR-CLI-05 | In progress | project/episode/scene/apply/versions/history groups | Command groups |
+| FR-CLI-06 | Done | cli.test.ts dry-run | Every mutating command accepts `--dry-run` and returns the list of res |
+| FR-CLI-07 | In progress | JSON envelope {ok,result|error} | Output of `--json` commands conforms to published schemas and is stabl — Output schemas to publish |
 | FR-AGT-01 | Not started | — | `frame mcp` starts a Model Context Protocol server exposing typed tool |
 | FR-AGT-02 | Not started | — | Minimum tools: `describe_capabilities`, `list_projects`, `open_project |
 | FR-AGT-03 | Not started | — | Resources: JSON Schemas, the Catalog (IDs, names, groups, capabilities |
-| FR-AGT-04 | Not started | — | Safety: agents cannot delete projects or voice assets, clone voices, o |
+| FR-AGT-04 | In progress | session.revertSource; project.setPermissions guard | Safety: agents cannot delete projects or voice assets, clone voices, o |
 | FR-AGT-05 | Not started | — | Agent sessions appear in the Studio's activity log with the commands a |
 | FR-ONB-01 | Not started | — | First run: choose theme, check the voice worker connection (or skip), |
 | FR-ONB-02 | Not started | — | Contextual help: every panel has a help link |
@@ -225,33 +225,33 @@ The Notes column starts with the requirement's short title from the SRS.
 | CAT-04 | Not started | — | Manifests and previews |
 | CAT-05 | Not started | — | Licensing and provenance |
 | CAT-06 | Not started | — | Quality bar |
-| CAT-07 | Not started | — | Content pipeline |
+| CAT-07 | In progress | catalog/*.yaml; packages/assets/test/catalog.test.ts | Content pipeline — Content pipeline pending |
 | CAT-08 | Not started | — | Sound assets |
 | CAT-09 | Not started | — | Starter voices |
 | CAT-10 | Not started | — | Coverage report |
-| UI-01 | Not started | — | The Studio implements the shell, modes, rail, panels, canvas, timeline |
+| UI-01 | In progress | packages/ui; apps/gallery | The Studio implements the shell, modes, rail, panels, canvas, timeline |
 | UI-02 | Not started | — | The Studio workspace and Character builder match the reference screens |
 | UI-03 | Not started | — | Every screen listed in 02 §7 |
-| UI-04 | Not started | — | Organisation patterns: trees, collapsible sections, lists and search b |
+| UI-04 | In progress | packages/ui tree/sections/lists/search | Organisation patterns: trees, collapsible sections, lists and search b |
 | UI-05 | Not started | — | Selection, undo, autosave, keyboard, drag-and-drop and context-menu ru |
-| UI-06 | Not started | — | Every visible control works or states its prerequisite |
-| UI-07 | Not started | — | Visual regression tests cover every component state and both reference |
+| UI-06 | In progress | disabledReason on buttons/menus/selects | Every visible control works or states its prerequisite |
+| UI-07 | In progress | apps/gallery/e2e (40 screenshots) | Visual regression tests cover every component state and both reference — Reference screens pending |
 | NFR-01 | Not started | — | Responsiveness |
 | NFR-02 | Not started | — | Preview performance |
-| NFR-03 | Not started | — | Determinism |
+| NFR-03 | In progress | render.test.ts golden + determinism | Determinism |
 | NFR-04 | Not started | — | A/V sync |
 | NFR-05 | Not started | — | Export speed |
 | NFR-06 | Not started | — | Voice speed |
 | NFR-07 | Not started | — | Capacity |
-| NFR-08 | Not started | — | Reliability |
+| NFR-08 | Done | packages/io/test/crash.test.ts (≥1000 edits, SIGKILL) | Reliability |
 | NFR-09 | Not started | — | Security |
 | NFR-10 | Not started | — | Privacy |
-| NFR-11 | Not started | — | Testability |
-| NFR-12 | Not started | — | Accessibility |
-| NFR-13 | Not started | — | Maintainability |
+| NFR-11 | In progress | Vitest suites, golden harness, Playwright | Testability |
+| NFR-12 | In progress | gallery axe checks (WCAG 2.2 AA), decision 0007 | Accessibility |
+| NFR-13 | In progress | architecture.test.ts | Maintainability |
 | NFR-14 | Not started | — | Compatibility |
-| NFR-15 | Not started | — | Portability |
-| NFR-16 | Not started | — | Internationalisation-ready |
+| NFR-15 | In progress | .github/workflows/ci.yml matrix | Portability — Awaiting first CI runs |
+| NFR-16 | In progress | packages/ui/src/i18n.ts | Internationalisation-ready |
 | NFR-17 | Not started | — | Licensing |
 | NFR-18 | Not started | — | Transparency |
 | AC-01 | Not started | — | Template to video |
@@ -269,7 +269,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | AC-13 | Not started | — | Agent production |
 | AC-14 | Not started | — | Performance |
 | AC-15 | Not started | — | Determinism and sync |
-| AC-16 | Not started | — | Reliability |
+| AC-16 | In progress | crash.test.ts; store.test.ts disk-full retry | Reliability — External git merge pending |
 | AC-17 | Not started | — | Worker resilience |
 | AC-18 | Not started | — | Design System compliance |
 | AC-19 | Not started | — | Catalog coverage |
@@ -283,11 +283,15 @@ The Notes column starts with the requirement's short title from the SRS.
 Catalog source not yet created. 0 / 1254 items complete (CAT-10 report not yet generated).
 
 ## Next actions (ordered)
-1. Scaffold the pnpm monorepo (SRS §2.2) with strict TypeScript, Vitest, lint and CI.
-2. Machine-readable catalog source (`catalog/*.yaml`) and generator for document 03 (CAT-07).
-3. Design tokens package and UI kit with stories in both themes.
-4. Schemas, core command/undo engine, project store, CLI skeleton.
-5. Golden-frame harness with the CanvasKit renderer.
+1. M1 rig v1: `rig.biped@1`, part contract (vector parts per view and family, anchors, layering), one character per family, all four views.
+2. Scene evaluation: time → display list (instances, characters with expression/mouth/gaze, camera shots and moves), golden frames.
+3. Voice Worker (FastAPI): Voice API OpenAPI, fixture engine (API-04), Qwen3-TTS engine plugin, aligner; `@frame/voice-client`.
+4. Lip sync pipeline (phoneme → 9 mouth shapes, coarticulation, amplitude fallback).
+5. Offline audio mix + ffmpeg MP4 export (`frame render video`), render report.
+6. Frame Server (REST + WebSocket) and Studio shell with the two reference screens.
+7. M1 exit: designed voice speaking two aligned lines in a two-character scene, identical frames from Studio and CLI.
 
 ## Open decisions and blockers
+- Decision 0007 (extra accent tokens for WCAG AA contrast) — owner review requested.
+- Decision 0006: FR-VOI-03 interpretation (range bank via VoiceDesign + similarity check) — validated only by AC-03 on the reference machine.
 - No GPU in the cloud implementation container: live Voice Worker checks (NFR-06, AC-03, AC-17, AC-24) will be **Not verified — requires reference machine**.
