@@ -105,6 +105,42 @@ export function sample<T extends number | number[] | string>(keys: Key<T>[], u: 
   return keys[keys.length - 1]!.v;
 }
 
+/** Motion principles per clip (FR-ACT-09), each 0–1. */
+export interface Principles { anticipation?: number; overshoot?: number; squash?: number }
+
+/**
+ * Samples a curve with anticipation and overshoot: anticipation leads opposite to the motion about to happen;
+ * overshoot carries the motion past where it stops and settles back. Both read the curve itself, so they apply to
+ * any action without extra keys, and vanish where the curve is still.
+ */
+export function samplePrincipled<T extends number | number[] | string>(keys: Key<T>[], u: number, p: Principles, loop = false): T | undefined {
+  const v = sample(keys, u);
+  const A = p.anticipation ?? 0;
+  const O = p.overshoot ?? 0;
+  if ((!A && !O) || v === undefined || typeof v === 'string') return v;
+  const d = 0.08;
+  const at = (x: number) => sample(keys, loop ? ((x % 1) + 1) % 1 : Math.max(0, Math.min(1, x))) as T;
+  const ahead = at(u + d);
+  const behind = at(u - d);
+  const mix = (x: number, f: number, b: number) => x - A * 0.8 * (f - x) + O * 0.8 * (x - b);
+  if (Array.isArray(v)) return (v as number[]).map((x, i) => mix(x, (ahead as number[])[i] ?? x, (behind as number[])[i] ?? x)) as T;
+  return mix(v as number, ahead as number, behind as number) as T;
+}
+
+/** How fast an action's numeric keys change at u (normalised: arm targets as-is, angles per 30°), for squash/stretch. */
+export function keySpeed(keys: Record<string, Key[]>, u: number, loop = false): number {
+  const d = 0.05;
+  const at = (k: Key[], x: number) => sample(k, loop ? ((x % 1) + 1) % 1 : Math.max(0, Math.min(1, x)));
+  let sum = 0;
+  for (const k of Object.values(keys)) {
+    const a = at(k, u - d);
+    const b = at(k, u + d);
+    if (typeof a === 'number' && typeof b === 'number') sum += Math.abs(b - a) / 30;
+    else if (Array.isArray(a) && Array.isArray(b)) sum += a.reduce((s, x, i) => s + Math.abs((b[i] ?? x) - x), 0);
+  }
+  return sum / (2 * d);
+}
+
 /** Blend weight of a clip at time t given blend-in/out (smooth). */
 export function clipWeight(t: number, start: number, end: number, blendIn: number, blendOut: number): number {
   if (t < start || t >= end) return 0;

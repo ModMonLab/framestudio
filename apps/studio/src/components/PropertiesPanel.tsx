@@ -100,7 +100,9 @@ function ClipProps({ scene, clip }: { scene: Scene; clip: Clip }) {
   const [open, toggle] = useSections('clip', { timing: true });
   const fps = studio.state.project!.project.frameRate;
   const snap = (s: number) => Math.round(Math.round(s * fps) * (48000 / fps));
+  const acting = scene.tracks.find((t) => t.id === clip.track)?.kind === 'acting' && !!clip.asset;
   return (
+    <>
     <Section title="Timing" open={open.timing!} onToggle={(o) => toggle('timing', o)}>
       <div className="st-grid2">
         <NumberField label="Start" prefix="In" unit=" s" precision={2} min={0} value={clip.start / 48000} onChange={(v, p) => p === 'commit' && snap(v) !== clip.start && void studio.exec([{ name: 'clip.move', params: { scene: scene.id, ids: [clip.id], delta: snap(v) - clip.start } }])} />
@@ -108,6 +110,70 @@ function ClipProps({ scene, clip }: { scene: Scene; clip: Clip }) {
       </div>
       <ToggleRow label="Enabled" checked={clip.enabled} onChange={(v) => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: clip.id, set: { enabled: v } } }])} />
     </Section>
+    {acting && <MotionProps scene={scene} clip={clip} />}
+    </>
+  );
+}
+
+/** Named pose controls for the pose editor (FR-ACT-10): offsets added to the action at keyframes. */
+const POSE_CONTROLS: { key: string; label: string; index?: number; range: number; unit: string }[] = [
+  { key: 'head.yaw', label: 'Head turn', range: 45, unit: '°' },
+  { key: 'head.pitch', label: 'Head nod', range: 30, unit: '°' },
+  { key: 'head.roll', label: 'Head tilt', range: 25, unit: '°' },
+  { key: 'spine.pitch', label: 'Lean forward', range: 25, unit: '°' },
+  { key: 'spine.roll', label: 'Lean sideways', range: 15, unit: '°' },
+  { key: 'shrug', label: 'Shoulders up', range: 1, unit: '' },
+  { key: 'armR', index: 1, label: 'Right arm raise', range: 0.8, unit: '' },
+  { key: 'armR', index: 2, label: 'Right arm forward', range: 0.8, unit: '' },
+  { key: 'armL', index: 1, label: 'Left arm raise', range: 0.8, unit: '' },
+  { key: 'armL', index: 2, label: 'Left arm forward', range: 0.8, unit: '' },
+];
+
+type PoseKey = { t: number; v: number | number[] };
+
+/** Motion principles (FR-ACT-09) and the advanced pose editor (FR-ACT-10) for an action clip. */
+function MotionProps({ scene, clip }: { scene: Scene; clip: Clip }) {
+  const { studio } = useCtx();
+  const time = useStudio(studio, (s) => s.time);
+  const [open, toggle] = useSections('motion', { motion: true, pose: false });
+  const [advanced, setAdvanced] = useState(false);
+  const set = (params: Record<string, unknown>, label: string) => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: clip.id, set: { params } } }], label);
+  const pct = (k: string) => Math.round(((clip.params[k] as number | undefined) ?? 0) * 100);
+  const u = Math.max(0, Math.min(1, Math.round(((time - clip.start) / Math.max(1, clip.end - clip.start)) * 100) / 100));
+  const inside = time >= clip.start && time < clip.end;
+  const pose = (clip.params.pose as Record<string, PoseKey[]> | undefined) ?? {};
+  const valueAt = (c: (typeof POSE_CONTROLS)[number]) => {
+    const keys = pose[c.key] ?? [];
+    const k = keys.find((x) => Math.abs(x.t - u) < 0.005);
+    const v = k?.v ?? (keys.length ? [...keys].sort((a, b) => Math.abs(a.t - u) - Math.abs(b.t - u))[0]!.v : 0);
+    return Array.isArray(v) ? v[c.index ?? 0] ?? 0 : v;
+  };
+  const setPose = (c: (typeof POSE_CONTROLS)[number], value: number) => {
+    const keys = [...(pose[c.key] ?? [])].filter((k) => Math.abs(k.t - u) >= 0.005);
+    const prev = (pose[c.key] ?? []).find((k) => Math.abs(k.t - u) < 0.005)?.v;
+    const v: number | number[] = c.index === undefined ? value : (() => { const a = Array.isArray(prev) ? [...prev] : [0, 0, 0]; a[c.index!] = value; return a; })();
+    keys.push({ t: u, v });
+    keys.sort((a, b) => a.t - b.t);
+    set({ pose: { ...pose, [c.key]: keys } }, `Pose: ${c.label}`);
+  };
+  const keyed = Object.values(pose).some((ks) => ks.some((k) => Math.abs(k.t - u) < 0.005));
+  return (
+    <>
+      <Section title="Motion" open={open.motion!} onToggle={(o) => toggle('motion', o)}>
+        <SliderRow label="Anticipation" value={pct('anticipation')} defaultValue={0} format={(v) => `${Math.round(v)}%`} onChange={(v, p) => p === 'commit' && set({ anticipation: v / 100 }, 'Anticipation')} />
+        <SliderRow label="Overshoot" value={pct('overshoot')} defaultValue={0} format={(v) => `${Math.round(v)}%`} onChange={(v, p) => p === 'commit' && set({ overshoot: v / 100 }, 'Overshoot')} />
+        <SliderRow label="Squash and stretch" value={pct('squash')} defaultValue={0} format={(v) => `${Math.round(v)}%`} onChange={(v, p) => p === 'commit' && set({ squash: v / 100 }, 'Squash and stretch')} />
+        <ToggleRow label="Pose editor (advanced)" checked={advanced} onChange={setAdvanced} />
+      </Section>
+      {advanced && (
+        <Section title="Pose" summary={inside ? `${Math.round(u * 100)}% through${keyed ? ' · key' : ''}` : 'Move the playhead into the clip'} open={open.pose ?? true} onToggle={(o) => toggle('pose', o)}>
+          {POSE_CONTROLS.map((c) => (
+            <SliderRow key={`${c.key}${c.index ?? ''}`} label={c.label} disabled={!inside} value={valueAt(c)} min={-c.range} max={c.range} step={c.range / 100} defaultValue={0} format={(v) => `${c.unit ? Math.round(v) : v.toFixed(2)}${c.unit}`} onChange={(v, p) => p === 'commit' && setPose(c, v)} />
+          ))}
+          <Button disabled={!Object.keys(pose).length} disabledReason="No pose keys on this clip" onClick={() => set({ pose: null }, 'Clear pose keys')}>Clear pose keys</Button>
+        </Section>
+      )}
+    </>
   );
 }
 

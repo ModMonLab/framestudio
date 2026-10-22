@@ -10,7 +10,7 @@ import { hash32, prng } from '../ids.js';
 import { TICKS_PER_SECOND } from '../time.js';
 import { lineTakeState } from '../validate.js';
 import { applyOverrides, mouthTrackFromAlignment, mouthTrackFromEnvelope, shapeAt } from './lipsync.js';
-import { clipWeight, mirrorKeys, postureAt, sample, type ActionData, type ExpressionData, type Key } from './data.js';
+import { clipWeight, keySpeed, mirrorKeys, postureAt, sample, samplePrincipled, type ActionData, type ExpressionData, type Key, type Principles } from './data.js';
 import { characterVariant, resolveCharacter, type AssetResolver } from './character.js';
 import { motionAt, type Motion } from './locomotion.js';
 import { holderAt, propStateAt, type Interaction } from './interact.js';
@@ -167,6 +167,8 @@ export function viewMatrix(scene: Scene, cs: CameraState, outW: number, outH: nu
 
 /* ------------------------------------------------------------------ performance */
 
+const num01 = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
+
 function activeClips(scene: Scene, owner: string, kind: string, t: number): Clip[] {
   const tracks = new Set(scene.tracks.filter((tr) => tr.owner === owner && tr.kind === kind && !tr.mute && !tr.hidden).map((tr) => tr.id));
   return scene.clips.filter((c) => c.enabled && tracks.has(c.track) && t >= c.start && t < c.end).sort((a, b) => a.start - b.start);
@@ -302,8 +304,15 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     const speed = (c.params.speed as number | undefined) ?? 1;
     const u = a.loop ? ((sec(t - c.start) * speed) / a.duration) % 1 : Math.min(1, sec(t - c.start) / durS);
     const keys = c.params.hand && a.hand && c.params.hand !== a.hand && a.hand !== 'both' ? mirrorKeys(a.keys) : a.keys;
+    // Motion principles (FR-ACT-09): per-clip anticipation, overshoot and squash/stretch over the action's own curves.
+    const pr: Principles = { anticipation: num01(c.params.anticipation), overshoot: num01(c.params.overshoot), squash: num01(c.params.squash) };
+    if (pr.squash) {
+      const now = keySpeed(keys as Record<string, Key[]>, u, a.loop);
+      const next = keySpeed(keys as Record<string, Key[]>, Math.min(1, u + 0.08), a.loop);
+      pose.stretch += Math.max(-0.15, Math.min(0.15, pr.squash * 0.05 * (now - 0.7 * Math.max(0, next - now)))) * w;
+    }
     for (const [k, ks] of Object.entries(keys)) {
-      const v = sample(ks as Key[], u);
+      const v = samplePrincipled(ks as Key[], u, pr, a.loop);
       if (k.startsWith('face.')) {
         // Face controls written by an action (e.g. a wince during a shrug) apply after expressions.
         if (typeof v === 'number') actionFace.push([k.slice(5), v, w, !!a.additive]);
@@ -317,6 +326,15 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     }
     if (a.resultPosture && u >= 0.999) pose.posture = a.resultPosture as Pose['posture'];
     if (c.params.prop) extraParts.push(String(c.params.prop));
+    // Pose overrides (FR-ACT-10): offsets on named controls keyed at clip-normalised times, added on top.
+    const overrides = c.params.pose as Record<string, Key[]> | undefined;
+    if (overrides && typeof overrides === 'object') {
+      for (const [k, ks] of Object.entries(overrides)) {
+        if (!Array.isArray(ks) || !ks.length) continue;
+        const v = sample(ks, Math.min(1, sec(t - c.start) / durS));
+        if (v !== undefined && typeof v !== 'string') setPath(pose, k, v, w, true);
+      }
+    }
   }
   if (variant.posture) pose.posture = variant.posture;
 
