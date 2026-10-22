@@ -196,7 +196,12 @@ export const PackageManifest = Type.Object(
         { additionalProperties: false },
       ),
     ),
-    assets: Type.Array(AssetRef),
+    assets: Type.Array(AssetRef, { description: 'The package\'s root assets (characters, voices, packed assets); empty for projects.' }),
+    requires: Type.Optional(Type.Array(
+      Type.Object({ ref: AssetRef, hash: Sha256 }, { additionalProperties: false }),
+      { description: 'Bundled assets the contents reference but do not carry, pinned by content hash (SRS §3.6).' },
+    )),
+    project: Type.Optional(Type.Object({ id: Type.String(), name: Type.String() }, { additionalProperties: false })),
   },
   { additionalProperties: false, description: 'Package manifest.json (FR-DAT-10).' },
 );

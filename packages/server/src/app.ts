@@ -11,7 +11,11 @@ import fastifyStatic from '@fastify/static';
 import { buildCharacter, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
-import { decodeAudioFile, OpenProject, renderExport, rmsEnvelope, type OutputPreset } from '@frame/io';
+import {
+  decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
+  projectAssetSource, unresolvedReferences, PACKAGE_EXTENSIONS, type OutputPreset,
+} from '@frame/io';
+import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
 import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
@@ -33,11 +37,14 @@ export interface ServerOptions {
   watchMs?: number;
   debounceMs?: number;
   logger?: boolean;
+  /** User library folder (FR-AST-01). */
+  userDir?: string;
 }
 
 const STATUS: Partial<Record<ErrorCode, number>> = {
   USAGE: 400, VALIDATION_FAILED: 422, NOT_FOUND: 404, REVISION_CONFLICT: 409, CONFLICT: 409, PERMISSION_REQUIRED: 403,
   CONSENT_REQUIRED: 403, WORKER_UNAVAILABLE: 503, CANCELLED: 409, SCHEMA_TOO_NEW: 422, MIGRATION_REQUIRED: 409, RENDER_FAILED: 500,
+  INVALID_PACKAGE: 422, UNSUPPORTED: 400,
 };
 
 function sendError(reply: FastifyReply, e: unknown) {
@@ -61,7 +68,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   const styles = loadStyles(o.contentDir);
   let renderer: Promise<NodeRenderer> | undefined;
   const getRenderer = () => (renderer ??= createNodeRenderer({ fontsDir: path.join(o.contentDir, 'fonts') }));
-  const library = (p?: HubProject) => libraryFor({ contentDir: o.contentDir, projectAssets: Object.fromEntries(Object.entries(p?.open.state.assets ?? {}).map(([ref, m]) => [`assets/local/${ref}.json`, m])) });
+  const library = (p?: HubProject) => libraryFor({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}), projectAssets: Object.fromEntries(Object.entries(p?.open.state.assets ?? {}).map(([ref, m]) => [`assets/local/${ref}.json`, m])) });
 
   /* ---------------------------------------------------------------- security */
   app.addHook('onRequest', async (req, reply) => {
@@ -75,7 +82,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (auth !== `Bearer ${o.token}` && q !== o.token) return reply.code(401).send({ error: { code: 'PERMISSION_REQUIRED', message: 'A valid token is required' } });
     }
   });
-  app.addContentTypeParser(['application/octet-stream', 'audio/*', 'image/*', 'video/*'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
+  app.addContentTypeParser(['application/octet-stream', 'application/zip', 'audio/*', 'image/*', 'video/*'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
   app.setErrorHandler((e, _req, reply) => {
     const fe = e as { validation?: unknown; statusCode?: number; message: string };
     if (fe.validation || fe.statusCode === 400) return sendError(reply, new FrameError('USAGE', fe.message));
@@ -348,6 +355,61 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const m = library(p).manifest(req.query.ref);
       if (!m) throw new FrameError('NOT_FOUND', `Asset ${req.query.ref} not found`);
       return m;
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  /* ---------------------------------------------------------------- packages (FR-DAT-10/11, FR-IMP-04) */
+  const download = (reply: FastifyReply, bytes: Uint8Array, name: string) =>
+    reply.header('content-type', 'application/zip').header('content-disposition', `attachment; filename="${name.replace(/[^A-Za-z0-9._-]/g, '-')}"`).send(Buffer.from(bytes));
+  const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export';
+  app.get<{ Params: { pid: string }; Querystring: { format: string; refs: string } }>('/api/projects/:pid/packages/export', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const format = req.query.format as Exclude<PackageFormat, 'frameproj'>;
+      if (!['framechar', 'frameasset', 'framevoice'].includes(format)) throw new FrameError('USAGE', 'format must be framechar, frameasset or framevoice');
+      const refs = String(req.query.refs ?? '').split(',').filter(Boolean);
+      const lib = library(p);
+      const bytes = exportAssetsFromProject(p.open, lib, format, refs, { appVersion: SERVER_VERSION });
+      const unresolved = unresolvedReferences(refs, projectAssetSource(lib, p.open));
+      if (unresolved.length) reply.header('x-frame-unresolved', unresolved.join(','));
+      return download(reply, bytes, `${slug(lib.manifest(refs[0]!)?.name ?? 'export')}${PACKAGE_EXTENSIONS[format]}`);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string }; Querystring: { onConflict?: string; expect?: string; dryRun?: string }; Body: Buffer }>('/api/projects/:pid/packages/import', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the package bytes as application/zip');
+      const expect = (req.query.expect ? req.query.expect.split(',') : ['framechar', 'frameasset', 'framevoice']) as PackageFormat[];
+      const r = importAssetsIntoProject(p.open, library(p), new Uint8Array(req.body), { expect, onConflict: req.query.onConflict === 'new-id' ? 'new-id' : 'refuse', dryRun: req.query.dryRun === 'true', source: sourceOf(req) });
+      return { ...r.report, revision: r.revision };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.get<{ Params: { pid: string } }>('/api/projects/:pid/package', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const bytes = exportProjectFromOpen(p.open, library(p), { appVersion: SERVER_VERSION });
+      return download(reply, bytes, `${slug(p.open.state.project.name)}.frameproj`);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Querystring: { path: string; allowMissing?: string }; Body: Buffer }>('/api/projects/import-package', async (req, reply) => {
+    try {
+      if (!req.query.path) throw new FrameError('USAGE', 'path is required');
+      if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the package bytes as application/zip');
+      const lib = library();
+      const bundledHash = (ref: string) => {
+        const e = lib.get(ref);
+        return e?.source === 'bundled' ? manifestHash(e.manifest) : undefined;
+      };
+      const res = importProjectPackage(new Uint8Array(req.body), req.query.path, { bundledHash }, { allowMissing: req.query.allowMissing === 'true' });
+      const p = hub.open(res.root);
+      return { id: p.id, root: p.root, revision: p.open.session.revision, name: p.open.state.project.name, missing: res.missing };
     } catch (e) {
       return sendError(reply, e);
     }

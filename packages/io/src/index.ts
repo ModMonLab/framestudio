@@ -4,3 +4,5 @@ export * from './project.js';
 export * from './audio.js';
 export * from './ffmpeg.js';
 export * from './export.js';
+export * from './package.js';
+export * from './assets-io.js';

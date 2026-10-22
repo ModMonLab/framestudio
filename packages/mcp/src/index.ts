@@ -15,6 +15,7 @@ export interface StartOptions {
   token?: string;
   /** Embedded server: content library and voice worker. */
   contentDir: string;
+  userDir?: string;
   workerUrl?: string;
   workerToken?: string;
   /** Agent session id (default: random); changes are tagged `agent:<session>`. */
@@ -28,7 +29,7 @@ export async function runStdio(o: StartOptions): Promise<void> {
   let url = o.serverUrl;
   let embedded: Awaited<ReturnType<typeof createServer>> | undefined;
   if (!url) {
-    embedded = await createServer({ contentDir: o.contentDir, host: '127.0.0.1', logger: false, watchMs: 1000, ...(o.workerUrl ? { workerUrl: o.workerUrl } : {}), ...(o.workerToken ? { workerToken: o.workerToken } : {}) });
+    embedded = await createServer({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}), host: '127.0.0.1', logger: false, watchMs: 1000, ...(o.workerUrl ? { workerUrl: o.workerUrl } : {}), ...(o.workerToken ? { workerToken: o.workerToken } : {}) });
     url = await embedded.app.listen({ host: '127.0.0.1', port: 0 });
   }
   o.log?.(`Frame MCP: session agent:${session}, server ${url}${embedded ? ' (embedded)' : ''}`);
