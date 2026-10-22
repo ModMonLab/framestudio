@@ -39,12 +39,21 @@ Status: Accepted · Requirements: FR-IMP-03, AC-12, FR-CHR-03, P11 · Part contr
 
 - Imported characters animate with every library action (rigid segments per bone); faces animate through mouth
   shapes; eyes and brows of raster artwork do not blink or emote unless library parts are chosen for them.
-- Prop-with-states and set outputs of the assistant (FR-IMP-03) are not built yet; layered artwork imports as a
-  character only. Images still import as objects/backgrounds (decision 0018).
+- **Props with states and sets (added in session 2):** the same artwork can instead become a prop or a location kit.
+  Prop layers map to *every state*, *only when <state>* (suggested from `state_on`, `State: off`, a `state_open`
+  folder, or bare `on`/`off`/`open`/`closed`) or *not used*; the prop's origin is the bottom centre of the used layers,
+  each layer is one placed-art shape (`when: { state: [...] }` for state layers, the default state also matching the
+  evaluator's unset value `default`), and the manifest declares a `state` enum parameter. Set layers map to depth
+  planes (sky/distant → far, walls → back, floors → ground, furniture → mid, foreground → front); the drawing is scaled
+  to the output width and bottom-aligned; each layer becomes a kit part anchored at its own bottom centre, placed as
+  `set-piece` instances. The prop evaluator now draws placed artwork (`placedArt` is exported from `@frame/rig`).
+  Images still import as objects/backgrounds (decision 0018).
 
 ## Evidence
 
 `packages/io/test/rigging.test.ts` (PSD written with ag-psd → layers, views, PNG media; rig with a library mouth; rig
 check passes with declared gaps; rendered through the one renderer), Studio e2e "rigging assistant: a layered PSD…"
 (mapping, blocked save until a library mouth, previews in both drawn views, axe, placed in the scene, preview =
-export renderer).
+export renderer); prop and set cases in the same unit file (state switching rendered by pixel colour, set pieces on
+planes filling the frame), `packages/server/test/rigging.test.ts` (API dry run, save, place, validate, frame) and the
+Studio e2e "rigging assistant: a layered SVG becomes a prop with states…".

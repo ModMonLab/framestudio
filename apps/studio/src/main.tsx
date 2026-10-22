@@ -6,7 +6,7 @@ import './studio.css';
 import { Home } from './components/Home.js';
 import { Workspace } from './components/Workspace.js';
 
-/** Routes: #/ (home) · #/p/<project id> (workspace) · #/p/<project id>/builder/<scene>/<instance> (character builder). */
+/** Routes: #/ (home) · #/p/<project id> (workspace) · #/p/<project id>/builder/<scene>/<instance> (character builder) · #/p/<project id>/part/<ref> (part editor) · #/p/<project id>/library (full-page library). */
 function useRoute(): string[] {
   const read = () => location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   const [route, setRoute] = useState(read);
@@ -20,7 +20,7 @@ function useRoute(): string[] {
 
 function App() {
   const route = useRoute();
-  if (route[0] === 'p' && route[1]) return <Workspace key={route[1]} pid={route[1]} builder={route[2] === 'builder' && route[3] && route[4] ? { scene: route[3], instance: route[4] } : undefined} />;
+  if (route[0] === 'p' && route[1]) return <Workspace key={route[1]} pid={route[1]} builder={route[2] === 'builder' && route[3] && route[4] ? { scene: route[3], instance: route[4] } : undefined} part={route[2] === 'part' && route[3] ? route[3] : undefined} screen={route[2] === 'library' ? 'library' : undefined} />;
   return <Home />;
 }
 

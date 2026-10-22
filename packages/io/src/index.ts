@@ -10,3 +10,4 @@ export * from './locks.js';
 export * from './import-image.js';
 export * from './import.js';
 export * from './artwork.js';
+export * from './user-library.js';

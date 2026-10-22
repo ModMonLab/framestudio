@@ -618,7 +618,7 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
  * Draws placed artwork (imported drawings) into its fit-space box: the source rectangle maps affinely onto the box's
  * corners as the space moves (u along the box's first axis, v along its second), so mirroring and rotation follow.
  */
-function placedArt(a: NonNullable<ShapeDef['art']>, map: Mapper, opacity?: number): Item | undefined {
+export function placedArt(a: NonNullable<ShapeDef['art']>, map: Mapper, opacity?: number): Item | undefined {
   const [u0, v0, u1, v1] = a.box;
   const [x, y, w, h] = a.src;
   if (!(w > 0 && h > 0)) return undefined;

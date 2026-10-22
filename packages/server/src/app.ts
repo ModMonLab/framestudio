@@ -8,20 +8,41 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { assetUsages, checkCharacter, compareStates, rigArtwork, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
+import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
-import { exitCodeFor, FrameError, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
+import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
 import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
 
+/** Rigging assistant build request: a character (default), a prop with states, or a location kit. */
+interface RigBuildBody {
+  kind?: 'character' | 'prop' | 'set';
+  name: string;
+  fileName: string;
+  rights: string;
+  layers: (RigLayer & { group?: string })[];
+  mapping: Record<string, string>;
+  libraryParts?: Record<string, string>;
+  /** Props: height on stage in output pixels. */
+  height?: number;
+  /** Sets: artwork size. */
+  width?: number;
+  artHeight?: number;
+  save?: boolean;
+  place?: { scene: string; x?: number; y?: number };
+}
+
 export const SERVER_VERSION = '0.1.0';
+/** Bump when thumbnail framing or rendering changes so cached thumbnails are rebuilt. */
+const THUMB_VERSION = 1;
 
 export interface ServerOptions {
   contentDir: string;
@@ -39,6 +60,8 @@ export interface ServerOptions {
   logger?: boolean;
   /** User library folder (FR-AST-01). */
   userDir?: string;
+  /** Derived-data cache (thumbnails); defaults to <userDir>/../cache. */
+  cacheDir?: string;
 }
 
 const STATUS: Partial<Record<ErrorCode, number>> = {
@@ -361,13 +384,22 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   });
 
   /* ---------------------------------------------------------------- library (FR-AST) */
-  app.get<{ Querystring: { q?: string; kind?: string; limit?: string; project?: string } }>('/api/library', async (req, reply) => {
+  app.get<{ Querystring: { q?: string; kind?: string; limit?: string; project?: string; scene?: string; instance?: string; family?: string; view?: string; source?: string } }>('/api/library', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
       const lib = library(p);
       const limit = req.query.limit === 'all' ? Infinity : Math.min(500, Number(req.query.limit ?? 100));
-      const hits = lib.search(req.query.q ?? '', { ...(req.query.kind ? { kind: req.query.kind } : {}) }).slice(0, limit);
-      return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source, preview: previewable(m.kind), ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views, capabilities: m.capabilities })) };
+      // Compatibility with the selection (FR-AST-04): the project's family and, with an instance, its character.
+      const inst = p && req.query.scene && req.query.instance ? p.open.state.scenes[req.query.scene]?.instances.find((i) => i.id === req.query.instance) : undefined;
+      const charMan = inst?.kind === 'character' && inst.asset ? lib.manifest(inst.asset) : undefined;
+      const target: CompatTarget | undefined = p ? { family: p.open.state.project.styleFamily, ...(charMan && inst?.character ? { character: { manifest: charMan, view: inst.character.view, posture: inst.character.posture } } : {}) } : undefined;
+      const hits = lib.search(req.query.q ?? '', {
+        ...(req.query.kind ? { kind: req.query.kind } : {}), ...(target ? { compatible: (m) => compatibility(m, target) } : {}),
+        ...(req.query.family === 'flat' || req.query.family === 'illustrated' ? { family: req.query.family } : {}),
+        ...(['front', 'three', 'side', 'back'].includes(req.query.view ?? '') ? { view: req.query.view as View } : {}),
+        ...(['bundled', 'user', 'project', 'imported'].includes(req.query.source ?? '') ? { source: req.query.source as 'bundled' } : {}),
+      }).slice(0, limit);
+      return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source: m.id.startsWith('user.') && p?.open.state.assets[`${m.id}@${m.version}`] ? 'project' : source, preview: previewable(m.kind), ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views, capabilities: m.capabilities })) };
     } catch (e) {
       return sendError(reply, e);
     }
@@ -382,6 +414,62 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
+  /* ---------------------------------------------------------------- part editor (FR-PED-02/05) */
+  app.post<{ Params: { pid: string }; Body: PartSaveRequest & { dryRun?: boolean } }>('/api/projects/:pid/parts', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const lib = library(p);
+      const { manifest, issues, isNew } = partManifest(req.body, { manifest: (r) => lib.manifest(r) as AssetManifest | undefined, versions: (id) => lib.versions(id).map((m) => m.version) }, { newId: () => `user.${randomUUID()}`, author: sourceOf(req) === 'user' ? 'Studio user' : sourceOf(req), date: new Date().toISOString().slice(0, 10) });
+      const ref = `${manifest.id}@${manifest.version}`;
+      const draft = manifest.tags.includes('draft');
+      const r = p.open.session.apply({ commands: [{ name: 'asset.addLocal', params: { manifest } }] as never, source: sourceOf(req), label: `${draft ? 'Save draft' : 'Save part'} ${manifest.name}${isNew ? '' : ` version ${manifest.version}`}` }, { dryRun: req.body.dryRun === true });
+      return { ref, isNew, draft, issues, revision: r.revision, dryRun: r.dryRun };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- user library and preferences (FR-AST-01/06) */
+  const userLib = () => {
+    if (!o.userDir) throw new FrameError('UNSUPPORTED', 'No user library folder is configured for this server', undefined, 'Start the server with `frame server start` (uses ~/.frame/library or FRAME_USER_DIR).');
+    return new UserLibrary(o.userDir);
+  };
+  app.get('/api/user/prefs', async (_req, reply) => {
+    try {
+      return userLib().prefs();
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.put<{ Body: { favourites: string[]; collections: { id: string; name: string; items: string[] }[] } }>('/api/user/prefs', async (req, reply) => {
+    try {
+      return userLib().setPrefs({ favourites: req.body?.favourites ?? [], collections: req.body?.collections ?? [] });
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Keeps project assets (characters, voices, imports) in the user library for other projects.
+  app.post<{ Params: { pid: string }; Body: { refs: string[] } }>('/api/projects/:pid/library/save', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      return userLib().saveFromProject(p.open, library(p), req.body?.refs ?? []);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Copies user-library assets (and their media) into the project before they are used, so it stays self-contained.
+  app.post<{ Params: { pid: string }; Body: { refs: string[] } }>('/api/projects/:pid/library/adopt', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const cmds = userLib().adoptCommands(p.open, library(p), req.body?.refs ?? []);
+      if (!cmds.length) return { added: [], revision: p.open.session.revision };
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: `Use ${cmds.length} asset(s) from my library` });
+      return { added: cmds.map((c) => { const m = c.params.manifest as AssetManifest; return `${m.id}@${m.version}`; }), revision: r.revision };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- file import (FR-IMP-01/02) */
   app.post<{ Params: { pid: string }; Querystring: { name: string; rights: string; licence?: string; attribution?: string; scene?: string; as?: string; at?: string; x?: string; y?: string; dryRun?: string }; Body: Buffer }>('/api/projects/:pid/import', async (req, reply) => {
     try {
@@ -414,14 +502,42 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         ...(l.png ? { media: p.open.store.putMedia(l.png, { ext: 'png', mime: 'image/png', width: Math.round(l.bounds[2]), height: Math.round(l.bounds[3]) }).hash } : {}),
         ...(l.paths ? { paths: l.paths } : {}),
         suggestion: suggestTarget(l.name),
+        propSuggestion: suggestPropTarget(l),
+        planeSuggestion: suggestPlane(l),
       }));
-      return { fileName: art.fileName, source: art.source, width: art.width, height: art.height, views: art.views, layers, warnings: art.warnings, targets: RIG_TARGETS.map((t) => ({ value: t, label: RIG_TARGET_LABELS[t] })) };
+      return { fileName: art.fileName, source: art.source, width: art.width, height: art.height, views: art.views, layers, warnings: art.warnings, targets: RIG_TARGETS.map((t) => ({ value: t, label: RIG_TARGET_LABELS[t] })), planes: [...SET_PLANES, 'ignore' as const].map((t) => ({ value: t, label: SET_PLANE_LABELS[t] })) };
     } catch (e) {
       return sendError(reply, e);
     }
   });
+  // Props with states and location kits (FR-IMP-03): dry run returns the manifest; save adds it and can place it.
+  const buildObject = (p: ReturnType<typeof hub.get>, b: RigBuildBody, source: string) => {
+    const common = { name: b.name.trim(), layers: b.layers ?? [], mapping: (b.mapping ?? {}) as Record<string, string>, newId: () => randomUUID(), author: source, date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights };
+    const out = p.open.state.project.output;
+    const res = b.kind === 'prop'
+      ? { ...rigProp({ ...common, ...(b.height ? { height: Number(b.height) } : {}) }), pieces: undefined }
+      : { ...rigSet({ ...common, width: Number(b.width ?? 0), height: Number(b.artHeight ?? 0), output: { width: out.width, height: out.height } }), states: undefined };
+    const errors = res.problems.filter((x) => x.severity === 'error');
+    if (!b.save) return { kind: b.kind, asset: res.asset, mapping: res.mapping, problems: res.problems, states: res.states ?? null, pieces: res.pieces ?? null, ok: errors.length === 0 };
+    if (errors.length) throw new FrameError('VALIDATION_FAILED', `The ${b.kind} cannot be saved yet: ${errors.map((e) => e.message).join('; ')}`, { problems: errors });
+    const ref = `${res.asset.id}@1`;
+    const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest: res.asset } }];
+    const instances: string[] = [];
+    if (b.place && b.kind === 'prop') {
+      instances.push(randomId('ins'));
+      cmds.push({ name: 'instance.add', params: { scene: b.place.scene, id: instances[0], kind: 'prop', asset: ref, name: res.asset.name, transform: { x: b.place.x ?? out.width / 2, y: b.place.y ?? out.height * 0.92 } } });
+    } else if (b.place) {
+      for (const x of res.pieces ?? []) {
+        const id = randomId('ins');
+        instances.push(id);
+        cmds.push({ name: 'instance.add', params: { scene: b.place.scene, id, kind: 'set-piece', asset: ref, name: x.name, transform: { x: x.at[0], y: x.at[1] }, depthPlane: x.plane, params: { part: x.key } } });
+      }
+    }
+    const r = p.open.session.apply({ commands: cmds as never, source, label: `Rig ${res.asset.name}` });
+    return { ref, instances, revision: r.revision };
+  };
   // Builds the character from mapped layers: a dry run returns the manifests and the rig check; save adds them.
-  app.post<{ Params: { pid: string }; Body: { name: string; fileName: string; rights: string; layers: RigLayer[]; mapping: Record<string, RigTarget>; libraryParts?: Record<string, string>; save?: boolean; place?: { scene: string; x?: number; y?: number } } }>('/api/projects/:pid/rigging/build', async (req, reply) => {
+  app.post<{ Params: { pid: string }; Body: RigBuildBody }>('/api/projects/:pid/rigging/build', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
       const b = req.body;
@@ -429,8 +545,9 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (!b.rights?.trim()) throw new FrameError('USAGE', 'State your rights to the artwork', undefined, 'Imports record a statement of rights (FR-IMP-02).');
       for (const l of b.layers ?? []) if (l.media && !p.open.store.findMedia(l.media)) throw new FrameError('NOT_FOUND', `Layer ${l.name} media is missing; read the artwork again`);
       const lib = library(p);
+      if (b.kind === 'prop' || b.kind === 'set') return buildObject(p, b, sourceOf(req));
       for (const ref of Object.values(b.libraryParts ?? {})) if (ref && !lib.has(ref)) throw new FrameError('NOT_FOUND', `${ref} is not in the library`);
-      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: b.mapping ?? {}, libraryParts: b.libraryParts ?? {}, newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
+      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: (b.mapping ?? {}) as Record<string, RigTarget>, libraryParts: b.libraryParts ?? {}, newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
       const local = new Map([...res.parts, res.character].map((m) => [`${m.id}@${m.version}`, m]));
       const look = (r: string) => local.get(r) ?? (lib.manifest(r) as AssetManifest | undefined);
       const check = checkCharacter(res.character, look, lib.byKind('act').map((x) => x.manifest));
@@ -507,6 +624,33 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
+  // Asset details (FR-AST-05): versions with their changes, where the asset is used in the project, licence and
+  // provenance, and the rig check for parts (FR-AST-08).
+  app.get<{ Querystring: { ref: string; project?: string } }>('/api/library/details', async (req, reply) => {
+    try {
+      const p = req.query.project ? hub.get(req.query.project) : undefined;
+      const lib = library(p);
+      const e = lib.get(req.query.ref);
+      if (!e) throw new FrameError('NOT_FOUND', `Asset ${req.query.ref} not found`);
+      const m = e.manifest;
+      const part = (m.data as { families?: unknown } | undefined)?.families ? (m.data as PartData) : undefined;
+      const { data: _d, ...meta } = m;
+      return {
+        ref: req.query.ref, source: p && m.id.startsWith('user.') && p.open.state.assets[req.query.ref] ? 'project' : e.source, manifest: meta,
+        latest: lib.latestRef(m.id), hash: manifestHash(m),
+        versions: lib.versions(m.id).map((v) => ({ version: v.version, ref: `${v.id}@${v.version}`, changes: v.changes ?? null, date: v.provenance.date, draft: v.tags.includes('draft') })),
+        usages: p ? assetUsages(p.open.state, m.id) : [],
+        rigCheck: part ? rigCheck(part) : null,
+      };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Manifests that failed validation and were left out of the library (FR-AST-02).
+  app.get<{ Querystring: { project?: string } }>('/api/library/problems', async (req) => {
+    const p = req.query.project ? hub.get(req.query.project) : undefined;
+    return { problems: library(p).problems };
+  });
   app.get('/api/styles', async () => styles);
 
   // Thumbnails (FR-AST-07): the item on the library's preview character, rendered with the export renderer and cached.
@@ -520,6 +664,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   // Library defaults the Studio reads (builder test sets, preview character); content, not code (FR-ARC-06).
   app.get('/api/library/defaults', async () => libraryDefaults);
   const thumbs = new Map<string, Buffer>();
+  const thumbDir = o.cacheDir ? path.join(o.cacheDir, 'thumbnails') : o.userDir ? path.join(path.dirname(o.userDir), 'cache', 'thumbnails') : undefined;
   app.get<{ Querystring: { ref: string; family?: string; w?: string; h?: string; project?: string } }>('/api/library/thumbnail', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
@@ -530,8 +675,12 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const family = req.query.family === 'illustrated' ? 'illustrated' : 'flat';
       const w = Math.max(16, Math.min(512, Number(req.query.w ?? 96)));
       const h = Math.max(16, Math.min(512, Number(req.query.h ?? w)));
-      const key = `${ref}|${family}|${w}x${h}`;
-      let png = thumbs.get(key);
+      // Keyed by content, so a changed asset or preview character renders again (FR-AST-07); kept on disk across runs.
+      const pc0 = libraryDefaults.previewCharacter;
+      const pcm0 = pc0 ? lib.manifest(pc0) : undefined;
+      const key = sha256(`${THUMB_VERSION}|${manifestHash(m)}|${pcm0 ? manifestHash(pcm0) : ''}|${family}|${w}x${h}`);
+      const file = thumbDir ? path.join(thumbDir, `${key}.png`) : undefined;
+      let png = thumbs.get(key) ?? (file && fs.existsSync(file) ? fs.readFileSync(file) : undefined);
       if (!png) {
         const pc = libraryDefaults.previewCharacter;
         const pcm = pc ? lib.manifest(pc) : undefined;
@@ -540,9 +689,16 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         const renderer = await getRenderer();
         const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));
         png = Buffer.from(renderer.png(ev.frame));
-        if (thumbs.size > 2000) thumbs.clear();
-        thumbs.set(key, png);
+        if (file) {
+          try {
+            writeFileAtomic(file, png);
+          } catch {
+            // The cache is derived data; failing to keep it never fails the request.
+          }
+        }
       }
+      if (thumbs.size > 2000) thumbs.clear();
+      thumbs.set(key, png);
       return reply.header('content-type', 'image/png').header('cache-control', 'public, max-age=86400').send(png);
     } catch (e) {
       return sendError(reply, e);
@@ -774,6 +930,22 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         throw e;
       }
       return checkCharacter(manifest, look, lib.byKind('act').filter((x) => lib.latestRef(x.manifest.id) === `${x.manifest.id}@${x.manifest.version}`).map((x) => x.manifest));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; vid: string }; Body: { path: string } }>('/api/projects/:pid/versions/:vid/copy', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!req.body?.path) throw new FrameError('USAGE', 'path is required');
+      const dir = path.resolve(req.body.path);
+      if (fs.existsSync(dir) && fs.readdirSync(dir).length) throw new FrameError('CONFLICT', `${dir} is not empty`, undefined, 'Choose a new folder name.');
+      const v = p.open.store.listVersions().find((x) => x.id === req.params.vid);
+      if (!v) throw new FrameError('NOT_FOUND', `Version ${req.params.vid} not found`);
+      p.open.flush();
+      p.open.store.copyVersionTo(v.id, dir, { projectId: randomId('prj'), name: `${p.open.state.project.name} — ${v.name}` });
+      const copy = hub.open(dir);
+      return { id: copy.id, root: copy.root, name: copy.open.state.project.name };
     } catch (e) {
       return sendError(reply, e);
     }

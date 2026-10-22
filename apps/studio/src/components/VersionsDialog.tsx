@@ -56,6 +56,22 @@ export function VersionsDialog({ pid, open, onClose }: { pid: string; open: bool
       setBusy(false);
     }
   };
+  const openCopy = async (v: VersionInfo) => {
+    const root = (await api.projects()).projects.find((p) => p.id === pid)?.root ?? '';
+    const suggestion = root.replace(/(\.frame)?$/, '') + ` — ${v.name.replace(/[^\w -]+/g, '')}.frame`;
+    const target = window.prompt('Folder for the copy', suggestion);
+    if (!target?.trim()) return;
+    setBusy(true);
+    try {
+      const c = await api.copyVersion(pid, v.id, target.trim());
+      toasts.show({ tone: 'success', message: `Opened “${c.name}” as a separate project` });
+      location.hash = `#/p/${encodeURIComponent(c.id)}`;
+    } catch (e) {
+      toasts.show({ tone: 'error', message: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
   const current = versions?.find((v) => v.id === selected);
 
   return (
@@ -95,7 +111,10 @@ export function VersionsDialog({ pid, open, onClose }: { pid: string; open: bool
                     {(cmp.takes.added > 0 || cmp.takes.removed > 0) && <li>Takes +{cmp.takes.added} −{cmp.takes.removed}</li>}
                   </ul>
                 )}
-                <Button onClick={() => void restore(current)} disabled={busy || cmp.identical} disabledReason={busy ? 'Working…' : 'Nothing to restore'}>Restore this version</Button>
+                <div className="st-buttons">
+                  <Button onClick={() => void restore(current)} disabled={busy || cmp.identical} disabledReason={busy ? 'Working…' : 'Nothing to restore'}>Restore this version</Button>
+                  <Button onClick={() => void openCopy(current)} disabled={busy} disabledReason="Working…">Open as a copy…</Button>
+                </div>
               </>
             )}
           </div>

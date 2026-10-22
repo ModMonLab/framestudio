@@ -80,7 +80,7 @@ export const api = {
   validate: (pid: string) => req<{ revision: number; problems: Problem[] }>('GET', `/api/projects/${pid}/validate`),
   sceneAssets: (pid: string, scene: string) => req<{ revision: number; manifests: Record<string, unknown> }>('GET', `/api/projects/${pid}/scene-assets?scene=${encodeURIComponent(scene)}`),
   manifest: (ref: string, pid?: string) => req<unknown>('GET', `/api/library/manifest?ref=${encodeURIComponent(ref)}${pid ? `&project=${pid}` : ''}`),
-  library: (q: string, kind?: string, pid?: string, limit = 200) => req<{ results: { ref: string; kind: string; name: string; category: string; group?: string; tags: string[]; preview?: boolean }[] }>('GET', `/api/library?q=${encodeURIComponent(q)}${kind ? `&kind=${kind}` : ''}${pid ? `&project=${pid}` : ''}&limit=${limit}`),
+  library: (q: string, kind?: string, pid?: string, limit = 200, sel?: { scene: string; instance: string }) => req<{ results: { ref: string; kind: string; name: string; category: string; group?: string; tags: string[]; preview?: boolean; incompatible?: string; source?: string }[] }>('GET', `/api/library?q=${encodeURIComponent(q)}${kind ? `&kind=${kind}` : ''}${pid ? `&project=${pid}` : ''}&limit=${limit}${sel ? `&scene=${encodeURIComponent(sel.scene)}&instance=${encodeURIComponent(sel.instance)}` : ''}`),
   styles: () => req<Record<string, unknown>>('GET', '/api/styles'),
   jobs: (pid?: string) => req<{ jobs: JobInfo[] }>('GET', `/api/jobs${pid ? `?project=${pid}` : ''}`),
   cancelJob: (id: string) => req<{ cancelled: boolean }>('DELETE', `/api/jobs/${id}`),
@@ -110,9 +110,15 @@ export const api = {
   },
   readArtwork: (pid: string, name: string, bytes: Uint8Array) => req<unknown>('POST', `/api/projects/${pid}/rigging/read?name=${encodeURIComponent(name)}`, bytes, { 'content-type': 'application/octet-stream' }),
   buildRig: (pid: string, body: Record<string, unknown>) => req<unknown>('POST', `/api/projects/${pid}/rigging/build`, body),
+  prefs: () => req<UserPrefs>('GET', '/api/user/prefs'),
+  setPrefs: (p: Omit<UserPrefs, 'schemaVersion'>) => req<UserPrefs>('PUT', '/api/user/prefs', p),
+  saveToLibrary: (pid: string, refs: string[]) => req<{ added: string[]; unchanged: string[] }>('POST', `/api/projects/${pid}/library/save`, { refs }),
+  adopt: (pid: string, refs: string[]) => req<{ added: string[]; revision: number }>('POST', `/api/projects/${pid}/library/adopt`, { refs }),
+  savePart: (pid: string, body: { from: string; name: string; data: unknown; draft?: boolean; asNew?: boolean; changes?: string }) => req<{ ref: string; isNew: boolean; draft: boolean; revision: number }>('POST', `/api/projects/${pid}/parts`, body),
   versions: (pid: string) => req<{ versions: { id: string; name: string; createdAt: string; revision: number }[] }>('GET', `/api/projects/${pid}/versions`),
   saveVersion: (pid: string, name: string) => req<{ id: string; name: string; createdAt: string; revision: number }>('POST', `/api/projects/${pid}/versions`, { name }),
   compareVersion: (pid: string, vid: string) => req<VersionComparison>('GET', `/api/projects/${pid}/versions/${vid}/compare`),
+  copyVersion: (pid: string, vid: string, path: string) => req<{ id: string; root: string; name: string }>('POST', `/api/projects/${pid}/versions/${vid}/copy`, { path }),
   restoreVersion: (pid: string, vid: string) => req<{ revision: number; label: string }>('POST', `/api/projects/${pid}/versions/${vid}/restore`),
 };
 
@@ -163,4 +169,10 @@ export function connectEvents(pid: string, onEvent: (e: ServerEvent) => void, on
     closed = true;
     ws?.close();
   };
+}
+
+export interface UserPrefs {
+  schemaVersion: 1;
+  favourites: string[];
+  collections: { id: string; name: string; items: string[] }[];
 }

@@ -83,6 +83,16 @@ describe('character versions and project versions (FR-CHR-10, FR-AST-05, FR-PER-
     st = (await api('GET', `/api/projects/${reopened}/state`)).json.state;
     expect(st.scenes[scene2].instances.find((i: any) => i.name === 'Robin').asset).toBe(v2);
 
+    // A version opens as a separate project (new id and name) with its media.
+    const copyDir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-ver-copy-')), 'Copy.frame');
+    const copy = await api('POST', `/api/projects/${reopened}/versions/${snap.json.id}/copy`, { path: copyDir });
+    expect(copy.status).toBe(200);
+    expect(copy.json.id).not.toBe(reopened);
+    expect(copy.json.name).toBe('Series — Before redesign');
+    const cst = (await api('GET', `/api/projects/${copy.json.id}/state`)).json.state;
+    expect(cst.scenes[scene2].instances.find((i: any) => i.name === 'Robin').asset).toBe(v1);
+    expect((await api('POST', `/api/projects/${reopened}/versions/${snap.json.id}/copy`, { path: copyDir })).status).toBe(409);
+
     // Saving a library character creates a new project character, swapped in where asked.
     const lib = await api('POST', `/api/projects/${reopened}/characters/versions`, { from: 'chr.aiko-tanaka@1', asNew: true, spec: { name: 'Aiko B' } });
     expect(lib.json.isNew).toBe(true);

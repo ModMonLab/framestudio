@@ -8,7 +8,7 @@ Last updated: 2026-10-22 · Session 2
 |---|---|---|
 | M0 Foundations | Done | Schemas published (`frame schema <type>`, packages/schema); component stories in both themes (apps/gallery, 40 screenshots + axe); `frame init` + `frame validate` (packages/cli/test/cli.test.ts); CI workflow with golden-frame harness (packages/render/test) |
 | M1 Vertical slice | In progress | Fixture-worker path passes: tools/test/slice.test.ts (two designed voices, 4 aligned takes, export, server = CLI frames byte-identical) and apps/studio/e2e/studio.spec.ts (same flow in the Studio, preview pixels = server/CLI renderer). Real Qwen3-TTS run pending on the reference GPU. |
-| M2 Builder and assets | In progress | Packages (packages/io/test/package.test.ts, cli + server package tests), character versions and update usages (packages/server/test/versions.test.ts, AC-11 path), editable builder (Studio e2e “character builder…”), imports and rigging assistant (packages/io/test/import.test.ts, rigging.test.ts, Studio e2e “rigging assistant…”, AC-12 path). Pending for exit: part editor, user library and collections, AC-02/AC-20 full runs |
+| M2 Builder and assets | In progress | Packages (packages/io/test/package.test.ts, cli + server package tests), character versions and update usages (packages/server/test/versions.test.ts, AC-11 path), editable builder with compare (Studio e2e “character builder…”), imports and rigging assistant for characters, props and sets (packages/io/test/import.test.ts, rigging.test.ts, Studio e2e, AC-12 path), part editor (Studio e2e “part editor…”), user library, favourites and collections, full-page library (Studio e2e), AC-02 and AC-20 automated paths (tools/test/m2-acceptance.test.ts). Pending for exit: owner runs of AC-02/AC-11/AC-12 (artist PSD) and AC-20 on a second OS; hand-pose supply; FR-PED-03 |
 | M3 Direction | Not started | — |
 | M4 Agents | In progress | `frame mcp` with all FR-AGT-02 tools and FR-AGT-03 resources (packages/mcp/test); agent tagging, session revert and Studio activity log (apps/studio/e2e). AC-13 needs recipes and music (M3) |
 | M5 Catalog completion | Not started | — |
@@ -47,22 +47,22 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-PRJ-07 | In progress | store.test.ts “invalid folders” | Open folder — Studio open-folder UI |
 | FR-PER-01 | In progress | io/project.ts autosave; Studio save badge (Saved/Saving…/Unsaved/Not saved) | Autosave — Retry action in badge pending |
 | FR-PER-02 | In progress | session.test.ts (undo ≥200, labels) | Undo/redo — Studio single-step drags in M1 |
-| FR-PER-03 | In progress | store.test.ts; server/test/versions.test.ts; Studio e2e “project versions…”; `frame versions compare` | Versions (snapshots) — Save, list, compare summary (scenes, clips, character versions, assets) and undoable restore done; “open as a copy” pending |
+| FR-PER-03 | Done | store.test.ts; server/test/versions.test.ts; Studio e2e “project versions…”; `frame versions compare|restore` | Versions (snapshots) — Save, list, compare summary (scenes, clips, character versions, assets), undoable restore and “open as a copy” (new folder, new project id) |
 | FR-PER-04 | Done | store.test.ts recovery; crash.test.ts | Crash recovery |
 | FR-PER-05 | In progress | server.test.ts “detects edits made on disk and reloads”; hub.checkExternal | External changes — Merge UI when local changes are pending: event sent, dialog pending |
 | FR-PER-06 | In progress | core validate.ts; Studio Problems badge + list with “Go to” (selects and seeks) | Validation — One-click fixes pending |
 | FR-PER-07 | Not started | — | Clipboard |
-| FR-AST-01 | Not started | — | Library sources |
-| FR-AST-02 | In progress | packages/assets/src/library.ts (invalid manifests reported and excluded); `frame assets validate` | Manifests — Problems report in the Studio pending |
-| FR-AST-03 | In progress | Studio Assets panel: search, categories with live counts, thumbnails, apply/drag | Browser — Full-page library, filters by family/view/source pending |
-| FR-AST-04 | Not started | — | Compatibility |
-| FR-AST-05 | In progress | asset.updateUsages; GET /api/library/usages; `frame assets usages|update-usages`; versions.test.ts | Versions — Asset details screen with versions/changes pending |
-| FR-AST-06 | Not started | — | Favourites and collections |
-| FR-AST-07 | In progress | core/preview.ts; server /api/library/thumbnail (cached) + server.test.ts; Studio library rows | Thumbnails — Item on the library preview character, both families; mouth shapes, eye/brow states and controls have no preview yet; persistent cache pending |
+| FR-AST-01 | Done | packages/io/src/user-library.ts; server/test/user-library.test.ts; Studio e2e “favourites, collections and the user library…” | Library sources — Bundled, user (profile folder, FRAME_USER_DIR), project-local and imported sources; “save to my library” and adopt-on-use keep projects self-contained |
+| FR-AST-02 | Done | library.ts (invalid manifests reported and excluded); `frame assets validate`; GET /api/library/problems shown in the full-page library | Manifests |
+| FR-AST-03 | Done | Assets panel and full-page library: search, categories with counts, filters by family/view/source, thumbnails; Studio e2e “full-page library…” | Browser |
+| FR-AST-04 | Done | core/compat.ts; library `compat` reasons (family, rig, view, posture, draft); Studio e2e “favourites…” (incompatible items stay visible with a reason) | Compatibility |
+| FR-AST-05 | Done | asset.updateUsages; /api/library/details and /usages; `frame assets usages|update-usages`; versions.test.ts; Studio e2e “full-page library…” | Versions — Details screen with versions, changes, usages and explicit update |
+| FR-AST-06 | Done | UserLibrary prefs; /api/user/prefs; Studio e2e “favourites, collections…” | Favourites and collections |
+| FR-AST-07 | In progress | core/preview.ts; persistent content-keyed thumbnail cache (server/test/user-library.test.ts “thumbnail cache”, server.test.ts) | Thumbnails — Mouth shapes, eye/brow states and controls have no preview yet |
 | FR-AST-08 | In progress | packages/rig/src/check.ts; packages/rig/test/check.test.ts; coverage validator column | Rig check and asset validator — Static contract check done; composition against reference characters and the action compatibility matrix pending |
 | FR-IMP-01 | Done | packages/io/test/import.test.ts; Studio e2e “imports an SVG…”; decision 0018 | Imports validate type, size and content before acceptance and report p — PNG/JPEG/WebP sniffed and measured, SVG parsed safely, audio decoded and limited; precise errors |
 | FR-IMP-02 | Done | import.test.ts (provenance, licence); rigging build requires a rights statement | Imported assets record provenance (file name, date, user statement of — File name, date, author, rights statement and licence recorded on every import |
-| FR-IMP-03 | In progress | packages/io/test/rigging.test.ts; Studio e2e “rigging assistant…”; decision 0019 | Rigging assistant — Layered PSD/SVG → character: name mapping, per-view frames, declared view gaps, library mouth for missing shapes, live preview with test gestures, rig check. Prop-with-states and set outputs, pivot adjustment UI and hand-pose supply pending |
+| FR-IMP-03 | In progress | packages/io/test/rigging.test.ts; server/test/rigging.test.ts; Studio e2e “rigging assistant…” (character, prop); decision 0019 | Rigging assistant — Layered PSD/SVG → character (mapping, per-view frames, declared view gaps, library mouth, test gestures, rig check), prop with states, or location kit on depth planes. Pivot adjustment UI and hand-pose supply pending |
 | FR-IMP-04 | Done | package.test.ts; `frame char|voice|assets export`; Studio builder Export… and File menu | Export assets — Characters (selected or all versions), voices (consent carried), any assets with dependencies; project packages |
 | FR-CHR-01 | Not started | — | Families |
 | FR-CHR-02 | Not started | — | Parametric parts |
@@ -77,17 +77,17 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-CHR-11 | Not started | — | Inclusive options |
 | FR-BLD-01 | Done | apps/studio/src/components/Builder.tsx; Studio e2e “character builder…” (axe) | Layout — Parts tree with search over current values and changed dots, live canvas, turnaround, test bar, properties panel |
 | FR-BLD-02 | In progress | BuilderProperties.tsx | Sections — All sections present with library-driven options; accessories, makeup, facial hair and patterns wait for content; voice auditions pending |
-| FR-BLD-03 | In progress | Builder preview uses the export renderer in both families and every view; turnaround sheet | Live preview — “Compare” before/after view pending |
+| FR-BLD-03 | Done | Builder preview uses the export renderer in both families and every view; turnaround sheet; “Compare” saved vs. draft | Live preview |
 | FR-BLD-04 | Done | Builder test bar: any expression, any action, lip-sync test with mouth readout | Testing |
 | FR-BLD-05 | In progress | Randomise (parts, build, colours); “Describe a character” states its prerequisite | Randomise and suggest — Constraint choices (life stage, palette) in the UI pending |
 | FR-BLD-06 | Done | Studio e2e builder save; leave-with-changes confirmation; Export… .framechar | Save |
 | FR-BLD-07 | In progress | Looks: new, duplicate, rename, default, delete; garments and colours per look | Looks — Patterns (B6) and per-garment options pending |
 | FR-BLD-08 | Done | POST /characters/check (core/character-check.ts); builder footer and drill-down dialog | Rig check — Views, styles, mouth shapes, action compatibility, per-part contract problems |
-| FR-PED-01 | Not started | — | Part editor |
-| FR-PED-02 | Not started | — | New part from existing |
-| FR-PED-03 | Not started | — | AI drafting |
-| FR-PED-04 | Not started | — | Family conversion assist |
-| FR-PED-05 | Not started | — | Validation |
+| FR-PED-01 | Done | apps/studio/src/components/PartEditor.tsx; rig/test/edit.test.ts; Studio e2e “part editor…” | Part editor — Points (drag, add, delete), parameter bindings, fills, strokes, slots, mirror view, live rig check |
+| FR-PED-02 | Done | core/part-save.ts; server/test/parts.test.ts; Studio e2e “part editor…” | New part from existing — New part from existing and new versions of project parts |
+| FR-PED-03 | Not started | — | AI drafting — Needs an AI drafting backend; provenance value `ai-assisted-human-reviewed` is already supported |
+| FR-PED-04 | Done | rig/src/edit.ts convertFamily; rig/test/edit.test.ts; part editor “Draft <family> from <other>” | Family conversion assist — Drafts are saved only after review (tagged draft until the rig check passes) |
+| FR-PED-05 | Done | partManifest rig-check gate; server/test/parts.test.ts | Validation — Failing parts save only as drafts with review “changes requested” |
 | FR-WRD-01 | Not started | — | Garments and accessories from Catalog B and C attach to the rig with l |
 | FR-WRD-02 | Not started | — | Colours (palette + custom), patterns (Catalog B6) with scale/rotation/ |
 | FR-WRD-03 | Not started | — | A scene instance chooses a look |
@@ -231,7 +231,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | CAT-10 | Done | packages/assets/src/coverage.ts; packages/assets/test/coverage.test.ts; `pnpm catalog:coverage` → docs/catalog/coverage.md | Coverage report — Report exists; currently 0 % green (release needs 100 %) |
 | UI-01 | In progress | apps/studio (shell, rail, resizable panels, canvas, timeline, properties); studio e2e | The Studio implements the shell, modes, rail, panels, canvas, timeline — Panel collapse shortcuts exist (\\ and View menu); 125 % zoom check pending |
 | UI-02 | In progress | apps/studio Workspace + Builder | The Studio workspace and Character builder match the reference screens — Visual comparison with mockups pending owner sign-off |
-| UI-03 | In progress | Versions dialog, import dialog, rigging assistant (Studio e2e with axe) | Every screen listed in 02 §7 — Home, template gallery, full-page library, voice library, part editor, settings, palette, help pending |
+| UI-03 | In progress | Versions dialog, import dialog, rigging assistant, full-page library, part editor (Studio e2e with axe) | Every screen listed in 02 §7 — Template gallery, voice library, settings, palette and help pending |
 | UI-04 | In progress | packages/ui tree/sections/lists/search | Organisation patterns: trees, collapsible sections, lists and search b |
 | UI-05 | In progress | shared selection, undo labels, autosave badge, keyboard shortcuts, drag on canvas/timeline, context menus (canvas, layers, clips), library drag-and-drop to canvas and Face/Acting lanes | Selection, undo, autosave, keyboard, drag-and-drop and context-menu ru — Tree drag-and-drop reparenting pending |
 | UI-06 | In progress | disabledReason on buttons/menus/selects | Every visible control works or states its prerequisite |
@@ -255,7 +255,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | NFR-17 | Not started | — | Licensing |
 | NFR-18 | In progress | fixture labels in worker, voice assets, takes, reports, Studio | Transparency — AI-generated provenance on real takes pending |
 | AC-01 | Not started | — | Template to video |
-| AC-02 | Not started | — | Build a character in both families |
+| AC-02 | In progress | tools/test/m2-acceptance.test.ts AC-02 (every builder section, 4 views × 2 families identical after .framechar into a fresh profile) | Build a character in both families — Owner run in the Studio and visual sign-off pending |
 | AC-03 | Not verified | — | Design a voice and range bank — Requires reference GPU and listening panel (owner checklist) |
 | AC-04 | Not started | — | Record and upload |
 | AC-05 | Not started | — | Clone with consent |
@@ -265,7 +265,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | AC-09 | Not started | — | Lip-sync accuracy |
 | AC-10 | Not started | — | Conflicts and validation |
 | AC-11 | In progress | packages/server/test/versions.test.ts (two episodes, new version in one scene, reopen, snapshot restore) | Versions and reuse — Studio run of the full scenario pending |
-| AC-12 | In progress | rigging.test.ts; Studio e2e “rigging assistant…”, “imports an SVG…”; import.test.ts (background image, audio) | Import and rigging assistant — Hand-pose supply and a real artist PSD pending |
+| AC-12 | In progress | rigging.test.ts (character, prop, set); Studio e2e “rigging assistant…”, “imports an SVG…”; import.test.ts | Import and rigging assistant — Hand-pose supply and a real artist PSD pending |
 | AC-13 | In progress | MCP path evidenced in `packages/mcp/test/mcp.test.ts` (create project, character, lines, dry run, conflict after human edit resolved by re-reading, voice → takes → frame and video) and Studio e2e (agent-tagged clips, session revert). Missing: recipes and music via MCP (recipes are M3), a 3-scene/2-character run by a real agent | Agent production |
 | AC-14 | Not started | — | Performance |
 | AC-15 | Not started | — | Determinism and sync |
@@ -273,7 +273,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | AC-17 | Not verified | test_models.py OOM logic | Worker resilience — Requires reference GPU |
 | AC-18 | Not started | — | Design System compliance |
 | AC-19 | Not started | — | Catalog coverage |
-| AC-20 | In progress | package.test.ts project package opens without the user library; CLI package import | Packages and portability — Second-machine (macOS/Linux) run with rendered-frame comparison pending |
+| AC-20 | In progress | package.test.ts; tools/test/m2-acceptance.test.ts AC-20 (new folder, no user library, identical frames) | Packages and portability — Second-machine (macOS/Linux) run pending |
 | AC-21 | In progress | package.test.ts malicious archives (traversal, scripts, undeclared, oversized, hash mismatch); SVG safety tests | Security and privacy — Network audit and token-in-logs checks pending |
 | AC-22 | Not started | — | Templates |
 | AC-23 | Not started | — | Captions and text |
@@ -288,14 +288,13 @@ H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output p
 
 ## Next actions (ordered)
 1. Keep CI green (typecheck, lint, unit, visual, worker, slice + Studio e2e).
-2. M2: part editor (FR-PED-01..05) on the placed-art and point contract; “new part from existing”.
-3. M2: user library (profile folder) with “save to my library”, favourites and collections (FR-AST-01/06), compatibility
-   reasons in the browser (FR-AST-04), full-page asset library with versions and usages (FR-AST-05, UI-03).
-4. M2: rigging assistant outputs for props with states and sets, pivot adjustment, hand-pose supply (FR-IMP-03).
-5. M2 exit runs: AC-02 (build in both families → .framechar → fresh profile, identical frames), AC-11 in the Studio,
-   AC-12 with an artist PSD, AC-20 on a second OS.
-6. M1 owner run with Qwen3-TTS on the reference GPU (docs/acceptance/owner-checklist.md §1).
-7. Content track (M5): accessories (C1), skin details/makeup (A13/A14), facial hair (A11), starter voices (Q1) — the
+2. M2 remainder: rigging assistant pivot adjustment and hand-pose supply (FR-IMP-03); thumbnails for mouth shapes,
+   eye/brow states and controls (FR-AST-07); builder constraint choices and patterns (FR-BLD-05/07).
+3. M2 exit runs with the owner: AC-02 in the Studio, AC-11, AC-12 with an artist PSD, AC-20 on a second OS
+   (docs/acceptance/owner-checklist.md).
+4. M3 Direction: recipes, music, camera direction (start from docs/spec milestone list; AC-13 needs recipes and music).
+5. M1 owner run with Qwen3-TTS on the reference GPU (docs/acceptance/owner-checklist.md §1).
+6. Content track (M5): accessories (C1), skin details/makeup (A13/A14), facial hair (A11), starter voices (Q1) — the
    bundled cast references some of these and the builder's rig check reports the gaps.
 
 ## Open decisions and blockers
@@ -331,8 +330,15 @@ H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output p
 - Fixes found by tests: CLI renders ignored project-local assets; the Layers tree omitted image instances; dropdowns
   opened behind dialogs; Windows path in a new test.
 
-**In progress** — see Next actions (part editor, user library and collections, rigging outputs for props/sets, M2
-exit runs).
+- Part editor (FR-PED-01/02/04/05): point and binding editing, mirror view, family drafting, new part from existing,
+  rig-check gate with drafts (Studio e2e, rig/test/edit.test.ts, server/test/parts.test.ts).
+- User library in the profile folder with save/adopt, favourites and collections, compatibility reasons, full-page
+  library with filters, details, versions, usages and problems; persistent thumbnail cache (server tests, Studio e2e).
+- “Open as a copy” for project versions; builder Compare; AC-02 and AC-20 automated paths (tools/test/m2-acceptance).
+- Rigging assistant outputs for props with states and location kits; the prop evaluator draws placed artwork
+  (io/server rigging tests, Studio e2e “…prop with states…”). PR ModMonLab/framestudio#1 merged mid-session.
+
+**In progress** — see Next actions (pivot adjustment and hand poses, remaining thumbnails, M2 exit runs, then M3).
 
 **Not verified (needs the reference machine or people)** — unchanged from session 1: NFR-06, AC-03, AC-17, AC-24,
 FR-VWK-02/04, CAT-06 visual review, listening panel.

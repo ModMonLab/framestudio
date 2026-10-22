@@ -76,7 +76,7 @@ export function ImportDialog({ file, onClose, position }: { file: File | undefin
       footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" loading={busy} onClick={() => void run()} disabled={kind === 'unsupported' || needsLicence} disabledReason={kind === 'unsupported' ? 'This file type cannot be imported' : 'Name the licence you hold'}>{kind === 'layered' || role === 'rig' ? 'Open rigging assistant' : 'Import'}</Button></>}
     >
       {kind === 'unsupported' && <p role="alert">.{ext} files cannot be imported. Images: PNG, JPEG, WebP, SVG. Layered artwork: PSD, SVG. Audio: WAV, MP3, FLAC, OGG, M4A. Packages: .framechar, .frameasset, .framevoice.</p>}
-      {kind === 'layered' && <p>Layered artwork opens in the rigging assistant, which maps its layers to the rig and makes a character.</p>}
+      {kind === 'layered' && <p>Layered artwork opens in the rigging assistant, which maps its layers to the rig and makes a character, a prop with states or a set.</p>}
       {kind === 'package' && <p>Adds the package’s assets to this project. Existing assets with the same version are kept; different content under the same ID is refused or imported under new IDs.</p>}
       {(kind === 'image' || kind === 'audio') && (
         <div className="st-form st-form--flush">
@@ -87,7 +87,7 @@ export function ImportDialog({ file, onClose, position }: { file: File | undefin
           ]} />
           {rights === 'licensed' && <TextField label="Licence" placeholder="Licence, e.g. CC-BY-4.0 or the seller’s licence name" value={licence} onChange={setLicence} />}
           <RadioList label="Use it as" value={role} onChange={setRole} items={kind === 'image'
-            ? [{ value: 'object', label: 'An object in the scene' }, { value: 'background', label: 'The scene background', meta: 'Back plane, covers the stage' }, ...(ext === 'svg' ? [{ value: 'rig', label: 'A character (rigging assistant)', meta: 'Layered SVG' }] : []), { value: 'library', label: 'Only add to the project’s assets' }]
+            ? [{ value: 'object', label: 'An object in the scene' }, { value: 'background', label: 'The scene background', meta: 'Back plane, covers the stage' }, ...(ext === 'svg' ? [{ value: 'rig', label: 'A character, prop or set (rigging assistant)', meta: 'Layered SVG' }] : []), { value: 'library', label: 'Only add to the project’s assets' }]
             : [{ value: 'music', label: 'Music at the playhead' }, { value: 'ambience', label: 'Ambience at the playhead' }, { value: 'sfx', label: 'Sound effect at the playhead' }, { value: 'library', label: 'Only store it in the project' }]} />
           <p className="fr-hint">Frame records the file name, today’s date and your statement with the import.</p>
         </div>
