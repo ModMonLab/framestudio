@@ -1,7 +1,7 @@
 /** Canvas (Design System §6.1): stage frame at the output aspect, selection, drag to move, shot badge, style and zoom. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
-import { evaluateFrame, type EvaluatedFrame } from '@frame/core';
+import { evaluateFrame, seatAnchors, seatCommands, type EvaluatedFrame } from '@frame/core';
 import { FloatingControl, IconButton, Segmented } from '@frame/ui';
 import { blit, getRenderer, getStyles } from '../lib/preview.js';
 import { useStudio } from '../lib/store.js';
@@ -120,6 +120,24 @@ export function CanvasView() {
       const inst = scene.instances.find((i) => i.id === id)!;
       return { name: 'instance.update', params: { scene: sceneId, id, set: { transform: { ...inst.transform, x: Math.round(inst.transform.x + d.dx / sx), y: Math.round(inst.transform.y + d.dy / sx) } } } };
     });
+    // Dropping one character on a seat seats it (FR-STG-04): hips on the seat anchor, in front of the seat.
+    const one = ids.length === 1 ? scene.instances.find((i) => i.id === ids[0]) : undefined;
+    if (one?.kind === 'character' && styles) {
+      const nx = one.transform.x + d.dx / sx;
+      const ny = one.transform.y + d.dy / sx;
+      const seatHit = scene.instances.flatMap((p) => {
+        if (p.id === one.id || !p.asset || (p.kind !== 'prop' && p.kind !== 'set-piece')) return [];
+        return Object.values(seatAnchors(assets.manifest(p.asset)?.anchors as Record<string, unknown> | undefined)).map((a) => ({ p, x: p.transform.x + a[0] * p.transform.scale * (p.transform.flipX ? -1 : 1), y: p.transform.y + a[1] * p.transform.scale }));
+      }).find((h) => Math.abs(h.x - nx) < 70 && ny > h.y - 40 && ny < h.p.transform.y + 80);
+      if (seatHit) {
+        try {
+          void studio.exec(seatCommands(project, sceneId, one.id, seatHit.p.id, { assets: { manifest: assets.manifest }, styles: styles as never, ...(family ? { family } : {}) }), `Seat ${one.name} on ${seatHit.p.name}`);
+          return;
+        } catch (err) {
+          studio.set({ lastError: { message: (err as Error).message } });
+        }
+      }
+    }
     void studio.exec(cmds, ids.length === 1 ? `Move ${scene.instances.find((i) => i.id === ids[0])?.name ?? 'object'}` : `Move ${ids.length} objects`);
   };
 

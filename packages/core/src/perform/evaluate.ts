@@ -3,7 +3,7 @@
  * (FR-RND-01/02). Studio preview, thumbnails, CLI renders and export all call this.
  */
 import type { Camera, Clip, Instance, MouthBlock, Scene, StyleFamily, Take } from '@frame/schema';
-import { composeCharacter, placedArt, NEUTRAL_FACE, REST_POSE, type FaceState, type FamilyStyle, type MouthLetter, type PartData, type Pose, type ViewArt, buildPath, ellipsePath, resolveFill, resolveColor, buildPalette, evalPoint, type Mapper } from '@frame/rig';
+import { composeCharacter, placedArt, NEUTRAL_FACE, REST_POSE, VIEW_ANGLE, type FaceState, type FamilyStyle, type MouthLetter, type PartData, type Pose, type ViewArt, buildPath, ellipsePath, resolveFill, resolveColor, buildPalette, evalPoint, type Mapper } from '@frame/rig';
 import type { Frame, GroupItem, Item, Mat } from '@frame/render';
 import type { ProjectState } from '../state.js';
 import { hash32, prng } from '../ids.js';
@@ -12,6 +12,7 @@ import { lineTakeState } from '../validate.js';
 import { applyOverrides, mouthTrackFromAlignment, mouthTrackFromEnvelope, shapeAt } from './lipsync.js';
 import { clipWeight, mirrorKeys, postureAt, sample, type ActionData, type ExpressionData, type Key } from './data.js';
 import { resolveCharacter, type AssetResolver } from './character.js';
+import { motionAt, type Motion } from './locomotion.js';
 import { captionItems, DEFAULT_CAPTION_STYLE, stripPauseMarkers, type CaptionStyle } from '../captions.js';
 
 
@@ -232,12 +233,17 @@ function mixFace(a: FaceState, b: FaceState, w: number): FaceState {
 /** Mouth tracks per alignment object (state is immutable: a re-aligned take gets a new alignment object). */
 const mouthCache = new WeakMap<object, Map<string, ReturnType<typeof mouthTrackFromAlignment>>>();
 
-function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, assets: AssetResolver, fps: number): PerfResult {
+function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, assets: AssetResolver, fps: number, motion?: Motion, posOf?: (id: string) => [number, number] | undefined): PerfResult {
   const ch = inst.character!;
   const seed = (scene.seed ^ hash32(inst.id)) >>> 0;
   const actionOf = (r: string) => (assets.manifest(r)?.data as { action?: ActionData } | undefined)?.action;
   // Posture persists after posture-changing actions end (sit down → seated until stand up, FR-ACT-03).
   const pose: Pose = JSON.parse(JSON.stringify({ ...REST_POSE, posture: postureAt(scene, inst.id, ch.posture, t, actionOf) }));
+  // Walking (FR-ACT-04): the gait follows the distance travelled, in character units along the body's forward axis.
+  if (motion?.moving && motion.gait) {
+    const facing = Math.sin((VIEW_ANGLE[motion.view ?? ch.view] * Math.PI) / 180) || 1;
+    pose.gait = { distance: motion.distance / Math.max(1e-6, inst.transform.scale) / facing, stride: motion.gait.stride, lift: motion.gait.lift };
+  }
   let face = { ...NEUTRAL_FACE };
   const overlays: Record<string, number> = {};
   const extraParts: string[] = [];
@@ -372,7 +378,7 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
   for (const c of activeClips(scene, inst.id, 'gaze', t)) {
     const w = clipWeight(t, c.start, c.end, c.blendIn, c.blendOut);
     const target = c.params.target as string | { x: number; y: number } | undefined;
-    const dir = gazeDirection(scene, inst, target, t);
+    const dir = gazeDirection(scene, inst, target, t, posOf);
     gaze = [gaze[0] + (dir[0] - gaze[0]) * w, gaze[1] + (dir[1] - gaze[1]) * w];
     pose.head = { ...pose.head, yaw: pose.head.yaw + dir[0] * 18 * w, pitch: pose.head.pitch + dir[1] * 8 * w };
   }
@@ -380,7 +386,7 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
   if (ch.auto.listening && !speaking && !activeClips(scene, inst.id, 'gaze', t).length) {
     const speaker = scene.clips.find((c) => c.line && c.line.speaker !== inst.id && t >= c.start && t < c.end && c.enabled);
     if (speaker) {
-      const dir = gazeDirection(scene, inst, speaker.line!.speaker, t);
+      const dir = gazeDirection(scene, inst, speaker.line!.speaker, t, posOf);
       gaze = [gaze[0] * 0.3 + dir[0] * 0.7, gaze[1] * 0.3 + dir[1] * 0.7];
       pose.head = { ...pose.head, yaw: pose.head.yaw + dir[0] * 10 };
     }
@@ -393,25 +399,74 @@ export function performAt(state: ProjectState, sceneId: string, instanceId: stri
   const scene = state.scenes[sceneId];
   const inst = scene?.instances.find((i) => i.id === instanceId);
   if (!scene || !inst?.character) throw new Error(`Character instance ${instanceId} not found`);
-  return perform(state, scene, inst, t, assets, state.project.frameRate);
+  const { motion, posOf } = motionContext(scene, t, assets);
+  return perform(state, scene, inst, t, assets, state.project.frameRate, motion(inst), posOf);
+}
+
+/**
+ * Stage positions of a character's joints at t (feet, hands, head…) — for foot-contact checks, attaching props to
+ * hands and overlays. Uses the same evaluation as rendering.
+ */
+export function characterJointsAt(state: ProjectState, sceneId: string, instanceId: string, t: number, o: Pick<EvalOptions, 'assets' | 'styles' | 'family'>): Record<string, [number, number]> {
+  const scene = state.scenes[sceneId];
+  const inst = scene?.instances.find((i) => i.id === instanceId);
+  if (!scene || !inst?.character || !inst.asset) throw new Error(`Character instance ${instanceId} not found`);
+  const family = o.family ?? state.project.styleFamily;
+  const man = o.assets.manifest(inst.asset);
+  if (!man) throw new Error(`${inst.asset} not found`);
+  const ctx = motionContext(scene, t, o.assets);
+  const mo = ctx.motion(inst);
+  const perf = perform(state, scene, inst, t, o.assets, state.project.frameRate, mo, ctx.posOf);
+  const { spec } = resolveCharacter(man, inst.character.look, family, o.styles[family], o.assets, perf.extraParts);
+  const composed = composeCharacter(spec, { view: mo.moving && mo.view ? mo.view : inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
+  const k = inst.transform.scale;
+  const out: Record<string, [number, number]> = {};
+  for (const [name, j] of Object.entries(composed.joints)) out[name] = [mo.x + j.p[0] * k, mo.y + j.p[1] * k];
+  return out;
+}
+
+/** Per-frame motion lookups: each character's position and facing at t (memoised within the frame). */
+function motionContext(scene: Scene, t: number, assets: AssetResolver) {
+  const actionOf = (r: string) => (assets.manifest(r)?.data as { action?: ActionData } | undefined)?.action;
+  const cache = new Map<string, Motion>();
+  const motion = (inst: Instance): Motion => {
+    let m = cache.get(inst.id);
+    if (!m) {
+      cache.set(inst.id, { x: inst.transform.x, y: inst.transform.y, flip: inst.transform.flipX, distance: 0, moving: false }); // guards turn-to-face cycles
+      m = inst.kind === 'character' ? motionAt(scene, inst, t, actionOf, (id) => posOf(id)) : { x: inst.transform.x, y: inst.transform.y, flip: inst.transform.flipX, distance: 0, moving: false };
+      cache.set(inst.id, m);
+    }
+    return m;
+  };
+  const posOf = (id: string): [number, number] | undefined => {
+    const i = scene.instances.find((x) => x.id === id);
+    if (!i) return undefined;
+    const m = motion(i);
+    return [m.x, m.y];
+  };
+  return { motion, posOf };
 }
 
 /** Screen-space direction (−1…1) from an instance's head to a target. */
-function gazeDirection(scene: Scene, inst: Instance, target: string | { x: number; y: number } | undefined, _t: number): [number, number] {
+function gazeDirection(scene: Scene, inst: Instance, target: string | { x: number; y: number } | undefined, _t: number, posOf?: (id: string) => [number, number] | undefined): [number, number] {
   if (!target || target === 'camera') return [0, 0];
   let tx: number;
   let ty: number;
+  // Positions at the current time, so gaze follows moving characters (FR-ACT-05).
+  const at = (i: Instance): [number, number] => posOf?.(i.id) ?? [i.transform.x, i.transform.y];
   if (typeof target === 'string') {
     const o = scene.instances.find((i) => i.id === target);
     if (!o) return [0, 0];
-    tx = o.transform.x;
-    ty = o.transform.y - 400 * o.transform.scale;
+    const p = at(o);
+    tx = p[0];
+    ty = p[1] - 400 * o.transform.scale;
   } else {
     tx = target.x;
     ty = target.y;
   }
-  const hx = inst.transform.x;
-  const hy = inst.transform.y - 400 * inst.transform.scale;
+  const self = at(inst);
+  const hx = self[0];
+  const hy = self[1] - 400 * inst.transform.scale;
   const dx = tx - hx;
   const dy = ty - hy;
   const d = Math.hypot(dx, dy) || 1;
@@ -502,10 +557,12 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
     return [x, y];
   };
 
+  const motions = motionContext(scene, t, o.assets);
   for (const inst of sorted) {
     const view = viewMatrix(scene, cs, o.width, o.height, designAspect, inst.parallax);
     const [px, py] = parentOffset(inst);
-    const tr = inst.transform;
+    const mo = motions.motion(inst);
+    const tr = { ...inst.transform, x: mo.x, y: mo.y, flipX: mo.flip };
     const local: Mat = mul(T(tr.x + px, tr.y + py), mul(R(tr.rotation), S(tr.scale * (tr.flipX && inst.kind !== 'character' ? -1 : 1), tr.scale)));
     const m = mul(view, local);
     let content: Item[] = [];
@@ -515,11 +572,11 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
         issues.push(`${inst.name}: character ${inst.asset} not found`);
         continue;
       }
-      const perf = perform(state, scene, inst, t, o.assets, fps);
+      const perf = perform(state, scene, inst, t, o.assets, fps, mo, motions.posOf);
       mouths[inst.id] = perf.mouth;
       const { spec, missing } = resolveCharacter(man, inst.character.look, family, style, o.assets, perf.extraParts);
       for (const mref of missing) issues.push(`${inst.name}: missing asset ${mref}`);
-      const composed = composeCharacter(spec, { view: inst.character.view, flip: tr.flipX, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
+      const composed = composeCharacter(spec, { view: mo.moving && mo.view ? mo.view : inst.character.view, flip: tr.flipX, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
       for (const i of composed.issues) issues.push(`${inst.name}: ${i}`);
       content = [composed.item];
       const b = composed.bounds;

@@ -125,5 +125,12 @@ export const ACTIONS: Record<string, ActionData> = {
   'seated-lean-in': A({ channels: ['posture', 'torso'], loop: true, duration: 4, postures: ['seated'], keys: { posture: k([0, 'seated']), 'spine.pitch': k([0, 10]), armR: k([0, [0.25, -0.5, 0.6]]), armL: k([0, [0.25, -0.5, 0.6]]) } }),
   'sit-down': A({ channels: ['posture', 'root'], duration: 1.2, postures: ['standing'], resultPosture: 'seated', keys: { posture: k([0, 'standing'], [0.5, 'seated']), 'spine.pitch': k([0, 0], [0.4, 20], [1, 0]) } }),
   'stand-up': A({ channels: ['posture', 'root'], duration: 1.2, postures: ['seated'], resultPosture: 'standing', keys: { posture: k([0, 'seated'], [0.5, 'standing']), 'spine.pitch': k([0, 0], [0.4, 20], [1, 0]) } }),
+  // Locomotion (FR-ACT-04): the engine drives legs and arm swing from the distance travelled; keys add attitude.
+  walk: A({ channels: ['root', 'legs'], loop: true, duration: 1.1, postures: ['standing'], locomotion: { speed: 160, stride: 1.1, lift: 0.1 }, keys: { 'spine.pitch': k([0, 3]) } }),
+  stroll: A({ channels: ['root', 'legs'], loop: true, duration: 1.3, postures: ['standing'], locomotion: { speed: 110, stride: 0.95, lift: 0.07 }, keys: { 'spine.pitch': k([0, 0]), 'head.pitch': k([0, -2]) } }),
+  'brisk-walk': A({ channels: ['root', 'legs'], loop: true, duration: 0.9, postures: ['standing'], locomotion: { speed: 220, stride: 1.25, lift: 0.12 }, keys: { 'spine.pitch': k([0, 6]) } }),
+  run: A({ channels: ['root', 'legs'], loop: true, duration: 0.6, postures: ['standing'], locomotion: { speed: 420, stride: 1.6, lift: 0.22 }, keys: { 'spine.pitch': k([0, 12]) } }),
+  sneak: A({ channels: ['root', 'legs'], loop: true, duration: 1.6, postures: ['standing'], locomotion: { speed: 70, stride: 0.8, lift: 0.08 }, keys: { 'spine.pitch': k([0, 14]), 'head.pitch': k([0, 6]) } }),
+  march: A({ channels: ['root', 'legs'], loop: true, duration: 1, postures: ['standing'], locomotion: { speed: 170, stride: 1.1, lift: 0.2 }, keys: { 'spine.pitch': k([0, -2]) } }),
   'arms-crossed': A({ channels: ['armR', 'armL', 'handR', 'handL'], loop: true, duration: 3, hand: 'both', keys: { armR: k([0, [-0.3, -0.45, 0.4]], [1, [-0.3, -0.45, 0.4]]), armL: k([0, [-0.28, -0.4, 0.42]], [1, [-0.28, -0.4, 0.42]]), handR: k([0, 'fist']), handL: k([0, 'fist']) } }),
 };

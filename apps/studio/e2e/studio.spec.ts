@@ -107,6 +107,40 @@ test('auto performance adds editable clips; a same-channel overlap is hatched an
   await expect.poll(async () => (await state()).scenes[sid].clips.find((c: { id: string }) => c.id === added).start).toBeGreaterThan(6 * 48000);
 });
 
+test('dropping a character on a chair seats it on the seat anchor, in front of the chair (FR-STG-04)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  let st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const add = await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'instance.add', params: { scene: sid, kind: 'prop', asset: 'prop.studio-chair@1', name: 'Spare chair', transform: { x: 300, y: 985 }, depthPlane: 'mid' } }] } });
+  const chair = (await add.json()).commands[0].params.id;
+  st = await state();
+  const maya = st.scenes[sid].instances.find((i: { name: string }) => i.name === 'Maya Bennett');
+  // Wait until the Studio has the new chair (it arrives over the live connection).
+  await expect(page.getByRole('treeitem', { name: /Spare chair/ }).first()).toBeVisible();
+  await page.waitForTimeout(500);
+  // The wide camera shows the whole stage (centre 960,560, width 1920): stage → canvas is a uniform scale.
+  const canvas = page.getByTestId('stage-canvas');
+  const box = (await canvas.boundingBox())!;
+  const k = box.width / 1920;
+  const toScreen = (x: number, y: number) => [box.x + x * k, box.y + (y - 20) * k] as const;
+  const [x0, y0] = toScreen(maya.transform.x, maya.transform.y - 420); // her head, above the chair she sits on
+  const [x1, y1] = toScreen(300, maya.transform.y - 420);
+  await page.mouse.move(x0, y0);
+  await page.mouse.down();
+  await page.mouse.move(x1, y1, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state()).scenes[sid].instances.find((i: { id: string }) => i.id === maya.id).transform.x, { timeout: 10_000 }).toBeLessThan(400);
+  st = await state();
+  const m = st.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id);
+  const c = st.scenes[sid].instances.find((i: { id: string }) => i.id === chair);
+  expect(m.character.posture).toBe('seated');
+  expect(m.depthPlane).toBe(c.depthPlane);
+  expect(m.order).toBeGreaterThan(c.order);
+  await expect(page.getByRole('button', { name: /^Undo Seat Maya Bennett on Spare chair/ }).first()).toBeVisible();
+});
+
 test('agent changes are tagged and a person reverts the agent session from Activity (FR-AGT-04/05, AC-13)', async ({ page }) => {
   await openProject(page, sample(false));
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);

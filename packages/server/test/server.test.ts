@@ -70,6 +70,23 @@ describe('Frame Server (FR-ARC-01..05)', () => {
     expect(Object.values(disk.state.scenes).map((s) => s.name)).toContain('Cold open');
   });
 
+  it('a copied folder with the same project id replaces the open original, which is saved and closed', async () => {
+    const dir = project();
+    const a = (await api('POST', '/api/projects/open', { path: dir })).json.id as string;
+    await api('POST', `/api/projects/${a}/commands`, { commands: [{ name: 'project.setSettings', params: { name: 'Original' } }] });
+    const copy = path.join(path.dirname(dir), 'Copy.frame');
+    await api('POST', `/api/projects/${a}/save`);
+    fs.cpSync(dir, copy, { recursive: true });
+    const b = (await api('POST', '/api/projects/open', { path: copy })).json;
+    expect(b.id).toBe(a);
+    await api('POST', `/api/projects/${a}/commands`, { commands: [{ name: 'project.setSettings', params: { name: 'Copy' } }] });
+    await api('POST', `/api/projects/${a}/save`);
+    expect(OpenProject.open(dir).state.project.name).toBe('Original');
+    expect(OpenProject.open(copy).state.project.name).toBe('Copy');
+    const list = (await api('GET', '/api/projects')).json.projects.filter((p: { id: string }) => p.id === a);
+    expect(list.map((p: { root: string }) => p.root)).toEqual([path.resolve(copy)]);
+  });
+
   it('rejects stale non-commutative edits with REVISION_CONFLICT and rebases commutative ones (FR-ARC-04)', async () => {
     const pid = (await api('POST', '/api/projects/open', { path: project() })).json.id;
     const st = (await api('GET', `/api/projects/${pid}/state`)).json;

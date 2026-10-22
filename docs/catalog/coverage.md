@@ -2,7 +2,7 @@
 
 Generated 2026-10-22 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
 
-**Green: 0 / 1254 (0 %)** · manifests present: 446 / 1254 (35.6 %)
+**Green: 0 / 1254 (0 %)** · manifests present: 452 / 1254 (36 %)
 
 An item is green when it has a manifest, both families and all four views (or documented exemptions) where they apply, passes the validators (schema and, for character-attached items, the rig check), has previews in both families, is approved in visual review (CAT-06) and carries a redistributable, commercial-use licence with provenance.
 
@@ -42,7 +42,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | D1 Bundled cast | `chr` | 14 | 14 | 0 |
 | E1 Expressions | `exp` | 83 | 83 | 0 |
 | E2 Facial overlays | `overlay` | 14 | 0 | 0 |
-| F1 Performance clips | `act` | 118 | 19 | 0 |
+| F1 Performance clips | `act` | 118 | 25 | 0 |
 | G1 Performance recipes | `rcp` | 24 | 0 | 0 |
 | H1 Props | `prop` | 142 | 8 | 0 |
 | I1 Location kits | `kit` | 16 | 1 | 0 |
@@ -695,13 +695,13 @@ An item is green when it has a manifest, both families and all four views (or do
 | `act.avoid-eye-contact` | — | — | — | — | — | — (no manifest) |
 | `act.scan-room` | — | — | — | — | — | — (no manifest) |
 | `act.stare-down` | — | — | — | — | — | — (no manifest) |
-| `act.walk` | — | — | — | — | — | — (no manifest) |
-| `act.brisk-walk` | — | — | — | — | — | — (no manifest) |
-| `act.sneak` | — | — | — | — | — | — (no manifest) |
-| `act.run` | — | — | — | — | — | — (no manifest) |
-| `act.stroll` | — | — | — | — | — | — (no manifest) |
+| `act.walk` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.brisk-walk` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.sneak` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.run` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.stroll` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.limp` | — | — | — | — | — | — (no manifest) |
-| `act.march` | — | — | — | — | — | — (no manifest) |
+| `act.march` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.enter` | — | — | — | — | — | — (no manifest) |
 | `act.exit` | — | — | — | — | — | — (no manifest) |
 | `act.turn-around` | — | — | — | — | — | — (no manifest) |

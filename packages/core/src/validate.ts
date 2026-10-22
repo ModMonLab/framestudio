@@ -60,6 +60,8 @@ export function channelConflicts(scene: SceneT, ctx: ValidationContext = {}): { 
     if (!base) continue;
     // Blink clips add or remove blinks; they layer over expressions (FR-EXP-03).
     if (t.kind === 'face' && c.params.blink !== undefined) continue;
+    // Turn clips change facing only; they combine with any action (FR-ACT-04).
+    if (t.kind === 'acting' && typeof c.params.turn === 'string') continue;
     const info = c.asset ? ctx.channelsOf?.(c.asset) ?? channelInfo(ctx, c.asset, c.params) : undefined;
     const channels = info?.channels ?? base;
     const list = byOwner.get(t.owner) ?? [];
