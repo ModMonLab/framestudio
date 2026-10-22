@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Frame — Character builder</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#3a66f0}a:hover{color:#2a52cc}
+button{font-family:inherit;font-size:inherit}
+.fx-ib{background:transparent;border:1px solid transparent;color:var(--text2);border-radius:6px;cursor:pointer;display:grid;place-items:center}
+.fx-ib:hover{background:var(--hover);color:var(--text)}
+.fx-row{background:transparent;border:none;color:var(--text);cursor:pointer;text-align:left}
+.fx-row:hover{background:var(--hover)}
+.fx-rowsel,.fx-rowsel:hover{background:var(--sel)}
+.fx-menu{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:0 8px;height:28px;border-radius:6px}
+.fx-menu:hover{background:var(--hover);color:var(--text)}
+.fx-sec{background:transparent;border:none;color:var(--text);cursor:pointer;width:100%;display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;font-weight:600}
+.fx-sec:hover{background:var(--hover)}
+.fx-ghost{background:var(--sub);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer;height:28px;padding:0 10px;font-weight:500}
+.fx-ghost:hover{background:var(--hover)}
+.fx-tile{background:var(--sub);border:1px solid var(--border);color:var(--text);border-radius:8px;cursor:pointer}
+.fx-tile:hover{border-color:var(--text3)}
+input[type=range]{accent-color:var(--accent);width:100%;height:16px;margin:0}
+</style>
+</helmet>
+<div style="{{themeVars}}">
+<div style="font-family: Inter, system-ui, sans-serif; font-size: 12px; color: var(--text); background: var(--app); min-height: 920px; display: flex; flex-direction: column">
+
+<header style="height: 48px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap">
+<div style="display: flex; align-items: center; gap: 8px; padding-right: 8px">
+<span style="width: 26px; height: 26px; border-radius: 7px; background: var(--accent); display: grid; place-items: center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M3 7l4-4M10 7l4-4M17 7l4-4"></path></svg></span>
+<span style="font-weight: 700; font-size: 14px">Frame</span>
+</div>
+<span style="width: 1px; height: 22px; background: var(--border); margin: 0 6px"></span>
+<a href="Main.dc.html" style="color: var(--text3); text-decoration: none">Cast</a><span style="color: var(--text3)">/</span>
+<span style="font-weight: 600">{{name}}</span>
+<span style="padding: 2px 6px; border-radius: 4px; background: var(--sub); border: 1px solid var(--border); color: var(--text2); font-size: 11px">v2 · edited</span>
+<span style="flex: 1"></span>
+<span style="color: var(--text3)">Preview style</span>
+<div role="group" aria-label="Preview style" style="display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--sub); border: 1px solid var(--border)">
+<sc-for list="{{families}}" as="f" hint-placeholder-count="2">
+<button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}}</button>
+</sc-for>
+</div>
+<span style="width: 1px; height: 22px; background: var(--border); margin: 0 4px"></span>
+<button class="fx-ib" onClick="{{toggleTheme}}" aria-label="{{themeLabel}}" title="{{themeLabel}}" style="width: 30px; height: 30px">
+<sc-if value="{{isDark}}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if>
+<sc-if value="{{isLight}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"></path></svg></sc-if>
+</button>
+<button class="fx-ib" aria-label="Undo" style="width: 30px; height: 30px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14L4 9l5-5"></path><path d="M4 9h11a5 5 0 010 10h-3"></path></svg></button>
+<button class="fx-ib" aria-label="Redo" style="width: 30px; height: 30px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 14l5-5-5-5"></path><path d="M20 9H9a5 5 0 000 10h3"></path></svg></button>
+<button class="fx-ghost" style="margin-left: 4px">Export…</button>
+<button style="height: 28px; padding: 0 12px; border-radius: 6px; border: none; background: var(--accent); color: #ffffff; font-weight: 600; cursor: pointer">Save version 3</button>
+</header>
+
+<div style="flex: 1; display: flex; min-height: 0; flex-wrap: wrap">
+
+<aside aria-label="Parts" style="width: 272px; flex: none; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 872px">
+<div style="display: flex; align-items: center; gap: 6px; padding: 10px 12px 8px">
+<span style="font-weight: 600; font-size: 13px; flex: 1">Parts</span>
+<button class="fx-ib" aria-label="Collapse all" onClick="{{collapseAll}}" style="width: 26px; height: 26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 15l5-5 5 5M7 9l5-5 5 5"></path></svg></button>
+</div>
+<div style="padding: 0 12px 8px">
+<label style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; border-radius: 6px; background: var(--field); border: 1px solid var(--border)">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text3)" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<input type="text" value="{{query}}" onInput="{{setQuery}}" placeholder="Search parts and settings" aria-label="Search parts and settings" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text); font: inherit">
+</label>
+</div>
+<div role="tree" aria-label="Character parts" style="flex: 1; overflow: auto; padding: 0 6px 10px">
+<sc-for list="{{tree}}" as="n" hint-placeholder-count="20">
+<div role="treeitem" aria-expanded="{{n.expanded}}" aria-selected="{{n.on}}" class="{{n.cls}}" onClick="{{n.select}}" style="display: flex; align-items: center; gap: 4px; height: 28px; border-radius: 6px; padding-right: 8px; cursor: pointer">
+<span style="{{n.indent}}"></span>
+<sc-if value="{{n.kids}}" hint-placeholder-val="{{ true }}">
+<button class="fx-ib" onClick="{{n.toggle}}" aria-label="{{n.toggleLabel}}" style="width: 18px; height: 18px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="{{n.chev}}"></path></svg></button>
+</sc-if>
+<sc-if value="{{n.leaf}}" hint-placeholder-val="{{ false }}"><span style="width: 18px"></span></sc-if>
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="{{n.iconStyle}}" aria-hidden="true"><path d="{{n.icon}}"></path></svg>
+<span style="{{n.labelStyle}}">{{n.label}}</span>
+<span style="color: var(--text3); font-size: 11px; white-space: nowrap">{{n.meta}}</span>
+<sc-if value="{{n.dirty}}" hint-placeholder-val="{{ false }}"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none" title="Changed"></span></sc-if>
+</div>
+</sc-for>
+<sc-if value="{{noResults}}" hint-placeholder-val="{{ false }}"><p style="color: var(--text3); padding: 8px 12px; margin: 0">Nothing matches “{{query}}”.</p></sc-if>
+</div>
+<div style="border-top: 1px solid var(--border); padding: 10px 12px; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 6px; font-weight: 600"><span style="width: 7px; height: 7px; border-radius: 50%; background: #34a853"></span>Rig check passed</div>
+<span style="color: var(--text3)">4 views · 2 styles · 9 mouth shapes · 112 compatible actions</span>
+</div>
+</aside>
+
+<main aria-label="Preview" style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; background: var(--canvas)">
+<div role="toolbar" aria-label="Preview controls" style="height: 44px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap">
+<span style="color: var(--text3)">View</span>
+<div role="group" aria-label="View direction" style="display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--sub); border: 1px solid var(--border)">
+<sc-for list="{{views}}" as="v" hint-placeholder-count="4">
+<button onClick="{{v.pick}}" aria-pressed="{{v.on}}" style="{{v.style}}">{{v.label}}</button>
+</sc-for>
+</div>
+<span style="color: var(--text3); margin-left: 8px">Frame</span>
+<div role="group" aria-label="Framing" style="display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--sub); border: 1px solid var(--border)">
+<sc-for list="{{framings}}" as="f" hint-placeholder-count="3">
+<button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}}</button>
+</sc-for>
+</div>
+<span style="flex: 1"></span>
+<button class="fx-ghost" aria-pressed="{{turnaround}}" onClick="{{toggleTurnaround}}">Turnaround sheet</button>
+</div>
+<div style="flex: 1; position: relative; min-height: 560px">
+<sc-if value="{{single}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 50%; bottom: 7%; width: 34%; height: 5%; transform: translateX(-50%); border-radius: 50%; background: rgba(0,0,0,0.12)"></div>
+<div style="position: absolute; left: 24%; right: 24%; top: 5%; bottom: 6%">
+<dc-import name="Character" family="{{family}}" view="{{view}}" pose="standing" expression="{{expression}}" gesture="{{gesture}}" mouth="{{mouth}}" params="{{params}}" uid="builder" framing="{{framing}}" hint-size="100%,100%"></dc-import>
+</div>
+</sc-if>
+<sc-if value="{{turnaround}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 24px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{sheet}}" as="t" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 6px; min-height: 0">
+<div style="flex: 1; min-height: 0; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); padding: 12px">
+<dc-import name="Character" family="{{family}}" view="{{t.view}}" pose="standing" expression="{{expression}}" params="{{params}}" uid="{{t.uid}}" framing="full" hint-size="100%,100%"></dc-import>
+</div>
+<span style="text-align: center; color: var(--text2); font-weight: 500">{{t.label}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<div style="position: absolute; left: 12px; top: 12px; padding: 3px 7px; border-radius: 4px; background: var(--panel); border: 1px solid var(--border); color: var(--text2); font-size: 11px; font-weight: 500">{{styleBadge}}</div>
+<sc-if value="{{talking}}" hint-placeholder-val="{{ false }}"><div style="position: absolute; left: 12px; top: 40px; padding: 3px 7px; border-radius: 4px; background: var(--panel); border: 1px solid var(--border); font: 500 11px 'JetBrains Mono', monospace">mouth · {{mouthLabel}}</div></sc-if>
+</div>
+<div role="toolbar" aria-label="Performance test" style="height: 44px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--panel); border-top: 1px solid var(--border); flex-wrap: wrap">
+<span style="color: var(--text3)">Expression</span>
+<div role="group" aria-label="Test expression" style="display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--sub); border: 1px solid var(--border)">
+<sc-for list="{{exprs}}" as="e" hint-placeholder-count="7">
+<button onClick="{{e.pick}}" aria-pressed="{{e.on}}" style="{{e.style}}">{{e.label}}</button>
+</sc-for>
+</div>
+<span style="color: var(--text3); margin-left: 6px">Gesture</span>
+<div role="group" aria-label="Test gesture" style="display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--sub); border: 1px solid var(--border)">
+<sc-for list="{{gestures}}" as="g" hint-placeholder-count="4">
+<button onClick="{{g.pick}}" aria-pressed="{{g.on}}" style="{{g.style}}">{{g.label}}</button>
+</sc-for>
+</div>
+<span style="flex: 1"></span>
+<button class="fx-ghost" onClick="{{toggleTalk}}" aria-pressed="{{talking}}">{{talkLabel}}</button>
+</div>
+</main>
+
+<aside aria-label="Properties" style="width: 304px; flex: none; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column">
+<div style="height: 52px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--border)">
+<div style="flex: 1; display: flex; flex-direction: column; min-width: 0"><span style="color: var(--text3); font-size: 11px">{{crumb}}</span><span style="font-weight: 600; font-size: 13px">{{panelTitle}}</span></div>
+<button class="fx-ib" aria-label="Reset to default" title="Reset to default" style="width: 28px; height: 28px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+</div>
+<div style="flex: 1; overflow: auto">
+<sc-for list="{{sections}}" as="sec" hint-placeholder-count="3">
+<div style="border-bottom: 1px solid var(--divider)">
+<button class="fx-sec" onClick="{{sec.toggle}}" aria-expanded="{{sec.open}}">
+<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--text3)" aria-hidden="true"><path d="{{sec.chev}}"></path></svg>
+<span style="flex: 1; text-align: left">{{sec.label}}</span>
+<span style="color: var(--text3); font-weight: 400">{{sec.hint}}</span>
+</button>
+<sc-if value="{{sec.open}}" hint-placeholder-val="{{ true }}">
+<div style="padding: 2px 12px 12px; display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="3">
+<sc-if value="{{r.isSlider}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; justify-content: space-between"><span style="color: var(--text2)">{{r.k}}</span><span style="min-width: 34px; text-align: center; padding: 1px 6px; border-radius: 4px; background: var(--field); border: 1px solid var(--border); font: 500 11px 'JetBrains Mono', monospace">{{r.n}}</span></div>
+<input type="range" min="0" max="100" value="{{r.n}}" onInput="{{r.set}}" aria-label="{{r.k}}">
+<div style="display: flex; justify-content: space-between; color: var(--text3); font-size: 11px"><span>{{r.lo}}</span><span>{{r.hi}}</span></div>
+</div>
+</sc-if>
+<sc-if value="{{r.isList}}" hint-placeholder-val="{{ false }}">
+<div role="radiogroup" aria-label="{{r.k}}" style="border: 1px solid var(--border); border-radius: 6px; overflow: hidden">
+<sc-for list="{{r.items}}" as="i" hint-placeholder-count="4">
+<button role="radio" aria-checked="{{i.on}}" onClick="{{i.pick}}" class="{{i.cls}}" style="width: 100%; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border: none; border-bottom: 1px solid var(--divider)">
+<span style="{{i.mark}}"></span><span style="flex: 1; font-weight: 500">{{i.label}}</span><span style="color: var(--text3); font-size: 11px">{{i.meta}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{r.isSwatches}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; justify-content: space-between"><span style="color: var(--text2)">{{r.k}}</span><span style="font: 500 11px 'JetBrains Mono', monospace; color: var(--text3)">{{r.hex}}</span></div>
+<div role="radiogroup" aria-label="{{r.k}}" style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{r.items}}" as="c" hint-placeholder-count="8">
+<button role="radio" aria-checked="{{c.on}}" aria-label="{{c.aria}}" onClick="{{c.pick}}" style="{{c.style}}"></button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{r.isToggle}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; align-items: center; gap: 10px; cursor: pointer">
+<input type="checkbox" checked="{{r.on}}" onChange="{{r.flip}}" style="width: 15px; height: 15px; accent-color: var(--accent); margin: 0">
+<span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 500">{{r.k}}</span><span style="color: var(--text3); font-size: 11px">{{r.note}}</span></span>
+</label>
+</sc-if>
+<sc-if value="{{r.isTiles}}" hint-placeholder-val="{{ false }}">
+<div role="radiogroup" aria-label="{{r.k}}" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{r.items}}" as="h" hint-placeholder-count="6">
+<button role="radio" aria-checked="{{h.on}}" onClick="{{h.pick}}" class="fx-tile" style="{{h.style}}">
+<span style="width: 100%; height: 64px; display: block; pointer-events: none">
+<dc-import name="Character" family="{{family}}" view="front" expression="neutral" params="{{h.params}}" uid="{{h.uid}}" framing="face" hint-size="100%,64px"></dc-import>
+</span>
+<span style="font-weight: 500">{{h.label}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{r.isSeg}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="color: var(--text2)">{{r.k}}</span>
+<div role="group" aria-label="{{r.k}}" style="display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--sub); border: 1px solid var(--border)">
+<sc-for list="{{r.items}}" as="o" hint-placeholder-count="3">
+<button onClick="{{o.pick}}" aria-pressed="{{o.on}}" style="{{o.style}}">{{o.label}}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{r.isField}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; flex-direction: column; gap: 4px"><span style="color: var(--text2)">{{r.k}}</span><input type="text" value="{{r.v}}" onInput="{{r.set}}" style="height: 30px; padding: 0 8px; border-radius: 6px; background: var(--field); border: 1px solid var(--border); color: var(--text); font: inherit; outline: none"></label>
+</sc-if>
+<sc-if value="{{r.isArea}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; flex-direction: column; gap: 4px"><span style="color: var(--text2)">{{r.k}}</span><textarea rows="3" style="padding: 7px 8px; border-radius: 6px; background: var(--field); border: 1px solid var(--border); color: var(--text); font: inherit; line-height: 1.45; resize: vertical; outline: none">{{r.v}}</textarea></label>
+</sc-if>
+<sc-if value="{{r.isTakes}}" hint-placeholder-val="{{ false }}">
+<div style="border: 1px solid var(--border); border-radius: 6px; overflow: hidden">
+<sc-for list="{{r.items}}" as="tk" hint-placeholder-count="5">
+<div class="{{tk.cls}}" style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 8px; border-bottom: 1px solid var(--divider)">
+<button onClick="{{tk.play}}" aria-label="{{tk.aria}}" style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border); background: var(--panel); color: var(--text); display: grid; place-items: center; cursor: pointer"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{tk.icon}}"></path></svg></button>
+<span style="width: 64px; font-weight: 500">{{tk.label}}</span>
+<span style="flex: 1; display: flex; align-items: center; gap: 2px; height: 18px">
+<sc-for list="{{tk.bars}}" as="b" hint-placeholder-count="20"><span style="{{b.style}}"></span></sc-for>
+</span>
+<span style="color: var(--text3); font: 500 11px 'JetBrains Mono', monospace">{{tk.dur}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{r.isButtons}}" hint-placeholder-val="{{ false }}">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{r.items}}" as="b" hint-placeholder-count="2">
+<button class="fx-ghost" style="{{b.style}}">{{b.label}}</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{r.isKV}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; justify-content: space-between; gap: 8px"><span style="color: var(--text2)">{{r.k}}</span><span style="font-weight: 500; text-align: right">{{r.v}}</span></div>
+</sc-if>
+<sc-if value="{{r.isNote}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; color: var(--text3); line-height: 1.45">{{r.v}}</p>
+</sc-if>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</aside>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"family":{"editor":"enum","options":["flat","illustrated"],"default":"flat"},"$preview":{"width":1440,"height":920}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      theme: null, family: null, node: 'head.shape', query: '', view: 'front', framing: 'full', expression: 'neutral', gesture: 'rest',
+      talking: false, tick: 0, turnaround: false, name: 'Maya Bennett', playing: null,
+      open: { char: true, identity: false, body: false, head: true, hair: true, wardrobe: false, accessories: false, voice: false, performance: false },
+      secOpen: {}, dirty: { 'head.shape': true, 'hair.style': true },
+      params: { skin: '#b9805c', hair: '#2f221c', top: '#c8653f', bottom: '#3e5953', shoe: '#efe6d6', eye: '#4b3426', lip: '#a65b4f',
+        hairStyle: 'bun', faceShape: 'oval', faceWidth: 48, faceLength: 52, jaw: 42, eyeSize: 50, hairVolume: 60, hairLength: 55,
+        shoulders: 48, waist: 42, hips: 56, freckles: true, topStyle: 'sweater', glasses: false, earrings: true, headset: false },
+      picks: { lifeStage: 'Adult', base: 'Average', eyeShape: 'Almond', brow: 'Soft arch', nose: 'Straight', mouthPreset: 'Full', ears: 'Average', facialHair: 'None', look: 'On-air', shoes: 'Canvas sneakers' },
+    };
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  set(key, value) {
+    this.setState({ params: Object.assign({}, this.state.params, { [key]: value }), dirty: Object.assign({}, this.state.dirty, { [this.state.node]: true }) });
+  }
+  pickVal(key, value) {
+    this.setState({ picks: Object.assign({}, this.state.picks, { [key]: value }), dirty: Object.assign({}, this.state.dirty, { [this.state.node]: true }) });
+  }
+  toggleTalk() {
+    if (this.state.talking) { clearInterval(this.timer); this.setState({ talking: false }); return; }
+    this.setState({ talking: true });
+    this.timer = setInterval(() => this.setState({ tick: this.state.tick + 1 }), 110);
+  }
+  renderVals() {
+    const s = this.state;
+    const P = s.params;
+    const K = s.picks;
+    const theme = s.theme || this.props.theme || 'dark';
+    const dark = theme === 'dark';
+    const V = dark
+      ? { app: '#1e1e20', panel: '#252528', sub: '#2c2c30', field: '#1b1b1d', hover: '#323236', border: '#38383d', divider: '#2f2f33', text: '#ececee', text2: '#b4b4b9', text3: '#8f8f95', accent: '#4f7cff', sel: 'rgba(79,124,255,0.22)', canvas: '#1a1a1c' }
+      : { app: '#f1f1f3', panel: '#ffffff', sub: '#f6f6f8', field: '#ffffff', hover: '#eeeef2', border: '#dcdce2', divider: '#ebebee', text: '#1c1c1f', text2: '#4f4f56', text3: '#6b6b72', accent: '#3a66f0', sel: 'rgba(58,102,240,0.12)', canvas: '#ebebef' };
+    const themeVars = Object.entries(V).map(([k, v]) => `--${k}: ${v}`).join('; ');
+    const fam = s.family || this.props.family || 'flat';
+    const seg = (on, extra) => `height: 24px; padding: 0 9px; border-radius: 5px; border: none; cursor: pointer; font-weight: 500; ${on ? 'background: var(--panel); color: var(--text); box-shadow: 0 0 0 1px var(--border)' : 'background: transparent; color: var(--text2)'}; ${extra || ''}`;
+    const chev = (open) => (open ? 'M6 9l6 6 6-6' : 'M9 6l6 6-6 6');
+
+    // Parts tree: [id, depth, label, icon, parent, metaFn].
+    const I = {
+      person: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0', id: 'M4 5h16v14H4zM8 10h3M8 14h8M15 9h2',
+      body: 'M12 5a2 2 0 100-4 2 2 0 000 4zM6 21l3-8h6l3 8M8 10h8', head: 'M12 3a7 8 0 100 16 7 8 0 000-16zM9 10h.01M15 10h.01M9.5 14c1.5 1 3.5 1 5 0',
+      hair: 'M5 13c0-6 3-9 7-9s7 3 7 9M5 13c0 4 2 7 3 8M19 13c0 4-2 7-3 8', shirt: 'M8 3l-5 3 2 5 3-1v11h8V10l3 1 2-5-5-3a4 4 0 01-8 0z',
+      glasses: 'M6 15a3 3 0 100 .01M18 15a3 3 0 100 .01M9 15h6M3 15l2-7M21 15l-2-7', voice: 'M9 3h6v11H9zM5 11a7 7 0 0014 0M12 18v3',
+      perf: 'M3 5h8v8a4 4 0 01-8 0zM13 9h8v8a4 4 0 01-8 0z', dot: 'M12 12m-2 0a2 2 0 104 0 2 2 0 10-4 0',
+    };
+    const T = [
+      ['char', 0, s.name, I.person, null, 'v2'],
+      ['identity', 1, 'Identity', I.id, 'char', K.lifeStage],
+      ['body', 1, 'Body', I.body, 'char', K.base],
+      ['body.base', 2, 'Build', I.dot, 'body', K.base],
+      ['body.torso', 2, 'Torso', I.dot, 'body', ''],
+      ['body.arms', 2, 'Arms and hands', I.dot, 'body', ''],
+      ['body.legs', 2, 'Legs and feet', I.dot, 'body', ''],
+      ['head', 1, 'Head and face', I.head, 'char', ''],
+      ['head.shape', 2, 'Face shape', I.dot, 'head', { oval: 'Oval', round: 'Round', angular: 'Angular' }[P.faceShape]],
+      ['head.eyes', 2, 'Eyes', I.dot, 'head', K.eyeShape],
+      ['head.brows', 2, 'Eyebrows', I.dot, 'head', K.brow],
+      ['head.nose', 2, 'Nose', I.dot, 'head', K.nose],
+      ['head.mouth', 2, 'Mouth', I.dot, 'head', K.mouthPreset],
+      ['head.ears', 2, 'Ears', I.dot, 'head', K.ears],
+      ['head.skin', 2, 'Skin and details', I.dot, 'head', P.freckles ? 'Freckles' : ''],
+      ['hair', 1, 'Hair', I.hair, 'char', ''],
+      ['hair.style', 2, 'Hairstyle', I.dot, 'hair', P.hairStyle[0].toUpperCase() + P.hairStyle.slice(1)],
+      ['hair.colour', 2, 'Colour', I.dot, 'hair', P.hair.toUpperCase()],
+      ['hair.facial', 2, 'Facial hair', I.dot, 'hair', K.facialHair],
+      ['wardrobe', 1, 'Wardrobe', I.shirt, 'char', K.look],
+      ['wardrobe.looks', 2, 'Saved looks', I.dot, 'wardrobe', '3'],
+      ['wardrobe.top', 2, 'Top', I.dot, 'wardrobe', { sweater: 'Ribbed sweater', tee: 'T-shirt', turtleneck: 'Turtleneck', hoodie: 'Hoodie', blazer: 'Blazer' }[P.topStyle]],
+      ['wardrobe.bottom', 2, 'Bottoms', I.dot, 'wardrobe', 'Trousers'],
+      ['wardrobe.shoes', 2, 'Shoes', I.dot, 'wardrobe', K.shoes],
+      ['accessories', 1, 'Accessories', I.glasses, 'char', `${['glasses', 'earrings', 'headset'].filter((k) => P[k]).length} on`],
+      ['voice', 1, 'Voice', I.voice, 'char', 'Warm host v2'],
+      ['voice.asset', 2, 'Voice asset', I.dot, 'voice', 'v2'],
+      ['voice.range', 2, 'Emotional range', I.dot, 'voice', '5'],
+      ['voice.takes', 2, 'Auditions', I.dot, 'voice', ''],
+      ['performance', 1, 'Performance defaults', I.perf, 'char', ''],
+    ];
+    const byId = new Map(T.map((r) => [r[0], r]));
+    const kidsOf = new Set(T.filter((r) => r[4]).map((r) => r[4]));
+    const q = s.query.trim().toLowerCase();
+    const matches = new Set();
+    if (q) for (const r of T) if (r[2].toLowerCase().includes(q) || String(r[5]).toLowerCase().includes(q)) { let p = r; while (p) { matches.add(p[0]); p = p[4] ? byId.get(p[4]) : null; } }
+    const visible = (r) => {
+      if (q) return matches.has(r[0]);
+      let p = r[4] ? byId.get(r[4]) : null;
+      while (p) { if (!s.open[p[0]]) return false; p = p[4] ? byId.get(p[4]) : null; }
+      return true;
+    };
+    const tree = T.filter(visible).map(([id, depth, label, icon, , meta]) => {
+      const kids = kidsOf.has(id);
+      const open = q ? true : !!s.open[id];
+      const on = s.node === id;
+      return {
+        label, icon, meta, kids, leaf: !kids, on, expanded: kids ? String(open) : undefined, dirty: !!s.dirty[id],
+        cls: on ? 'fx-row fx-rowsel' : 'fx-row', chev: chev(open), toggleLabel: `${open ? 'Collapse' : 'Expand'} ${label}`,
+        indent: `width: ${depth * 14}px; flex: none`,
+        iconStyle: `flex: none; color: ${depth === 2 ? 'var(--text3)' : 'var(--text2)'}`,
+        labelStyle: `flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: ${depth <= 1 ? 600 : 400}`,
+        toggle: (e) => { e.stopPropagation(); this.setState({ open: Object.assign({}, s.open, { [id]: !s.open[id] }) }); },
+        select: () => this.setState({ node: id, open: kids ? Object.assign({}, s.open, { [id]: true }) : s.open }),
+      };
+    });
+
+    // Property rows.
+    const slider = (key, k, lo, hi) => ({ isSlider: true, k, lo, hi, n: P[key], set: (e) => this.set(key, Number(e.target.value)) });
+    const misc = s.misc || {};
+    const staticSlider = (k, n, lo, hi) => ({ isSlider: true, k, lo, hi, n: misc[k] ?? n, set: (e) => this.setState({ misc: Object.assign({}, misc, { [k]: Number(e.target.value) }) }) });
+    const radio = (on) => `width: 14px; height: 14px; border-radius: 50%; flex: none; ${on ? 'border: 4px solid var(--accent)' : 'border: 1.5px solid var(--text3)'}`;
+    const list = (k, options, current, onPick) => ({ isList: true, k, items: options.map(([label, meta]) => ({ label, meta: meta || '', on: current === label, pick: () => onPick(label), cls: current === label ? 'fx-row fx-rowsel' : 'fx-row', mark: radio(current === label) })) });
+    const pickList = (k, key, options) => list(k, options, K[key], (v) => this.pickVal(key, v));
+    const swatches = (k, key, colors) => ({ isSwatches: true, k, hex: P[key].toUpperCase(), items: colors.map((c) => ({ aria: `${k} ${c}`, on: P[key] === c, pick: () => this.set(key, c), style: `aspect-ratio: 1; width: 100%; border-radius: 6px; cursor: pointer; background: ${c}; border: ${P[key] === c ? '2px solid var(--accent)' : '1px solid var(--border)'}; box-shadow: ${P[key] === c ? 'inset 0 0 0 2px var(--panel)' : 'none'}` })) });
+    const toggle = (k, key, note) => ({ isToggle: true, k, note, on: !!P[key], flip: () => this.set(key, !P[key]) });
+    const segRow = (k, options, current, onPick) => ({ isSeg: true, k, items: options.map(([v, label]) => ({ label, on: current === v, pick: () => onPick(v), style: seg(current === v, 'flex: 1') })) });
+    const kv = (k, v) => ({ isKV: true, k, v });
+    const note = (v) => ({ isNote: true, v });
+    const buttons = (labels) => ({ isButtons: true, items: labels.map((label, i) => ({ label, style: i === 0 && labels.length > 2 ? '' : '' })) });
+    const sec = (key, label, hint, rows, defOpen) => {
+      const open = s.secOpen[key] === undefined ? defOpen !== false : s.secOpen[key];
+      return { label, hint: hint || '', open, chev: chev(open), rows, toggle: () => this.setState({ secOpen: Object.assign({}, s.secOpen, { [key]: !open }) }) };
+    };
+    const bars = (seed) => Array.from({ length: 20 }, (_, i) => ({ style: `width: 3px; border-radius: 1px; background: var(--text3); height: ${3 + Math.abs(Math.sin(i * 1.7 + seed) * 14)}px` }));
+    const take = (label, dur, i, on) => ({ label, dur, bars: bars(i * 2.1), aria: `Play ${label}`, icon: s.playing === label ? 'M6 4h4v16H6zM14 4h4v16h-4z' : 'M7 4l13 8-13 8z', play: () => this.setState({ playing: s.playing === label ? null : label }), cls: on ? 'fx-rowsel' : '' });
+    const tops = [['sweater', 'Ribbed sweater'], ['tee', 'T-shirt'], ['turtleneck', 'Turtleneck'], ['hoodie', 'Hoodie'], ['blazer', 'Blazer']];
+    const hairTiles = { isTiles: true, k: 'Hairstyle', items: [['bun', 'Bun'], ['bob', 'Bob'], ['curls', 'Curls'], ['crop', 'Crop'], ['long', 'Long'], ['shaved', 'Shaved']].map(([k, label]) => ({
+      label, uid: `hs-${k}`, params: Object.assign({}, P, { hairStyle: k }), on: P.hairStyle === k, pick: () => this.set('hairStyle', k),
+      style: `display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 4px 6px; ${P.hairStyle === k ? 'border: 2px solid var(--accent); background: var(--sel)' : ''}`,
+    })) };
+    const content = {
+      identity: [sec('id', 'Details', '', [{ isField: true, k: 'Name', v: s.name, set: (e) => this.setState({ name: e.target.value }) }, { isField: true, k: 'Role in the story', v: 'Podcast host', set: () => {} }, { isArea: true, k: 'Notes', v: 'Curious, quick-witted, always ready with a follow-up question.' }]),
+        sec('life', 'Life stage', K.lifeStage, [segRow('Life stage', [['Child', 'Child'], ['Teen', 'Teen'], ['Adult', 'Adult'], ['Senior', 'Senior']], K.lifeStage, (v) => this.pickVal('lifeStage', v)), note('Life stage sets head-to-body proportions. Fine-tune them under Body.')]),
+        sec('ver', 'Versions', 'v2', [kv('Current', 'Version 2 · edited'), kv('Used in', '3 scenes · 1 project'), note('Saving creates version 3. Scenes using version 2 keep it until you update them.')], false)],
+      'body.base': [sec('base', 'Build', K.base, [list('Build', [['Slim', ''], ['Average', ''], ['Athletic', ''], ['Broad', ''], ['Curvy', ''], ['Stocky', ''], ['Heavyset', ''], ['Lanky', ''], ['Petite', ''], ['Elderly', '']], K.base, (v) => {
+        const pr = { Slim: [38, 34, 40], Average: [48, 42, 56], Athletic: [66, 40, 50], Broad: [80, 60, 58], Curvy: [46, 38, 78], Stocky: [70, 66, 62], Heavyset: [70, 80, 76], Lanky: [40, 36, 42], Petite: [36, 36, 48], Elderly: [44, 56, 54] }[v];
+        this.setState({ picks: Object.assign({}, K, { base: v }), params: Object.assign({}, P, { shoulders: pr[0], waist: pr[1], hips: pr[2] }), dirty: Object.assign({}, s.dirty, { 'body.base': true }) });
+      })])],
+      'body.torso': [sec('upper', 'Upper body', '', [slider('shoulders', 'Shoulder width', 'Narrow', 'Broad'), staticSlider('Chest', 50, 'Less', 'More'), staticSlider('Torso length', 50, 'Shorter', 'Longer')]), sec('waist', 'Waist and hips', '', [slider('waist', 'Waist width', 'Narrow', 'Wide'), slider('hips', 'Hip width', 'Narrow', 'Wide')])],
+      'body.arms': [sec('arms', 'Arms', '', [staticSlider('Arm length', 50, 'Shorter', 'Longer'), staticSlider('Muscle tone', 40, 'Soft', 'Defined')]), sec('hands', 'Hands', '12 poses', [kv('Hand set', 'Standard · 12 poses × 4 views'), staticSlider('Hand size', 50, 'Small', 'Large')])],
+      'body.legs': [sec('legs', 'Legs', '', [staticSlider('Leg length', 50, 'Shorter', 'Longer'), staticSlider('Thigh width', 46, 'Narrow', 'Wide')]), sec('feet', 'Feet', '', [staticSlider('Foot size', 50, 'Small', 'Large')])],
+      'head.shape': [sec('shape', 'Starting shape', { oval: 'Oval', round: 'Round', angular: 'Angular' }[P.faceShape], [segRow('Face shape', [['oval', 'Oval'], ['round', 'Round'], ['angular', 'Angular']], P.faceShape, (v) => this.set('faceShape', v))]),
+        sec('struct', 'Facial structure', '', [slider('faceWidth', 'Face width', 'Narrow', 'Wide'), slider('faceLength', 'Face length', 'Shorter', 'Longer'), slider('jaw', 'Jaw width', 'Soft', 'Defined'), staticSlider('Cheekbones', 50, 'Low', 'High')])],
+      'head.eyes': [sec('eshape', 'Eye shape', K.eyeShape, [pickList('Eye shape', 'eyeShape', [['Almond'], ['Round'], ['Hooded'], ['Monolid'], ['Downturned'], ['Upturned']])]),
+        sec('esize', 'Size and spacing', '', [slider('eyeSize', 'Eye size', 'Small', 'Large'), staticSlider('Spacing', 50, 'Close', 'Wide'), staticSlider('Tilt', 50, 'Down', 'Up')]),
+        sec('ecol', 'Iris colour', '', [swatches('Iris colour', 'eye', ['#4b3426', '#2d1e16', '#6b4a2b', '#3d5a40', '#4b6b8f', '#7a8b99', '#8a6a3a', '#2b2b2b'])])],
+      'head.brows': [sec('brows', 'Eyebrows', K.brow, [pickList('Eyebrows', 'brow', [['Straight'], ['Soft arch'], ['High arch'], ['Angled'], ['Thick'], ['Thin']]), staticSlider('Thickness', 55, 'Thin', 'Thick')])],
+      'head.nose': [sec('nose', 'Nose', K.nose, [pickList('Nose', 'nose', [['Button'], ['Straight'], ['Roman'], ['Snub'], ['Wide'], ['Narrow']]), staticSlider('Width', 50, 'Narrow', 'Wide'), staticSlider('Length', 50, 'Short', 'Long')])],
+      'head.mouth': [sec('mouth', 'Mouth', K.mouthPreset, [pickList('Mouth', 'mouthPreset', [['Full'], ['Thin'], ['Wide'], ['Small'], ['Bow'], ['Asymmetric']]), staticSlider('Lip thickness', 55, 'Thin', 'Full')]),
+        sec('visemes', 'Speech shapes', '9 shapes', [note('Each mouth includes all nine speech shapes for every view, so lip sync works with any choice. Use “Test lip sync” below the preview.')], false)],
+      'head.ears': [sec('ears', 'Ears', K.ears, [pickList('Ears', 'ears', [['Small'], ['Average'], ['Large'], ['Pointed'], ['Round']])])],
+      'head.skin': [sec('tone', 'Skin tone', '', [swatches('Skin tone', 'skin', ['#f6d7bf', '#e3ad86', '#d39a72', '#b9805c', '#a06a49', '#87553a', '#6e4330', '#3f2419'])]),
+        sec('details', 'Details and overlays', '', [toggle('Freckles', 'freckles', 'Cheeks and nose'), { isToggle: true, k: 'Beauty mark', note: 'Position adjustable', on: false, flip: () => {} }, { isToggle: true, k: 'Smile lines', note: 'Ageing detail', on: false, flip: () => {} }])],
+      'hair.style': [sec('hs', 'Hairstyle', '40 in library', [hairTiles, { isButtons: true, items: [{ label: 'Browse all 40', style: '' }, { label: 'New hairstyle…', style: '' }] }]),
+        sec('ht', 'Shape and texture', '', [slider('hairVolume', 'Volume', 'Close', 'Full'), slider('hairLength', 'Length', 'Shorter', 'Longer'), staticSlider('Curl', 20, 'Straight', 'Coily')])],
+      'hair.colour': [sec('hc', 'Hair colour', '', [swatches('Hair colour', 'hair', ['#1d1715', '#2f221c', '#4e3324', '#7a4a2c', '#b77b44', '#e3c58f', '#9a9a9a', '#b5483a']), staticSlider('Highlights', 0, 'None', 'Strong')])],
+      'hair.facial': [sec('fh', 'Facial hair', K.facialHair, [pickList('Facial hair', 'facialHair', [['None'], ['Stubble'], ['Short beard'], ['Full beard'], ['Goatee'], ['Moustache']])])],
+      'wardrobe.looks': [sec('looks', 'Saved looks', K.look, [pickList('Look', 'look', [['On-air', 'Sweater · trousers'], ['Everyday', 'Hoodie · jeans'], ['Evening', 'Blazer · trousers']]), { isButtons: true, items: [{ label: 'New look', style: '' }, { label: 'Duplicate', style: '' }] }, note('A look is a named outfit. Scenes choose a look; the character stays the same person.')])],
+      'wardrobe.top': [sec('top', 'Top', '', [list('Top', tops.map(([, l]) => [l]), tops.find((x) => x[0] === P.topStyle)[1], (l) => this.set('topStyle', tops.find((x) => x[1] === l)[0]))]), sec('topc', 'Colour', '', [swatches('Top colour', 'top', ['#c8653f', '#d9a441', '#4f8f87', '#3f5f8f', '#7b5ea8', '#a33f55', '#efe7da', '#2b2d33'])])],
+      'wardrobe.bottom': [sec('bot', 'Bottoms', 'Trousers', [swatches('Trousers colour', 'bottom', ['#3e5953', '#2f3442', '#5a4636', '#1f2024', '#7f8a96', '#b8a78f', '#4b3f6b', '#6b2f2f'])])],
+      'wardrobe.shoes': [sec('shoes', 'Shoes', K.shoes, [pickList('Shoes', 'shoes', [['Canvas sneakers'], ['Boots'], ['Loafers'], ['Heels'], ['Barefoot']])])],
+      accessories: [sec('acc', 'Worn items', '', [toggle('Glasses', 'glasses', 'Round frames · follow head turns'), toggle('Earrings', 'earrings', 'Gold studs · hidden in back view'), toggle('Headset', 'headset', 'Attaches to the head anchor')])],
+      'voice.asset': [sec('va', 'Voice asset', 'v2', [kv('Name', 'Maya — warm host'), kv('Created by', 'Design from description'), kv('Engine', 'Qwen3-TTS 1.7B · local'), { isArea: true, k: 'Description', v: 'Late-20s woman, warm mid-range voice, bright and curious, slight smile in the tone, clear diction.' }]),
+        sec('vnew', 'Create a voice', '', [{ isButtons: true, items: [{ label: 'Design from text', style: '' }, { label: 'Clone a recording', style: '' }, { label: 'Record in browser', style: '' }, { label: 'Pick a preset', style: '' }] }, note('Cloning a real person’s voice requires their consent; the voice asset records who gave it.')], false)],
+      'voice.range': [sec('vr', 'Emotional range', '5 references', [{ isTakes: true, items: [take('Neutral', '3.1 s', 0, false), take('Happy', '2.8 s', 1, false), take('Nervous', '3.4 s', 2, false), take('Angry', '2.6 s', 3, false), take('Whisper', '3.0 s', 4, false)] }, note('Each line is generated from the reference that matches its delivery, so the voice stays recognisable when it is emotional.')])],
+      'voice.takes': [sec('vt', 'Audition', '', [{ isField: true, k: 'Test line', v: 'Wait, you forgot to press record?', set: () => {} }, { isTakes: true, items: [take('Take 1', '2.3 s', 5, false), take('Take 2', '2.1 s', 6, true), take('Take 3', '2.6 s', 7, false)] }, { isButtons: true, items: [{ label: 'Generate 3 more', style: '' }, { label: 'Use take 2', style: '' }] }])],
+      performance: [sec('pd', 'Defaults', '', [staticSlider('Idle energy', 40, 'Still', 'Fidgety'), staticSlider('Gesture size', 62, 'Small', 'Expansive'), staticSlider('Expression strength', 70, 'Subtle', 'Cartoonish')]),
+        sec('sig', 'Signature actions', '3', [list('Signature actions', [['Head tilt when curious', 'Listening'], ['Counts on fingers', 'Talking'], ['Laughs with eyes closed', 'Reaction']], null, () => {}), note('The studio uses these for idles and talking gestures. Every clip stays editable on the timeline.')])],
+    };
+    const leafFor = { char: 'identity', body: 'body.base', head: 'head.shape', hair: 'hair.style', wardrobe: 'wardrobe.looks', voice: 'voice.asset' };
+    const nodeKey = content[s.node] ? s.node : leafFor[s.node] || 'identity';
+    const nodeRow = byId.get(nodeKey);
+    const parentRow = nodeRow && nodeRow[4] ? byId.get(nodeRow[4]) : null;
+
+    const visemes = ['ah', 'ee', 'oh', 'mbp', 'ah', 'l', 'oo', 'fv', 'rest', 'ee', 'oh', 'mbp'];
+    const mouth = s.talking ? visemes[s.tick % visemes.length] : null;
+    return {
+      themeVars, isDark: dark, isLight: !dark, themeLabel: dark ? 'Switch to light theme' : 'Switch to dark theme', toggleTheme: () => this.setState({ theme: dark ? 'light' : 'dark' }),
+      family: fam, name: s.name, params: P, view: s.view, framing: s.framing, expression: s.expression, gesture: s.gesture, mouth, mouthLabel: mouth || 'rest',
+      families: [['flat', 'Flat'], ['illustrated', 'Illustrated']].map(([k, label]) => ({ label, on: fam === k, pick: () => this.setState({ family: k }), style: seg(fam === k) })),
+      query: s.query, setQuery: (e) => this.setState({ query: e.target.value }), collapseAll: () => this.setState({ open: { char: true } }),
+      tree, noResults: !!q && tree.length === 0,
+      views: [['front', 'Front'], ['three', '¾'], ['side', 'Side'], ['back', 'Back']].map(([k, label]) => ({ label, on: s.view === k, pick: () => this.setState({ view: k, turnaround: false }), style: seg(s.view === k) })),
+      framings: [['full', 'Full body'], ['upper', 'Upper'], ['face', 'Face']].map(([k, label]) => ({ label, on: s.framing === k, pick: () => this.setState({ framing: k, turnaround: false }), style: seg(s.framing === k) })),
+      turnaround: s.turnaround, single: !s.turnaround, toggleTurnaround: () => this.setState({ turnaround: !s.turnaround }),
+      sheet: [['front', 'Front'], ['three', 'Three-quarter'], ['side', 'Side'], ['back', 'Back']].map(([v, label]) => ({ view: v, label, uid: `sheet-${v}` })),
+      styleBadge: fam === 'illustrated' ? 'Illustrated style' : 'Flat style',
+      exprs: [['neutral', 'Neutral'], ['smile', 'Smile'], ['surprise', 'Surprise'], ['frown', 'Sad'], ['skeptical', 'Skeptical'], ['embarrassed', 'Embarrassed'], ['angry', 'Angry']].map(([k, label]) => ({ label, on: s.expression === k, pick: () => this.setState({ expression: k }), style: seg(s.expression === k) })),
+      gestures: [['rest', 'Rest'], ['talk', 'Talk'], ['point', 'Point'], ['wave', 'Wave']].map(([k, label]) => ({ label, on: s.gesture === k, pick: () => this.setState({ gesture: k }), style: seg(s.gesture === k) })),
+      talking: s.talking, talkLabel: s.talking ? 'Stop lip sync test' : 'Test lip sync', toggleTalk: () => this.toggleTalk(),
+      crumb: parentRow && parentRow[0] !== 'char' ? `${s.name} / ${parentRow[2]}` : s.name,
+      panelTitle: nodeRow ? nodeRow[2] : 'Identity',
+      sections: content[nodeKey],
+    };
+  }
+}
+</script>
+</body>
+</html>

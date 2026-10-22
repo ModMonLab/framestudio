@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Frame — Studio workspace</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#3a66f0}a:hover{color:#2a52cc}
+button{font-family:inherit;font-size:inherit}
+.fx-ib{background:transparent;border:1px solid transparent;color:var(--text2);border-radius:6px;cursor:pointer;display:grid;place-items:center}
+.fx-ib:hover{background:var(--hover);color:var(--text)}
+.fx-row{background:transparent;border:none;color:var(--text);cursor:pointer;text-align:left}
+.fx-row:hover{background:var(--hover)}
+.fx-rowsel,.fx-rowsel:hover{background:var(--sel)}
+.fx-menu{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:0 8px;height:28px;border-radius:6px}
+.fx-menu:hover{background:var(--hover);color:var(--text)}
+.fx-field{background:var(--field);border:1px solid var(--border);color:var(--text);border-radius:6px;height:28px;padding:0 8px;font:inherit;outline:none;box-sizing:border-box}
+.fx-field:focus{border-color:var(--accent)}
+.fx-sec{background:transparent;border:none;color:var(--text);cursor:pointer;width:100%;display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;font-weight:600}
+.fx-sec:hover{background:var(--hover)}
+.fx-ghost{background:var(--sub);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer;height:28px;padding:0 10px;font-weight:500}
+.fx-ghost:hover{background:var(--hover)}
+.fx-clip{cursor:grab}
+.fx-clip:hover{filter:brightness(1.08)}
+input[type=range]{accent-color:var(--accent);width:100%;height:16px;margin:0}
+</style>
+</helmet>
+<div style="{{themeVars}}">
+<div style="font-family: Inter, system-ui, sans-serif; font-size: 12px; color: var(--text); background: var(--app); min-height: 920px; display: flex; flex-direction: column">
+
+<header style="height: 48px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap">
+<div style="display: flex; align-items: center; gap: 8px; padding-right: 8px">
+<span style="width: 26px; height: 26px; border-radius: 7px; background: var(--accent); display: grid; place-items: center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M3 7l4-4M10 7l4-4M17 7l4-4"></path></svg></span>
+<span style="font-weight: 700; font-size: 14px">Frame</span>
+</div>
+<nav aria-label="Menu" style="display: flex">
+<button class="fx-menu">File</button><button class="fx-menu">Edit</button><button class="fx-menu">View</button><button class="fx-menu">Insert</button><button class="fx-menu">Scene</button><button class="fx-menu">Help</button>
+</nav>
+<span style="width: 1px; height: 22px; background: var(--border); margin: 0 6px"></span>
+<span style="color: var(--text3)">Episodes</span><span style="color: var(--text3)">/</span>
+<span style="font-weight: 600">The Backup Recording</span>
+<span style="padding: 2px 6px; border-radius: 4px; background: var(--sub); border: 1px solid var(--border); color: var(--text2); font-size: 11px">Saved</span>
+<div style="flex: 1; display: flex; justify-content: center; align-self: stretch">
+<div role="tablist" aria-label="Workspace mode" style="display: flex; gap: 2px; align-items: stretch">
+<sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
+<button role="tab" aria-selected="{{m.on}}" onClick="{{m.pick}}" style="{{m.style}}">{{m.label}}</button>
+</sc-for>
+</div>
+</div>
+<span title="Self-hosted voice worker" style="display: flex; align-items: center; gap: 6px; color: var(--text2); padding: 0 8px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #34a853"></span>Voice worker</span>
+<button class="fx-ib" onClick="{{toggleTheme}}" aria-label="{{themeLabel}}" title="{{themeLabel}}" style="width: 30px; height: 30px">
+<sc-if value="{{isDark}}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if>
+<sc-if value="{{isLight}}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"></path></svg></sc-if>
+</button>
+<button class="fx-ib" aria-label="Undo" style="width: 30px; height: 30px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14L4 9l5-5"></path><path d="M4 9h11a5 5 0 010 10h-3"></path></svg></button>
+<button class="fx-ib" aria-label="Redo" style="width: 30px; height: 30px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 14l5-5-5-5"></path><path d="M20 9H9a5 5 0 000 10h3"></path></svg></button>
+<button class="fx-ghost" style="margin-left: 4px">Preview</button>
+<button style="height: 28px; padding: 0 12px; border-radius: 6px; border: none; background: var(--accent); color: #ffffff; font-weight: 600; cursor: pointer">Export</button>
+</header>
+
+<div style="flex: 1; display: flex; min-height: 0; flex-wrap: wrap">
+
+<nav aria-label="Panels" style="width: 64px; flex: none; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 8px; height: 540px">
+<sc-for list="{{rail}}" as="r" hint-placeholder-count="7">
+<button onClick="{{r.pick}}" aria-pressed="{{r.on}}" aria-label="{{r.label}}" style="{{r.style}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.icon}}"></path></svg>
+<span style="font-size: 10px; font-weight: 500">{{r.label}}</span>
+</button>
+</sc-for>
+</nav>
+
+<aside aria-label="{{panelTitle}}" style="width: 272px; flex: none; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 540px">
+<div style="display: flex; align-items: center; gap: 6px; padding: 10px 12px 8px">
+<span style="font-weight: 600; font-size: 13px; flex: 1">{{panelTitle}}</span>
+<button class="fx-ib" aria-label="Collapse all" onClick="{{collapseAll}}" style="width: 26px; height: 26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 15l5-5 5 5M7 9l5-5 5 5"></path></svg></button>
+<button class="fx-ib" aria-label="Add" style="width: 26px; height: 26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+</div>
+<div style="padding: 0 12px 8px">
+<label style="display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px; border-radius: 6px; background: var(--field); border: 1px solid var(--border)">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text3)" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<input type="text" value="{{query}}" onInput="{{setQuery}}" placeholder="{{searchPlaceholder}}" aria-label="{{searchPlaceholder}}" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text); font: inherit">
+</label>
+</div>
+<sc-if value="{{isLayers}}" hint-placeholder-val="{{ true }}">
+<div role="tree" aria-label="Layers" style="flex: 1; overflow: auto; padding: 0 6px 10px">
+<sc-for list="{{tree}}" as="n" hint-placeholder-count="16">
+<div role="treeitem" aria-expanded="{{n.expanded}}" aria-selected="{{n.on}}" class="{{n.cls}}" onClick="{{n.select}}" style="display: flex; align-items: center; gap: 4px; height: 28px; border-radius: 6px; padding-right: 6px; cursor: pointer">
+<span style="{{n.indent}}"></span>
+<sc-if value="{{n.kids}}" hint-placeholder-val="{{ true }}">
+<button class="fx-ib" onClick="{{n.toggle}}" aria-label="{{n.toggleLabel}}" style="width: 18px; height: 18px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="{{n.chev}}"></path></svg></button>
+</sc-if>
+<sc-if value="{{n.leaf}}" hint-placeholder-val="{{ false }}"><span style="width: 18px"></span></sc-if>
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="{{n.iconStyle}}" aria-hidden="true"><path d="{{n.icon}}"></path></svg>
+<span style="{{n.labelStyle}}">{{n.label}}</span>
+<span style="color: var(--text3); font-size: 11px">{{n.meta}}</span>
+</div>
+</sc-for>
+<sc-if value="{{noResults}}" hint-placeholder-val="{{ false }}"><p style="color: var(--text3); padding: 8px 12px; margin: 0">No layers match “{{query}}”.</p></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{isAssets}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1; overflow: auto; padding: 0 0 10px">
+<sc-for list="{{assetGroups}}" as="g" hint-placeholder-count="8">
+<div style="border-top: 1px solid var(--divider)">
+<button class="fx-sec" onClick="{{g.toggle}}" aria-expanded="{{g.open}}">
+<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--text3)" aria-hidden="true"><path d="{{g.chev}}"></path></svg>
+<span style="flex: 1; text-align: left">{{g.label}}</span>
+<span style="color: var(--text3); font-weight: 400">{{g.count}}</span>
+</button>
+<sc-if value="{{g.open}}" hint-placeholder-val="{{ false }}">
+<div style="padding: 0 6px 8px">
+<sc-for list="{{g.items}}" as="i" hint-placeholder-count="4">
+<div class="fx-row" style="display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 6px; border-radius: 6px">
+<span style="{{i.thumb}}"></span>
+<span style="flex: 1; display: flex; flex-direction: column; min-width: 0"><span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{i.name}}</span><span style="color: var(--text3); font-size: 11px">{{i.meta}}</span></span>
+</div>
+</sc-for>
+<button class="fx-menu" style="color: var(--accent); font-weight: 500; margin-left: 4px">See all {{g.count}}</button>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</aside>
+
+<main aria-label="Stage" style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; background: var(--canvas); height: 540px">
+<div role="toolbar" aria-label="Selection" style="height: 44px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap">
+<span style="display: flex; align-items: center; gap: 6px; font-weight: 600; padding-right: 6px"><span style="{{selDot}}"></span>{{selName}}</span>
+<span style="width: 1px; height: 20px; background: var(--border)"></span>
+<sc-for list="{{ctx}}" as="c" hint-placeholder-count="5">
+<button class="fx-ghost" style="display: flex; align-items: center; gap: 6px; background: transparent; border-color: transparent"><span style="color: var(--text3)">{{c.k}}</span><span style="font-weight: 600">{{c.v}}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--text3)" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</sc-for>
+<span style="flex: 1"></span>
+<button class="fx-ib" aria-label="Duplicate" style="width: 28px; height: 28px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M4 16V6a2 2 0 012-2h10"></path></svg></button>
+<button class="fx-ib" aria-label="Delete" style="width: 28px; height: 28px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></button>
+</div>
+<div style="flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 18px">
+<div style="position: relative; width: 100%; max-width: 740px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.2), 0 12px 32px rgba(0,0,0,0.22)">
+<div style="{{stageTransform}}">
+<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%" aria-hidden="true">
+<defs>
+<linearGradient id="st-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{{bg.wallTop}}"></stop><stop offset="1" stop-color="{{bg.wallBottom}}"></stop></linearGradient>
+<radialGradient id="st-glow" cx="0.5" cy="0.4" r="0.5"><stop offset="0" stop-color="{{bg.glow}}" stop-opacity="0.9"></stop><stop offset="1" stop-color="{{bg.glow}}" stop-opacity="0"></stop></radialGradient>
+<linearGradient id="st-floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{{bg.floorTop}}"></stop><stop offset="1" stop-color="{{bg.floorBottom}}"></stop></linearGradient>
+</defs>
+<rect x="0" y="0" width="1600" height="900" fill="url(#st-wall)"></rect>
+<ellipse cx="800" cy="330" rx="420" ry="360" fill="url(#st-glow)"></ellipse>
+<path d="M610 640 L610 260 A190 190 0 0 1 990 260 L990 640 Z" fill="{{bg.window}}"></path>
+<path d="M800 70 L800 640 M610 400 L990 400" stroke="{{bg.frame}}" stroke-width="10"></path>
+<path d="M610 640 L610 260 A190 190 0 0 1 990 260 L990 640" stroke="{{bg.frame}}" stroke-width="14" fill="none"></path>
+<sc-for list="{{slats}}" as="s" hint-placeholder-count="12">
+<rect x="{{s.x}}" y="90" width="26" height="560" rx="6" fill="{{bg.slat}}"></rect>
+</sc-for>
+<rect x="0" y="630" width="1600" height="270" fill="url(#st-floor)"></rect>
+<rect x="0" y="624" width="1600" height="12" fill="{{bg.skirting}}"></rect>
+<ellipse cx="800" cy="790" rx="560" ry="80" fill="{{bg.rug}}"></ellipse>
+<rect x="700" y="96" width="200" height="56" rx="10" fill="#2a1c19"></rect>
+<text x="800" y="133" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="26" letter-spacing="6" fill="#ff7a62">ON AIR</text>
+<rect x="150" y="560" width="120" height="120" rx="14" fill="{{bg.pot}}"></rect>
+<path d="M210 560 C 150 470 90 450 70 380 C 140 400 190 460 210 560 Z M210 560 C 220 440 260 380 330 340 C 320 420 270 480 210 560 Z M210 560 C 180 420 190 330 230 270 C 260 350 240 450 210 560 Z" fill="{{bg.leaf}}"></path>
+<path d="M1390 690 L1390 300" stroke="#3b302a" stroke-width="10"></path>
+<ellipse cx="1390" cy="690" rx="60" ry="12" fill="#3b302a"></ellipse>
+<path d="M1320 300 L1460 300 L1430 200 L1350 200 Z" fill="{{bg.lamp}}"></path>
+<path d="M330 470 Q330 420 380 420 L560 420 Q610 420 610 470 L610 700 L330 700 Z" fill="{{bg.chair}}"></path>
+<path d="M990 470 Q990 420 1040 420 L1220 420 Q1270 420 1270 470 L1270 700 L990 700 Z" fill="{{bg.chair}}"></path>
+<sc-if value="{{shafts}}" hint-placeholder-val="{{ false }}">
+<path d="M640 120 L1000 120 L1240 900 L520 900 Z" fill="#fff3d9" opacity="0.12"></path>
+</sc-if>
+</svg>
+<div style="position: absolute; left: 18.5%; top: 26%; width: 21%; height: 61%">
+<dc-import name="Character" family="{{family}}" view="three" pose="seated" expression="{{maya.expression}}" gesture="{{maya.gesture}}" mouth="{{maya.mouth}}" gaze="{{maya.gaze}}" params="{{maya.params}}" uid="maya" framing="full" hint-size="100%,100%"></dc-import>
+</div>
+<div style="position: absolute; left: 59.5%; top: 26%; width: 21%; height: 61%">
+<dc-import name="Character" family="{{family}}" view="three" pose="seated" mirror="{{ true }}" expression="{{leo.expression}}" gesture="{{leo.gesture}}" mouth="{{leo.mouth}}" gaze="{{leo.gaze}}" params="{{leo.params}}" uid="leo" framing="full" hint-size="100%,100%"></dc-import>
+</div>
+<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none" aria-hidden="true">
+<path d="M560 700 L800 960 L1040 700" fill="#2e2622"></path>
+<ellipse cx="800" cy="705" rx="310" ry="62" fill="{{bg.tableEdge}}"></ellipse>
+<ellipse cx="800" cy="690" rx="310" ry="58" fill="{{bg.table}}"></ellipse>
+<path d="M650 690 L620 640 L600 560" stroke="#2c2a2b" stroke-width="7" fill="none" stroke-linecap="round"></path>
+<rect x="578" y="520" width="34" height="62" rx="16" fill="#2c2a2b" transform="rotate(-22 595 551)"></rect>
+<path d="M950 690 L980 640 L1000 560" stroke="#2c2a2b" stroke-width="7" fill="none" stroke-linecap="round"></path>
+<rect x="988" y="520" width="34" height="62" rx="16" fill="#2c2a2b" transform="rotate(22 1005 551)"></rect>
+<rect x="776" y="640" width="48" height="50" rx="8" fill="#f2ece2"></rect>
+<ellipse cx="800" cy="641" rx="24" ry="6" fill="#5a3b2b"></ellipse>
+</svg>
+<sc-if value="{{showSelection}}" hint-placeholder-val="{{ true }}">
+<div style="{{selectionBox}}">
+<span style="position: absolute; left: -4px; top: -4px; width: 7px; height: 7px; background: #ffffff; border: 1.5px solid #4f7cff"></span>
+<span style="position: absolute; right: -4px; top: -4px; width: 7px; height: 7px; background: #ffffff; border: 1.5px solid #4f7cff"></span>
+<span style="position: absolute; left: -4px; bottom: -4px; width: 7px; height: 7px; background: #ffffff; border: 1.5px solid #4f7cff"></span>
+<span style="position: absolute; right: -4px; bottom: -4px; width: 7px; height: 7px; background: #ffffff; border: 1.5px solid #4f7cff"></span>
+</div>
+</sc-if>
+</div>
+<sc-if value="{{caption}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); max-width: 80%; padding: 6px 12px; border-radius: 6px; background: rgba(12,12,14,0.72); color: #ffffff; font-weight: 500; font-size: 14px; text-align: center">{{captionWho}}: {{captionText}}</div>
+</sc-if>
+<div style="position: absolute; left: 8px; top: 8px; padding: 3px 7px; border-radius: 4px; background: rgba(12,12,14,0.65); color: #ffffff; font-size: 10px; font-weight: 600; letter-spacing: 0.04em">{{shotBadge}}</div>
+</div>
+<div style="position: absolute; right: 14px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.12)">
+<button class="fx-ib" aria-label="Zoom out" style="width: 26px; height: 26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+<span style="width: 44px; text-align: center; font-weight: 500">100%</span>
+<button class="fx-ib" aria-label="Zoom in" style="width: 26px; height: 26px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+<span style="width: 1px; height: 16px; background: var(--border)"></span>
+<button class="fx-menu" style="height: 26px">Fit</button>
+</div>
+<div style="position: absolute; left: 14px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.12)">
+<span style="color: var(--text3); padding: 0 6px">Style</span>
+<sc-for list="{{families}}" as="f" hint-placeholder-count="2">
+<button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}}</button>
+</sc-for>
+</div>
+</div>
+</main>
+
+<aside aria-label="Properties" style="width: 300px; flex: none; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; height: 540px">
+<div role="tablist" style="display: flex; gap: 2px; padding: 0 8px; border-bottom: 1px solid var(--border); height: 40px; flex: none">
+<sc-for list="{{rtabs}}" as="t" hint-placeholder-count="3">
+<button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+</sc-for>
+</div>
+<div style="flex: 1; overflow: auto">
+<sc-for list="{{sections}}" as="sec" hint-placeholder-count="4">
+<div style="border-bottom: 1px solid var(--divider)">
+<button class="fx-sec" onClick="{{sec.toggle}}" aria-expanded="{{sec.open}}">
+<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--text3)" aria-hidden="true"><path d="{{sec.chev}}"></path></svg>
+<span style="flex: 1; text-align: left">{{sec.label}}</span>
+<span style="color: var(--text3); font-weight: 400">{{sec.hint}}</span>
+</button>
+<sc-if value="{{sec.open}}" hint-placeholder-val="{{ true }}">
+<div style="padding: 2px 12px 12px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="3">
+<sc-if value="{{r.isPair}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+<label style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border-radius: 6px; background: var(--field); border: 1px solid var(--border)"><span style="color: var(--text3); width: 14px">{{r.a}}</span><input type="text" value="{{r.av}}" aria-label="{{r.al}}" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text); font: 500 12px 'JetBrains Mono', monospace"></label>
+<label style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border-radius: 6px; background: var(--field); border: 1px solid var(--border)"><span style="color: var(--text3); width: 14px">{{r.b}}</span><input type="text" value="{{r.bv}}" aria-label="{{r.bl}}" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text); font: 500 12px 'JetBrains Mono', monospace"></label>
+</div>
+</sc-if>
+<sc-if value="{{r.isSelect}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 8px"><span style="width: 88px; color: var(--text2)">{{r.k}}</span><button class="fx-field" style="flex: 1; display: flex; align-items: center; justify-content: space-between; cursor: pointer; text-align: left"><span>{{r.v}}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--text3)" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button></div>
+</sc-if>
+<sc-if value="{{r.isSlider}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: 8px"><span style="width: 88px; color: var(--text2)">{{r.k}}</span><input type="range" min="0" max="100" value="{{r.n}}" aria-label="{{r.k}}" style="flex: 1"><span style="width: 38px; text-align: right; font: 500 11px 'JetBrains Mono', monospace; color: var(--text2)">{{r.v}}</span></div>
+</sc-if>
+<sc-if value="{{r.isChips}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-wrap: wrap; gap: 4px">
+<sc-for list="{{r.chips}}" as="c" hint-placeholder-count="6">
+<button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}">{{c.label}}</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{r.isList}}" hint-placeholder-val="{{ false }}">
+<div style="border: 1px solid var(--border); border-radius: 6px; overflow: hidden">
+<sc-for list="{{r.items}}" as="i" hint-placeholder-count="3">
+<div class="{{i.cls}}" style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border-bottom: 1px solid var(--divider)">
+<span style="{{i.mark}}"></span><span style="flex: 1; font-weight: 500">{{i.label}}</span><span style="color: var(--text3); font-size: 11px">{{i.meta}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{r.isButton}}" hint-placeholder-val="{{ false }}">
+<button class="fx-ghost" style="width: 100%">{{r.v}}</button>
+</sc-if>
+<sc-if value="{{r.isNote}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; color: var(--text3); line-height: 1.45">{{r.v}}</p>
+</sc-if>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</aside>
+</div>
+
+<section aria-label="Timeline" style="height: 332px; flex: none; background: var(--panel); border-top: 1px solid var(--border); display: flex; flex-direction: column">
+<div style="height: 40px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap">
+<button class="fx-ib" onClick="{{rewind}}" aria-label="Back to start" style="width: 28px; height: 28px"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"></path></svg></button>
+<button onClick="{{togglePlay}}" aria-label="{{playLabel}}" style="width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--accent); color: #ffffff; display: grid; place-items: center; cursor: pointer">
+<sc-if value="{{playing}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"></path></svg></sc-if>
+<sc-if value="{{paused}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"></path></svg></sc-if>
+</button>
+<span style="font: 500 12px 'JetBrains Mono', monospace; padding: 0 6px">{{timeLabel}} <span style="color: var(--text3)">/ 00:30.0</span></span>
+<span style="width: 1px; height: 18px; background: var(--border)"></span>
+<button class="fx-menu" aria-pressed="true" style="color: var(--text)">Snap</button>
+<button class="fx-menu">Ripple</button>
+<span style="flex: 1"></span>
+<label style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border-radius: 6px; background: var(--field); border: 1px solid var(--border); width: 180px">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text3)" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+<input type="text" value="{{trackQuery}}" onInput="{{setTrackQuery}}" placeholder="Filter tracks" aria-label="Filter tracks" style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--text); font: inherit">
+</label>
+<div role="group" aria-label="Show" style="display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--sub); border: 1px solid var(--border)">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="3">
+<button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}}</button>
+</sc-for>
+</div>
+<span style="color: var(--text3); padding-left: 6px">Zoom</span>
+<input type="range" min="0" max="100" value="40" aria-label="Timeline zoom" style="width: 90px">
+</div>
+<div style="flex: 1; overflow: auto; position: relative">
+<div style="display: flex; position: sticky; top: 0; z-index: 3; background: var(--panel); border-bottom: 1px solid var(--border); height: 22px">
+<div style="width: 200px; flex: none; border-right: 1px solid var(--border)"></div>
+<div style="position: relative; flex: 1; cursor: pointer" onClick="{{seek}}">
+<sc-for list="{{ticks}}" as="t" hint-placeholder-count="7">
+<span style="{{t.style}}">{{t.label}}</span>
+</sc-for>
+</div>
+</div>
+<sc-for list="{{tracks}}" as="tr" hint-placeholder-count="12">
+<sc-if value="{{tr.group}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; height: 26px; background: var(--sub); border-bottom: 1px solid var(--divider)">
+<button class="fx-sec" onClick="{{tr.toggle}}" aria-expanded="{{tr.open}}" style="width: 200px; flex: none; height: 26px; padding: 0 8px; border-right: 1px solid var(--border)">
+<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--text3)" aria-hidden="true"><path d="{{tr.chev}}"></path></svg>
+<span style="{{tr.dot}}"></span>
+<span style="flex: 1; text-align: left">{{tr.label}}</span>
+<span style="color: var(--text3); font-weight: 400; font-size: 11px">{{tr.count}}</span>
+</button>
+<div style="position: relative; flex: 1">
+<sc-for list="{{tr.summary}}" as="c" hint-placeholder-count="0">
+<div style="{{c.style}}"></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{tr.lane}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; height: 30px; border-bottom: 1px solid var(--divider)">
+<div style="width: 200px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 26px; border-right: 1px solid var(--border)">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color: var(--text3)" aria-hidden="true"><path d="{{tr.icon}}"></path></svg>
+<span style="flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text2)">{{tr.label}}</span>
+<sc-if value="{{tr.audio}}" hint-placeholder-val="{{ false }}">
+<button class="fx-ib" aria-label="Mute {{tr.label}}" style="width: 20px; height: 20px; font-size: 10px; font-weight: 700">M</button>
+<button class="fx-ib" aria-label="Solo {{tr.label}}" style="width: 20px; height: 20px; font-size: 10px; font-weight: 700">S</button>
+</sc-if>
+<button class="fx-ib" aria-label="Lock {{tr.label}}" style="width: 20px; height: 20px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 018 0"></path></svg></button>
+</div>
+<div style="position: relative; flex: 1">
+<sc-for list="{{tr.clips}}" as="c" hint-placeholder-count="2">
+<div class="fx-clip" title="{{c.title}}" style="{{c.style}}">{{c.label}}</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</sc-for>
+<div style="{{playheadStyle}}"></div>
+</div>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"family":{"editor":"enum","options":["flat","illustrated"],"default":"flat"},"$preview":{"width":1440,"height":920}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      theme: null, mode: 'direct', rail: 'layers', sel: 'maya', t: 4.2, playing: false, family: null, filter: 'all',
+      query: '', trackQuery: '', rtab: null, mayaExpr: null,
+      open: { ep: true, s1: true, cast: true, maya: true, leo: false, set: true, bg: false, furn: false, props: false, cams: true, atmo: false, over: false, s2: false, s3: false },
+      secOpen: { transform: true, layer: false, look: true, pose: false, expr: true, gesture: true, gaze: false, recipes: false, voice: true, take: true, delivery: false, lips: false, mix: true },
+      groups: { camera: true, maya: true, leo: false, fx: false, sound: true },
+      assetsOpen: { Expressions: true, Actions: false, Recipes: false, Characters: false, Props: false, Locations: false, Effects: false, Camera: false, Sound: false, Text: false },
+    };
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  toggle() {
+    if (this.state.playing) { clearInterval(this.timer); this.setState({ playing: false }); return; }
+    this.setState({ playing: true, t: this.state.t >= 29.9 ? 0 : this.state.t });
+    this.timer = setInterval(() => {
+      const t = this.state.t + 0.05;
+      if (t >= 30) { clearInterval(this.timer); this.setState({ t: 30, playing: false }); } else this.setState({ t });
+    }, 50);
+  }
+  renderVals() {
+    const s = this.state;
+    const theme = s.theme || this.props.theme || 'dark';
+    const dark = theme === 'dark';
+    const V = dark
+      ? { app: '#1e1e20', panel: '#252528', sub: '#2c2c30', field: '#1b1b1d', hover: '#323236', border: '#38383d', divider: '#2f2f33', text: '#ececee', text2: '#b4b4b9', text3: '#8f8f95', accent: '#4f7cff', sel: 'rgba(79,124,255,0.22)', canvas: '#161618' }
+      : { app: '#f1f1f3', panel: '#ffffff', sub: '#f6f6f8', field: '#ffffff', hover: '#eeeef2', border: '#dcdce2', divider: '#ebebee', text: '#1c1c1f', text2: '#4f4f56', text3: '#6b6b72', accent: '#3a66f0', sel: 'rgba(58,102,240,0.12)', canvas: '#e4e4e9' };
+    const themeVars = Object.entries(V).map(([k, v]) => `--${k}: ${v}`).join('; ');
+    const CL = dark
+      ? { shot: ['#35507a', '#e9eefb'], move: ['#3d4b5c', '#e3e8ef'], dlg: ['#22675f', '#e4f5f2'], lips: ['#34343a', '#c9c9cf'], act: ['#4f4590', '#ece9fb'], face: ['#7a5c22', '#fbf1dc'], fx: ['#7a3f62', '#fbe8f2'], music: ['#433f86', '#ebeafb'], amb: ['#37566a', '#e2edf3'], sfx: ['#5e5d30', '#f3f2dc'] }
+      : { shot: ['#d9e4f8', '#1d3a6b'], move: ['#e1e6ec', '#2d3a4a'], dlg: ['#cdebe6', '#14514a'], lips: ['#ececef', '#4f4f56'], act: ['#e3def8', '#3a2f78'], face: ['#f4e6c7', '#5b4413'], fx: ['#f5dbe8', '#6b2b51'], music: ['#dedcf6', '#2f2b70'], amb: ['#d8e7ef', '#234759'], sfx: ['#ebe9cd', '#4a4919'] };
+    const t = s.t;
+    const fam = s.family || this.props.family || 'flat';
+    const ill = fam === 'illustrated';
+    const seg = (on) => `height: 24px; padding: 0 9px; border-radius: 5px; border: none; cursor: pointer; font-weight: 500; ${on ? 'background: var(--panel); color: var(--text); box-shadow: 0 0 0 1px var(--border)' : 'background: transparent; color: var(--text2)'}`;
+    const chip = (on) => `height: 26px; padding: 0 9px; border-radius: 6px; cursor: pointer; font-weight: 500; ${on ? 'background: var(--sel); color: var(--accent); border: 1px solid var(--accent)' : 'background: var(--sub); color: var(--text); border: 1px solid var(--border)'}`;
+    const chev = (open) => (open ? 'M6 9l6 6 6-6' : 'M9 6l6 6-6 6');
+
+    // Performance timing (seconds).
+    const shots = [{ s: 0, e: 6.3, label: 'Wide', key: 'wide' }, { s: 6.3, e: 13.8, label: 'Leo close-up', key: 'leo' }, { s: 13.8, e: 21.6, label: 'Maya close-up', key: 'maya' }, { s: 21.6, e: 30, label: 'Wide · push in', key: 'push' }];
+    const lines = [
+      { who: 'maya', name: 'Maya', s: 0.8, e: 6.0, text: 'Welcome back. Today we are talking about the recording.' },
+      { who: 'leo', name: 'Leo', s: 6.6, e: 12.6, text: 'You mean the recording you forgot to start?' },
+      { who: 'maya', name: 'Maya', s: 14.6, e: 20.8, text: 'I was hoping you would not mention that.' },
+      { who: 'leo', name: 'Leo', s: 22.4, e: 27.2, text: 'Good thing I brought a backup.' },
+    ];
+    const inR = (a) => t >= a.s && t < a.e;
+    const shot = shots.find(inR) || shots[3];
+    const line = lines.find(inR);
+    const visemes = ['ah', 'ee', 'oh', 'mbp', 'ah', 'l', 'oo', 'fv', 'rest', 'ee'];
+    const mouthFor = (who) => (line && line.who === who ? visemes[Math.floor(t * 11) % visemes.length] : null);
+    const pick = (ranges, d) => { const r = ranges.find(inR); return r ? r.v : d; };
+    const mayaExpr = s.mayaExpr || pick([{ s: 0, e: 6.2, v: 'smile' }, { s: 9, e: 13.5, v: 'surprise' }, { s: 14.2, e: 21.2, v: 'embarrassed' }, { s: 27.4, e: 30, v: 'smile' }], 'neutral');
+    const leoExpr = pick([{ s: 6.4, e: 13.4, v: 'skeptical' }, { s: 22.2, e: 30, v: 'smile' }], 'neutral');
+    const mayaGesture = pick([{ s: 0.4, e: 2.2, v: 'wave' }, { s: 2.2, e: 6, v: 'talk' }, { s: 15.5, e: 20.5, v: 'talk' }], 'rest');
+    const leoGesture = pick([{ s: 7.2, e: 10.4, v: 'point' }, { s: 22.6, e: 27, v: 'talk' }], 'rest');
+    const maya = { expression: mayaExpr, gesture: mayaGesture, mouth: mouthFor('maya'), gaze: t >= 14.2 && t < 15.8 ? 'left' : 'right',
+      params: { skin: '#b9805c', hair: '#2f221c', top: '#c8653f', bottom: '#3e5953', hairStyle: 'bun', freckles: true, topStyle: 'sweater', earrings: true } };
+    const leo = { expression: leoExpr, gesture: leoGesture, mouth: mouthFor('leo'), gaze: 'right',
+      params: { skin: '#e7b38c', hair: '#5b3a24', top: '#4f8f87', bottom: '#2f3442', hairStyle: 'crop', freckles: false, topStyle: 'tee', earrings: false, faceShape: 'angular', jaw: 62, shoulders: 62, eye: '#3d5a40', lip: '#b46a5c' } };
+    let scale = 1, ox = 50, oy = 50;
+    if (shot.key === 'leo') { scale = 2.5; ox = 69.5; oy = 47; }
+    if (shot.key === 'maya') { scale = 2.5; ox = 29.5; oy = 47; }
+    if (shot.key === 'push') { scale = 1 + 0.22 * Math.min(1, (t - 21.6) / 8.4); oy = 55; }
+    const bg = ill
+      ? { wallTop: '#8f7a68', wallBottom: '#5f4c3f', glow: '#ffe2b0', window: '#d9c3a1', frame: '#4a3a30', slat: '#6e5847', floorTop: '#6b4d36', floorBottom: '#3f2d21', skirting: '#2e221b', rug: '#7e5b44', pot: '#9c5a3c', leaf: '#4e6b47', lamp: '#e8d3ac', chair: '#3b3f4a', table: '#8a5d3d', tableEdge: '#5f3f29' }
+      : { wallTop: '#e9dcc8', wallBottom: '#d8c5a8', glow: '#fff3df', window: '#f4ead8', frame: '#cdb592', slat: '#c4a57f', floorTop: '#b99573', floorBottom: '#a17d5c', skirting: '#8a6a4c', rug: '#dcc6a6', pot: '#b9765a', leaf: '#6f9873', lamp: '#f1e3c4', chair: '#7a7f8c', table: '#b78e66', tableEdge: '#957049' };
+    const slats = [];
+    for (let i = 0; i < 6; i++) { slats.push({ x: 60 + i * 44 }); slats.push({ x: 1290 + i * 44 }); }
+
+    // Header tabs and rail.
+    const modes = [['stage', 'Stage'], ['direct', 'Direct'], ['edit', 'Edit']].map(([k, label]) => ({
+      label, on: s.mode === k, pick: () => this.setState({ mode: k, rtab: null }),
+      style: `background: transparent; border: none; cursor: pointer; padding: 0 14px; font-weight: 600; color: ${s.mode === k ? 'var(--text)' : 'var(--text2)'}; box-shadow: ${s.mode === k ? 'inset 0 -2px 0 var(--accent)' : 'none'}`,
+    }));
+    const railIcons = {
+      layers: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5',
+      assets: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+      cast: 'M9 7a3 3 0 106 0 3 3 0 00-6 0M4 21v-1a6 6 0 0112 0v1M17 11a3 3 0 100-6M20 21v-1a5 5 0 00-3-4.6',
+      text: 'M5 6V4h14v2M12 4v16M9 20h6',
+      effects: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9z',
+      audio: 'M9 18V6l11-2v12M9 18a3 3 0 11-6 0 3 3 0 016 0zM20 16a3 3 0 11-6 0 3 3 0 016 0z',
+      templates: 'M4 4h16v6H4zM4 14h7v6H4zM15 14h5v6h-5z',
+    };
+    const rail = [['layers', 'Layers'], ['assets', 'Assets'], ['cast', 'Cast'], ['text', 'Text'], ['effects', 'Effects'], ['audio', 'Audio'], ['templates', 'Templates']].map(([k, label]) => ({
+      label, icon: railIcons[k], on: (s.railKey || 'layers') === k,
+      pick: () => {
+        const focus = { assets: 'Expressions', cast: 'Characters', text: 'Text', effects: 'Effects', audio: 'Sound', templates: 'Locations' }[k];
+        this.setState({ rail: k === 'layers' ? 'layers' : 'assets', railKey: k, query: '', assetsOpen: focus ? { [focus]: true } : s.assetsOpen });
+      },
+      style: `width: 54px; height: 52px; border-radius: 8px; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; ${(s.railKey || 'layers') === k ? 'background: var(--sel); color: var(--accent)' : 'background: transparent; color: var(--text2)'}`,
+    }));
+
+    // Layers tree.
+    const I = {
+      folder: 'M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z', scene: 'M3 5h18v14H3zM3 9h18M8 5v4M16 5v4',
+      person: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0', look: 'M8 3l-5 3 2 5 3-1v11h8V10l3 1 2-5-5-3a4 4 0 01-8 0z',
+      voice: 'M9 3h6v11H9zM5 11a7 7 0 0014 0M12 18v3', pose: 'M12 5a2 2 0 100-4 2 2 0 000 4zM6 21l3-8h6l3 8M8 10h8',
+      image: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6', box: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',
+      camera: 'M2 7h13v10H2zM15 11l6-3v8l-6-3', spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z', type: 'M5 6V4h14v2M12 4v16M9 20h6',
+      film: 'M3 4h18v16H3zM7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4',
+    };
+    const T = [
+      ['ep', 0, 'The Backup Recording', I.film, 'Episode 01', null],
+      ['s1', 1, 'Scene 1 · Cold open', I.scene, '0:30', 'ep'],
+      ['cast', 2, 'Cast', I.folder, '2', 's1'],
+      ['maya', 3, 'Maya Bennett', I.person, 'Seated', 'cast', 'maya'],
+      ['maya-look', 4, 'Look · On-air', I.look, '', 'maya'],
+      ['maya-voice', 4, 'Voice · Warm host v2', I.voice, '', 'maya'],
+      ['maya-pose', 4, 'Pose · Seated, ¾ right', I.pose, '', 'maya'],
+      ['leo', 3, 'Leo Park', I.person, 'Seated', 'cast', 'leo'],
+      ['leo-look', 4, 'Look · Everyday', I.look, '', 'leo'],
+      ['leo-voice', 4, 'Voice · Dry wit v1', I.voice, '', 'leo'],
+      ['set', 2, 'Set · Podcast studio', I.folder, 'Kit', 's1'],
+      ['bg', 3, 'Background', I.folder, '3', 'set'],
+      ['bg-wall', 4, 'Back wall', I.image, 'Back', 'bg'],
+      ['bg-win', 4, 'Arched window', I.image, 'Back', 'bg'],
+      ['bg-slat', 4, 'Acoustic slats', I.image, 'Back', 'bg'],
+      ['furn', 3, 'Furniture', I.folder, '3', 'set'],
+      ['f-table', 4, 'Round table', I.box, 'Fore', 'furn'],
+      ['f-chairA', 4, 'Chair A', I.box, 'Mid', 'furn'],
+      ['f-chairB', 4, 'Chair B', I.box, 'Mid', 'furn'],
+      ['props', 3, 'Props', I.folder, '5', 'set'],
+      ['p-mic1', 4, 'Desk mic (Maya)', I.box, 'Fore', 'props'],
+      ['p-mic2', 4, 'Desk mic (Leo)', I.box, 'Fore', 'props'],
+      ['p-mug', 4, 'Mug', I.box, 'Fore', 'props'],
+      ['p-lamp', 4, 'Floor lamp', I.box, 'Back', 'props'],
+      ['p-plant', 4, 'Plant', I.box, 'Back', 'props'],
+      ['cams', 2, 'Cameras', I.folder, '3', 's1'],
+      ['c-wide', 3, 'Wide', I.camera, '35mm', 'cams'],
+      ['c-leo', 3, 'Leo close-up', I.camera, '85mm', 'cams'],
+      ['c-maya', 3, 'Maya close-up', I.camera, '85mm', 'cams'],
+      ['atmo', 2, 'Atmosphere', I.folder, '2', 's1'],
+      ['a-shafts', 3, 'Window light shafts', I.spark, 'Overlay', 'atmo'],
+      ['a-dust', 3, 'Dust motes', I.spark, 'Particles', 'atmo'],
+      ['over', 2, 'Screen overlays', I.folder, '2', 's1'],
+      ['o-cap', 3, 'Captions · Podcast style', I.type, '', 'over'],
+      ['o-lt', 3, 'Lower third · Maya', I.type, '', 'over'],
+      ['s2', 1, 'Scene 2 · The search', I.scene, '0:42', 'ep'],
+      ['s3', 1, 'Scene 3 · The backup', I.scene, '0:25', 'ep'],
+    ];
+    const byId = new Map(T.map((r) => [r[0], r]));
+    const hasKids = new Set(T.filter((r) => r[5]).map((r) => r[5]));
+    const q = s.query.trim().toLowerCase();
+    const matches = new Set();
+    if (q) {
+      for (const r of T) if (r[2].toLowerCase().includes(q)) { let p = r; while (p) { matches.add(p[0]); p = p[5] ? byId.get(p[5]) : null; } }
+    }
+    const visible = (r) => {
+      if (q) return matches.has(r[0]);
+      let p = r[5] ? byId.get(r[5]) : null;
+      while (p) { if (!s.open[p[0]]) return false; p = p[5] ? byId.get(p[5]) : null; }
+      return true;
+    };
+    const selId = s.selNode || s.sel;
+    const tree = T.filter(visible).map((r) => {
+      const [id, depth, label, icon, meta, , castKey] = r;
+      const kids = hasKids.has(id) || id === 's2' || id === 's3';
+      const open = q ? true : !!s.open[id];
+      const on = selId === id;
+      return {
+        label, icon, meta, kids, leaf: !kids, on, expanded: kids ? String(open) : undefined,
+        cls: on ? 'fx-row fx-rowsel' : 'fx-row', chev: chev(open), toggleLabel: `${open ? 'Collapse' : 'Expand'} ${label}`,
+        indent: `width: ${depth * 14}px; flex: none`,
+        iconStyle: `flex: none; color: ${depth <= 1 ? 'var(--text2)' : castKey ? 'var(--accent)' : 'var(--text3)'}`,
+        labelStyle: `flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: ${depth <= 2 ? 600 : 400}; color: ${on ? 'var(--text)' : depth >= 4 ? 'var(--text2)' : 'var(--text)'}`,
+        toggle: (e) => { e.stopPropagation(); this.setState({ open: Object.assign({}, s.open, { [id]: !s.open[id] }) }); },
+        select: () => this.setState({ selNode: id, sel: castKey || (id.startsWith('maya') ? 'maya' : id.startsWith('leo') ? 'leo' : s.sel) }),
+      };
+    });
+
+    // Assets.
+    const thumbCols = { Expressions: '#c8865f', Actions: '#7b74c0', Recipes: '#4f8f87', Characters: '#b9805c', Props: '#8a8f9a', Locations: '#6f9873', Effects: '#a85f8f', Camera: '#4f7199', Sound: '#6d5fa8', Text: '#7a7f8c' };
+    const assetData = [
+      ['Expressions', 61, [['Skeptical', 'Thinking · intensity'], ['Embarrassed', 'Social · blush overlay'], ['Furious', 'Anger · vein mark'], ['Half smile', 'Subtle reaction'], ['Starstruck', 'Positive · sparkle eyes'], ['Deadpan', 'Low energy']]],
+      ['Actions', 112, [['Shrug', 'Emblem · 1.2 s'], ['Double take', 'Reaction · 1.0 s'], ['Facepalm', 'Reaction · 1.4 s'], ['Drink from mug', 'Object · needs grip anchor']]],
+      ['Recipes', 24, [['Embarrassed reply', '5 clips · 1 character'], ['Interruption', '4 clips · 2 characters'], ['Comedic beat', 'Camera + face']]],
+      ['Characters', 18, [['Maya Bennett', 'In cast · v2'], ['Leo Park', 'In cast · v1'], ['Sam Ortiz', 'Library · v3']]],
+      ['Props', 140, [['Mug', 'Interactive · 2 states'], ['Phone', 'Interactive · 3 states'], ['Laptop', 'Animated screen']]],
+      ['Locations', 12, [['Podcast studio', 'Kit · 24 parts'], ['Classroom', 'Kit · 31 parts'], ['Coffee shop', 'Kit · 28 parts']]],
+      ['Effects', 58, [['Speed lines', 'Motion'], ['Sweat drop', 'Follows head'], ['Light rain', 'Weather']]],
+      ['Camera', 31, [['Slow push in', 'Move'], ['Crash zoom', 'Energy'], ['Over-the-shoulder', 'Framing']]],
+      ['Sound', 220, [['Warm intro', 'Music · 0:42'], ['Studio room tone', 'Ambience'], ['Cup on table', 'Object']]],
+      ['Text', 40, [['Podcast captions', 'Caption style'], ['Name lower third', 'Graphic'], ['Episode title card', 'Graphic']]],
+    ];
+    const assetGroups = assetData.map(([label, count, items]) => {
+      const its = items.filter(([n, m]) => !q || n.toLowerCase().includes(q) || m.toLowerCase().includes(q));
+      const open = q ? its.length > 0 : !!s.assetsOpen[label];
+      return {
+        label, count: q ? its.length : count, open, chev: chev(open),
+        toggle: () => this.setState({ assetsOpen: Object.assign({}, s.assetsOpen, { [label]: !s.assetsOpen[label] }) }),
+        items: its.map(([name, meta]) => ({ name, meta, thumb: `width: 30px; height: 30px; flex: none; border-radius: 6px; background: linear-gradient(135deg, ${thumbCols[label]}, ${dark ? '#2c2c30' : '#e9e9ee'})` })),
+      };
+    }).filter((g) => !q || g.items.length);
+
+    // Properties.
+    const selIsMaya = s.sel === 'maya';
+    const sec = (key, label, hint, rows) => ({ label, hint, open: !!s.secOpen[key], chev: chev(!!s.secOpen[key]), toggle: () => this.setState({ secOpen: Object.assign({}, s.secOpen, { [key]: !s.secOpen[key] }) }), rows });
+    const pair = (a, av, b, bv, al, bl) => ({ isPair: true, a, av, b, bv, al, bl });
+    const sel = (k, v) => ({ isSelect: true, k, v });
+    const sl = (k, n, v) => ({ isSlider: true, k, n, v: v || `${n}` });
+    const note = (v) => ({ isNote: true, v });
+    const btn = (v) => ({ isButton: true, v });
+    const exprLabels = [['neutral', 'Neutral'], ['smile', 'Smile'], ['surprise', 'Surprise'], ['frown', 'Sad'], ['skeptical', 'Skeptical'], ['embarrassed', 'Embarrassed'], ['angry', 'Angry']];
+    const cur = selIsMaya ? mayaExpr : leoExpr;
+    const chips = (list, current, onPick) => ({ isChips: true, chips: list.map(([k, label]) => ({ label, on: current === k, pick: () => onPick(k), style: chip(current === k) })) });
+    const list = (items) => ({ isList: true, items: items.map(([label, meta, on]) => ({ label, meta, cls: on ? 'fx-rowsel' : '', mark: `width: 14px; height: 14px; border-radius: 50%; flex: none; ${on ? 'border: 4px solid var(--accent)' : 'border: 1.5px solid var(--text3)'}` })) });
+    const rtabSets = { stage: ['properties', 'acting', 'audio'], direct: ['acting', 'properties', 'audio'], edit: ['audio', 'properties', 'acting'] };
+    const rtab = s.rtab || rtabSets[s.mode][0];
+    const rtabs = [['properties', 'Properties'], ['acting', 'Acting'], ['audio', 'Audio']].map(([k, label]) => ({
+      label, on: rtab === k, pick: () => this.setState({ rtab: k }),
+      style: `background: transparent; border: none; cursor: pointer; padding: 0 10px; font-weight: 600; color: ${rtab === k ? 'var(--text)' : 'var(--text2)'}; box-shadow: ${rtab === k ? 'inset 0 -2px 0 var(--accent)' : 'none'}`,
+    }));
+    const sectionsBy = {
+      properties: [
+        sec('transform', 'Transform', '', [pair('X', selIsMaya ? '612' : '1128', 'Y', '760', 'Position X', 'Position Y'), pair('W', '330', 'H', '528', 'Width', 'Height'), pair('↻', '0°', '⇋', selIsMaya ? 'Off' : 'On', 'Rotation', 'Flip')]),
+        sec('layer', 'Layer and depth', 'Midground', [sel('Depth plane', 'Midground'), sl('Parallax', 100, '100%'), sl('Opacity', 100, '100%')]),
+        sec('look', 'Appearance', selIsMaya ? 'On-air' : 'Everyday', [sel('Look', selIsMaya ? 'On-air' : 'Everyday'), sel('View', selIsMaya ? '¾ facing right' : '¾ facing left'), btn('Open in character builder')]),
+        sec('pose', 'Pose', 'Seated', [sel('Base pose', 'Seated'), sel('Anchored to', selIsMaya ? 'Chair A' : 'Chair B'), sel('Hands', 'Relaxed')]),
+      ],
+      acting: [
+        sec('expr', 'Expression', exprLabels.find((x) => x[0] === cur)[1], [chips(exprLabels, cur, (k) => this.setState({ mayaExpr: k, sel: 'maya' })), sl('Intensity', 70, '70%'), sl('Blend in', 25, '0.25 s')]),
+        sec('gesture', 'Gesture', selIsMaya ? 'Talking · calm' : 'Point', [chips([['talk', 'Talking'], ['point', 'Point'], ['wave', 'Wave'], ['shrug', 'Shrug'], ['nod', 'Nod'], ['listen', 'Listen']], selIsMaya ? 'talk' : 'point', () => {}), sl('Energy', 55, '55%')]),
+        sec('gaze', 'Gaze', selIsMaya ? 'Leo' : 'Maya', [sel('Look at', selIsMaya ? 'Leo' : 'Maya'), sel('Eye behaviour', 'Natural blinks')]),
+        sec('recipes', 'Recipes', '24', [list([['Embarrassed reply', '5 clips', false], ['Question and reaction', '3 clips', false], ['Comedic beat', '3 clips', false]]), note('Applying a recipe adds normal clips you can edit or delete.')]),
+      ],
+      audio: [
+        sec('voice', 'Voice', selIsMaya ? 'Warm host v2' : 'Dry wit v1', [sel('Voice asset', selIsMaya ? 'Maya — warm host v2' : 'Leo — dry wit v1'), sel('Engine', 'Qwen3-TTS 1.7B · local')]),
+        sec('take', 'Current line', line ? `${line.name}` : '—', [note(line ? `“${line.text}”` : 'Select a dialogue clip.'), list([['Take 1', '3.9 s', false], ['Take 2', '4.1 s · chosen', true], ['Take 3', '4.4 s', false]]), btn('Generate more takes')]),
+        sec('delivery', 'Delivery', 'Warm, upbeat', [sel('Emotion', 'Happy'), sl('Pace', 50, '1.0×'), sel('Reference', 'Happy · range bank')]),
+        sec('lips', 'Lip sync', 'Auto', [sel('Source', 'Forced alignment'), sel('Mouth set', 'Standard 9 shapes'), btn('Edit mouth track')]),
+        sec('mix', 'Mix', '−3 dB', [sl('Gain', 72, '−3 dB'), sl('Fade in', 10, '0.1 s'), sl('Fade out', 20, '0.2 s')]),
+      ],
+    };
+    const sections = sectionsBy[rtab];
+
+    // Timeline.
+    const pct = (x) => `${(x / 30 * 100).toFixed(3)}%`;
+    const clip = (a, b, label, kind, title) => ({ label, title: title || label, style: `position: absolute; top: 4px; bottom: 4px; left: ${pct(a)}; width: calc(${pct(b - a)} - 2px); background: ${CL[kind][0]}; color: ${CL[kind][1]}; border-radius: 4px; padding: 0 7px; display: flex; align-items: center; font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis` });
+    const vis = (l) => {
+      const out = []; const L = ['A', 'C', 'D', 'E', 'B', 'F', 'H', 'X'];
+      for (let x = l.s, i = 0; x < l.e - 0.15; x += 0.32, i++) out.push(Object.assign(clip(x, x + 0.3, L[i % L.length], 'lips', 'Mouth shape'), {}));
+      return out;
+    };
+    const LI = { shot: I.camera, move: 'M5 12h14M13 6l6 6-6 6', dlg: 'M4 5h16v11H8l-4 4z', lips: 'M4 12c4-5 12-5 16 0-4 5-12 5-16 0z', act: I.pose, face: 'M12 21a9 9 0 100-18 9 9 0 000 18zM9 10h.01M15 10h.01M8.5 15c2 1.5 5 1.5 7 0', fx: I.spark, music: 'M9 18V6l11-2v12', amb: 'M3 12h3l3-6 4 12 3-6h5', sfx: 'M11 5L6 9H2v6h4l5 4z' };
+    const groupsDef = [
+      ['camera', 'Camera', 'shot', [['Shots', 'shot', shots.map((x) => clip(x.s, x.e, x.label, 'shot'))], ['Moves', 'move', [clip(10.4, 11.2, 'Shake · light', 'move'), clip(21.6, 30, 'Slow push in', 'move')]]]],
+      ['maya', 'Maya Bennett', 'dlg', [['Dialogue', 'dlg', [clip(0.8, 6.0, '“Welcome back…” · take 2', 'dlg'), clip(14.6, 20.8, '“I was hoping you…”', 'dlg')], true], ['Lip sync', 'lips', [...vis(lines[0]), ...vis(lines[2])]], ['Acting', 'act', [clip(0.4, 2.2, 'Wave', 'act'), clip(2.2, 6, 'Talking · calm', 'act'), clip(14.2, 15.8, 'Look away', 'act'), clip(15.5, 20.5, 'Talking · small', 'act')]], ['Face', 'face', [clip(0, 6.2, 'Smile 70%', 'face'), clip(9, 13.5, 'Surprise', 'face'), clip(14.2, 21.2, 'Embarrassed', 'face')]]]],
+      ['leo', 'Leo Park', 'dlg', [['Dialogue', 'dlg', [clip(6.6, 12.6, '“You mean the recording…”', 'dlg'), clip(22.4, 27.2, '“Good thing I brought…”', 'dlg')], true], ['Lip sync', 'lips', [...vis(lines[1]), ...vis(lines[3])]], ['Acting', 'act', [clip(7.2, 10.4, 'Point at Maya', 'act'), clip(22.6, 27, 'Talking', 'act')]], ['Face', 'face', [clip(6.4, 13.4, 'Skeptical', 'face'), clip(22.2, 30, 'Smug smile', 'face')]]]],
+      ['fx', 'Effects', 'fx', [['On characters', 'fx', [clip(15.2, 18.6, 'Sweat drop → Maya', 'fx'), clip(10.2, 11.4, 'Speed lines', 'fx')]]]],
+      ['sound', 'Sound', 'music', [['Music', 'music', [clip(0, 30, 'Warm intro · −18 dB · ducked', 'music')], true], ['Ambience', 'amb', [clip(0, 30, 'Studio room tone · −28 dB', 'amb')], true], ['Sound FX', 'sfx', [clip(12.8, 13.6, 'Cup on table', 'sfx'), clip(24.4, 25, 'Record beep', 'sfx')], true]]],
+    ];
+    const tq = s.trackQuery.trim().toLowerCase();
+    const tracks = [];
+    for (const [gk, glabel, gkind, lanes] of groupsDef) {
+      if (s.filter === 'audio' && !['maya', 'leo', 'sound'].includes(gk)) continue;
+      if (s.filter === 'picture' && gk === 'sound') continue;
+      const ls = lanes.filter(([label, kind, , audio]) => (!tq || label.toLowerCase().includes(tq) || glabel.toLowerCase().includes(tq)) && !(s.filter === 'audio' && !audio) && !(s.filter === 'picture' && audio));
+      if (!ls.length) continue;
+      const open = tq ? true : !!s.groups[gk];
+      tracks.push({ group: true, lane: false, label: glabel, count: `${ls.length}`, open, chev: chev(open), dot: `width: 8px; height: 8px; border-radius: 2px; background: ${CL[gkind][0]}; flex: none`,
+        toggle: () => this.setState({ groups: Object.assign({}, s.groups, { [gk]: !s.groups[gk] }) }),
+        summary: open ? [] : ls.flatMap(([, kind, clips]) => clips.filter((c) => kind !== 'lips')).map((c) => ({ style: c.style.replace('top: 4px; bottom: 4px', 'top: 9px; bottom: 9px').replace(/padding: 0 7px;/, '') })), clips: [] });
+      if (open) for (const [label, kind, clips, audio] of ls) tracks.push({ group: false, lane: true, label, icon: LI[kind], clips, audio: !!audio });
+    }
+    const ticks = [0, 5, 10, 15, 20, 25, 30].map((x) => ({ label: `00:${String(x).padStart(2, '0')}`, style: `position: absolute; left: ${pct(x)}; top: 4px; transform: translateX(${x === 30 ? '-100%' : x === 0 ? '4px' : '-50%'}); font: 500 10px 'JetBrains Mono', monospace; color: var(--text3)` }));
+    const fmt = (x) => `00:${x.toFixed(1).padStart(4, '0')}`;
+
+    const filters = [['all', 'All'], ['picture', 'Picture'], ['audio', 'Audio']].map(([k, label]) => ({ label, on: s.filter === k, pick: () => this.setState({ filter: k }), style: seg(s.filter === k) }));
+    const families = [['flat', 'Flat'], ['illustrated', 'Illustrated']].map(([k, label]) => ({ label, on: fam === k, pick: () => this.setState({ family: k }), style: seg(fam === k) }));
+    const ctxBy = {
+      stage: [['Look', selIsMaya ? 'On-air' : 'Everyday'], ['Pose', 'Seated'], ['Depth', 'Midground'], ['View', '¾']],
+      direct: [['Expression', exprLabels.find((x) => x[0] === cur)[1]], ['Gesture', selIsMaya ? 'Talking' : 'Point'], ['Look at', selIsMaya ? 'Leo' : 'Maya'], ['Recipe', 'None']],
+      edit: [['Voice', selIsMaya ? 'Warm host v2' : 'Dry wit v1'], ['Take', '2 of 3'], ['Gain', '−3 dB'], ['Fade', '0.1 s']],
+    };
+    return {
+      themeVars, isDark: dark, isLight: !dark, themeLabel: dark ? 'Switch to light theme' : 'Switch to dark theme', toggleTheme: () => this.setState({ theme: dark ? 'light' : 'dark' }),
+      modes, rail, isLayers: s.rail === 'layers', isAssets: s.rail !== 'layers',
+      panelTitle: { layers: 'Layers', assets: 'Assets', cast: 'Cast', text: 'Text', effects: 'Effects', audio: 'Audio', templates: 'Templates' }[s.railKey || 'layers'], searchPlaceholder: s.rail === 'layers' ? 'Search layers' : 'Search 1,400+ assets',
+      query: s.query, setQuery: (e) => this.setState({ query: e.target.value }),
+      collapseAll: () => this.setState({ open: { ep: true }, assetsOpen: {} }),
+      tree, noResults: !!q && tree.length === 0, assetGroups,
+      family: fam, maya, leo, bg, slats, shafts: ill,
+      stageTransform: `position: absolute; inset: 0; transform-origin: ${ox}% ${oy}%; transform: scale(${scale.toFixed(3)})`,
+      showSelection: !s.playing && shot.key === 'wide',
+      selectionBox: `position: absolute; ${selIsMaya ? 'left: 19%' : 'left: 61%'}; top: 24%; width: 20%; height: 50%; border: 1.5px solid #4f7cff; pointer-events: none`,
+      caption: !!line, captionWho: line ? line.name : '', captionText: line ? line.text : '',
+      shotBadge: { wide: 'CAM 01 · WIDE', leo: 'CAM 02 · LEO CLOSE-UP', maya: 'CAM 03 · MAYA CLOSE-UP', push: 'CAM 01 · PUSH IN' }[shot.key],
+      selName: selIsMaya ? 'Maya Bennett' : 'Leo Park', selDot: `width: 8px; height: 8px; border-radius: 50%; background: ${selIsMaya ? '#c8653f' : '#4f8f87'}`,
+      ctx: ctxBy[s.mode].map(([k, v]) => ({ k, v })),
+      families, rtabs, sections, tracks, ticks, filters,
+      trackQuery: s.trackQuery, setTrackQuery: (e) => this.setState({ trackQuery: e.target.value }),
+      playheadStyle: `position: absolute; top: 0; bottom: 0; left: calc(200px + (100% - 200px) * ${(t / 30).toFixed(4)}); width: 1px; background: var(--accent); z-index: 4; pointer-events: none`,
+      playing: s.playing, paused: !s.playing, playLabel: s.playing ? 'Pause' : 'Play', togglePlay: () => this.toggle(), rewind: () => this.setState({ t: 0 }),
+      seek: (e) => { const r = e.currentTarget.getBoundingClientRect(); this.setState({ t: Math.max(0, Math.min(30, ((e.clientX - r.left) / r.width) * 30)) }); },
+      timeLabel: fmt(t),
+    };
+  }
+}
+</script>
+</body>
+</html>

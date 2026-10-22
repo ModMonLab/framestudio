@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Character</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center">
+<svg viewBox="{{c.viewBox}}" preserveAspectRatio="{{c.aspect}}" style="width: 100%; height: 100%; display: block; overflow: visible" role="img" aria-label="{{c.label}}">
+<defs>
+<radialGradient id="{{c.idSkin}}" cx="0.42" cy="0.36" r="0.75">
+<stop offset="0" stop-color="{{c.skinLight}}"></stop>
+<stop offset="0.6" stop-color="{{c.skin}}"></stop>
+<stop offset="1" stop-color="{{c.skinDark}}"></stop>
+</radialGradient>
+<linearGradient id="{{c.idTop}}" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="{{c.topLight}}"></stop>
+<stop offset="1" stop-color="{{c.topDark}}"></stop>
+</linearGradient>
+<linearGradient id="{{c.idHair}}" x1="0" y1="0" x2="0.4" y2="1">
+<stop offset="0" stop-color="{{c.hairLight}}"></stop>
+<stop offset="1" stop-color="{{c.hairDark}}"></stop>
+</linearGradient>
+<linearGradient id="{{c.idPants}}" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="{{c.bottomDark}}"></stop>
+<stop offset="0.45" stop-color="{{c.bottom}}"></stop>
+<stop offset="1" stop-color="{{c.bottomDark}}"></stop>
+</linearGradient>
+</defs>
+<g transform="{{c.mirror}}">
+<sc-if value="{{c.groundShadow}}" hint-placeholder-val="{{ true }}">
+<ellipse cx="200" cy="{{c.foot}}" rx="{{c.groundRx}}" ry="12" fill="#000000" opacity="0.18"></ellipse>
+</sc-if>
+
+<path d="{{c.hairBack}}" fill="{{c.hairFill}}"></path>
+
+<path d="{{c.legL}}" stroke="{{c.pantsFill}}" stroke-width="{{c.legW}}" stroke-linecap="round" fill="none"></path>
+<path d="{{c.legR}}" stroke="{{c.pantsFill}}" stroke-width="{{c.legW}}" stroke-linecap="round" fill="none"></path>
+<ellipse cx="{{c.shoeLx}}" cy="{{c.shoeY}}" rx="{{c.shoeRx}}" ry="{{c.shoeRy}}" fill="{{c.shoe}}"></ellipse>
+<ellipse cx="{{c.shoeRx2}}" cy="{{c.shoeY}}" rx="{{c.shoeRx}}" ry="{{c.shoeRy}}" fill="{{c.shoe}}"></ellipse>
+<path d="{{c.pants}}" fill="{{c.pantsFill}}"></path>
+
+<g transform="{{c.upper}}">
+<sc-if value="{{c.hood}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.hoodPath}}" fill="{{c.topDark}}"></path>
+</sc-if>
+<path d="{{c.armBackPath}}" stroke="{{c.armBackColor}}" stroke-width="{{c.armW}}" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+<ellipse cx="{{c.handBx}}" cy="{{c.handBy}}" rx="{{c.handRx}}" ry="{{c.handRy}}" fill="{{c.skinFill}}"></ellipse>
+<rect x="{{c.neckX}}" y="{{c.neckY}}" width="{{c.neckW}}" height="{{c.neckH}}" rx="6" fill="{{c.skinFill}}"></rect>
+<path d="{{c.neckShadow}}" fill="{{c.skinShade}}" opacity="0.75"></path>
+<path d="{{c.torso}}" fill="{{c.topFill}}"></path>
+<sc-for list="{{c.ribs}}" as="r" hint-placeholder-count="10">
+<path d="{{r.d}}" stroke="{{c.ribColor}}" stroke-width="2" opacity="{{c.ribOpacity}}" fill="none"></path>
+</sc-for>
+<sc-for list="{{c.folds}}" as="f" hint-placeholder-count="3">
+<path d="{{f.d}}" stroke="{{c.topDark}}" stroke-width="2.4" stroke-linecap="round" opacity="0.55" fill="none"></path>
+</sc-for>
+<sc-if value="{{c.blazer}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.shirtV}}" fill="#f2ede4"></path>
+<path d="{{c.lapelL}}" fill="{{c.topDark}}"></path>
+<path d="{{c.lapelR}}" fill="{{c.topDark}}"></path>
+<circle cx="{{c.btnX}}" cy="{{c.btnY1}}" r="3.4" fill="{{c.topDark}}"></circle>
+<circle cx="{{c.btnX}}" cy="{{c.btnY2}}" r="3.4" fill="{{c.topDark}}"></circle>
+</sc-if>
+<sc-if value="{{c.turtle}}" hint-placeholder-val="{{ false }}">
+<rect x="{{c.turtleX}}" y="{{c.turtleY}}" width="{{c.turtleW}}" height="{{c.turtleH}}" rx="7" fill="{{c.topFill}}"></rect>
+<path d="{{c.turtleLine}}" stroke="{{c.topDark}}" stroke-width="2" opacity="0.6" fill="none"></path>
+</sc-if>
+<sc-if value="{{c.crew}}" hint-placeholder-val="{{ true }}">
+<path d="{{c.collar}}" stroke="{{c.topDark}}" stroke-width="6" stroke-linecap="round" fill="none"></path>
+</sc-if>
+<sc-if value="{{c.hood}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.strings}}" stroke="#efe7da" stroke-width="2.4" stroke-linecap="round" fill="none"></path>
+<path d="{{c.pocket}}" fill="{{c.topDark}}" opacity="0.55"></path>
+</sc-if>
+<path d="{{c.armFrontPath}}" stroke="{{c.armFrontColor}}" stroke-width="{{c.armW}}" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+<sc-if value="{{c.shortSleeves}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.sleeveB}}" stroke="{{c.topFill}}" stroke-width="{{c.sleeveW}}" stroke-linecap="round" fill="none"></path>
+<path d="{{c.sleeveF}}" stroke="{{c.topFill}}" stroke-width="{{c.sleeveW}}" stroke-linecap="round" fill="none"></path>
+</sc-if>
+<ellipse cx="{{c.handFx}}" cy="{{c.handFy}}" rx="{{c.handRx}}" ry="{{c.handRy}}" fill="{{c.skinFill}}"></ellipse>
+<sc-if value="{{c.pointing}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.finger}}" stroke="{{c.skin}}" stroke-width="6" stroke-linecap="round" fill="none"></path>
+</sc-if>
+
+<sc-for list="{{c.ears}}" as="e" hint-placeholder-count="2">
+<ellipse cx="{{e.x}}" cy="{{e.y}}" rx="{{e.rx}}" ry="{{e.ry}}" fill="{{c.skinFill}}"></ellipse>
+<ellipse cx="{{e.x}}" cy="{{e.y}}" rx="{{e.irx}}" ry="{{e.iry}}" fill="{{c.skinShade}}" opacity="0.6"></ellipse>
+<sc-if value="{{e.ring}}" hint-placeholder-val="{{ true }}">
+<circle cx="{{e.x}}" cy="{{e.ringY}}" r="3.6" fill="#e2b552"></circle>
+</sc-if>
+</sc-for>
+<path d="{{c.head}}" fill="{{c.skinFill}}" stroke="{{c.lineColor}}" stroke-width="{{c.lineW}}"></path>
+<sc-if value="{{c.ill}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.jawShade}}" fill="{{c.skinDark}}" opacity="0.28"></path>
+</sc-if>
+<sc-if value="{{c.face}}" hint-placeholder-val="{{ true }}">
+<path d="{{c.hairShadow}}" fill="{{c.skinShade}}" opacity="0.55"></path>
+<sc-for list="{{c.blush}}" as="b" hint-placeholder-count="2">
+<ellipse cx="{{b.x}}" cy="{{b.y}}" rx="{{b.rx}}" ry="{{b.ry}}" fill="#e0606a" opacity="{{b.o}}"></ellipse>
+</sc-for>
+<sc-for list="{{c.freckles}}" as="f" hint-placeholder-count="10">
+<circle cx="{{f.x}}" cy="{{f.y}}" r="{{f.r}}" fill="{{c.freckle}}" opacity="0.7"></circle>
+</sc-for>
+<sc-for list="{{c.eyes}}" as="e" hint-placeholder-count="2">
+<path d="{{e.white}}" fill="#f6f1ea"></path>
+<ellipse cx="{{e.ix}}" cy="{{e.iy}}" rx="{{e.irx}}" ry="{{e.iry}}" fill="{{c.eye}}"></ellipse>
+<ellipse cx="{{e.ix}}" cy="{{e.iy}}" rx="{{e.prx}}" ry="{{e.pry}}" fill="#140f0d"></ellipse>
+<circle cx="{{e.hx}}" cy="{{e.hy}}" r="{{e.hr}}" fill="#ffffff"></circle>
+<path d="{{e.lid}}" stroke="{{c.lidColor}}" stroke-width="{{e.lidW}}" stroke-linecap="round" fill="none"></path>
+<sc-if value="{{c.ill}}" hint-placeholder-val="{{ false }}">
+<path d="{{e.crease}}" stroke="{{c.skinDark}}" stroke-width="1.2" opacity="0.55" fill="none"></path>
+<path d="{{e.lower}}" stroke="{{c.skinDark}}" stroke-width="1" opacity="0.5" fill="none"></path>
+</sc-if>
+<path d="{{e.brow}}" stroke="{{c.browColor}}" stroke-width="{{c.browW}}" stroke-linecap="round" fill="none"></path>
+</sc-for>
+<path d="{{c.nose}}" stroke="{{c.noseColor}}" stroke-width="{{c.noseW}}" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+<sc-if value="{{c.ill}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.noseShade}}" fill="{{c.skinDark}}" opacity="0.3"></path>
+</sc-if>
+<sc-if value="{{c.mouthOpen}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.mouthFill}}" fill="#3a1d1c"></path>
+<sc-if value="{{c.teeth}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.teethPath}}" fill="#f7f2ea"></path>
+</sc-if>
+<sc-if value="{{c.tongue}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.tonguePath}}" fill="#c4545a"></path>
+</sc-if>
+</sc-if>
+<sc-if value="{{c.lipsFilled}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.upperLip}}" fill="{{c.lipDark}}"></path>
+<path d="{{c.lowerLip}}" fill="{{c.lip}}"></path>
+</sc-if>
+<path d="{{c.mouthLine}}" stroke="{{c.lipLine}}" stroke-width="{{c.mouthW}}" stroke-linecap="round" fill="none"></path>
+<sc-if value="{{c.glasses}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{c.eyes}}" as="e" hint-placeholder-count="2">
+<rect x="{{e.gx}}" y="{{e.gy}}" width="{{e.gw}}" height="{{e.gh}}" rx="9" fill="#ffffff" fill-opacity="0.12" stroke="#2b2522" stroke-width="3"></rect>
+</sc-for>
+<path d="{{c.bridge}}" stroke="#2b2522" stroke-width="3" fill="none"></path>
+</sc-if>
+</sc-if>
+<path d="{{c.hairFront}}" fill="{{c.hairFill}}"></path>
+<sc-for list="{{c.curls}}" as="q" hint-placeholder-count="0">
+<circle cx="{{q.x}}" cy="{{q.y}}" r="{{q.r}}" fill="{{c.hairFill}}"></circle>
+</sc-for>
+<sc-if value="{{c.bun}}" hint-placeholder-val="{{ false }}">
+<circle cx="{{c.bunX}}" cy="{{c.bunY}}" r="{{c.bunR}}" fill="{{c.hairFill}}"></circle>
+<path d="{{c.bunBand}}" stroke="{{c.hairDark}}" stroke-width="3" opacity="0.7" fill="none"></path>
+</sc-if>
+<sc-for list="{{c.strands}}" as="s" hint-placeholder-count="6">
+<path d="{{s.d}}" stroke="{{c.strandColor}}" stroke-width="{{c.strandW}}" stroke-linecap="round" opacity="{{c.strandO}}" fill="none"></path>
+</sc-for>
+<sc-if value="{{c.headset}}" hint-placeholder-val="{{ false }}">
+<path d="{{c.headsetBand}}" stroke="#25272c" stroke-width="7" stroke-linecap="round" fill="none"></path>
+<rect x="{{c.cupX}}" y="{{c.cupY}}" width="18" height="30" rx="7" fill="#25272c"></rect>
+</sc-if>
+<sc-for list="{{c.symbols}}" as="s" hint-placeholder-count="0">
+<path d="{{s.d}}" stroke="{{s.color}}" stroke-width="3.5" stroke-linecap="round" fill="none"></path>
+</sc-for>
+</g>
+</g>
+</svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"family":{"editor":"enum","options":["flat","illustrated"],"default":"flat"},"view":{"editor":"enum","options":["front","three","side","back"],"default":"front"},"pose":{"editor":"enum","options":["standing","seated"],"default":"standing"},"expression":{"editor":"enum","options":["neutral","smile","surprise","frown","skeptical","embarrassed","angry"],"default":"neutral"},"gesture":{"editor":"enum","options":["rest","talk","point","wave"],"default":"rest"},"framing":{"editor":"enum","options":["full","upper","face"],"default":"full"},"mirror":{"editor":"boolean","default":false},"mouth":{"editor":null},"params":{"editor":null},"uid":{"editor":null},"gaze":{"editor":null},"$preview":{"width":400,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const D = { skin: '#b9805c', hair: '#2f221c', eye: '#4b3426', top: '#c8653f', bottom: '#3e5953', shoe: '#efe6d6', lip: '#a65b4f',
+      hairStyle: 'bun', faceShape: 'oval', faceWidth: 50, faceLength: 50, jaw: 45, eyeSize: 50, hairVolume: 55, hairLength: 50,
+      shoulders: 50, waist: 45, hips: 52, freckles: true, topStyle: 'sweater', glasses: false, earrings: true, headset: false };
+    const P = Object.assign({}, D, p.params || {});
+    const ill = p.family === 'illustrated';
+    const view = p.view || 'front';
+    const seated = p.pose === 'seated';
+    const expr = p.expression || 'neutral';
+    const gesture = p.gesture || 'rest';
+    const uid = p.uid || 'c';
+    const k = (v, lo, hi) => lo + (hi - lo) * (Number(v) / 100);
+    const r1 = (n) => Math.round(n * 10) / 10;
+    const sh = (hex, f) => {
+      const n = parseInt(String(hex).slice(1), 16);
+      const ch = [n >> 16, (n >> 8) & 255, n & 255].map((x) => Math.max(0, Math.min(255, Math.round(f < 1 ? x * f : x + (255 - x) * (f - 1)))));
+      return '#' + ch.map((x) => x.toString(16).padStart(2, '0')).join('');
+    };
+    const G = ill
+      ? { cy: 112, rx: 43, ry: 55, neck: 160, sh: 194, waist: 356, hip: 378, foot: 606, shW: 74, waW: 48, hipW: 54, arm: 19, leg: 29 }
+      : { cy: 150, rx: 64, ry: 80, neck: 218, sh: 250, waist: 396, hip: 414, foot: 606, shW: 66, waW: 54, hipW: 56, arm: 25, leg: 34 };
+    const cx = 200;
+    const rx = G.rx * k(P.faceWidth, 0.86, 1.14);
+    const ry = G.ry * k(P.faceLength, 0.9, 1.1);
+    const cy = G.cy;
+    const shapeJaw = P.faceShape === 'round' ? 1.3 : P.faceShape === 'angular' ? 1.05 : 1;
+    const jw = rx * k(P.jaw, 0.42, 0.82) * shapeJaw;
+    const face = view !== 'back';
+    const off = view === 'three' ? rx * 0.3 : view === 'side' ? rx * 0.55 : 0;
+    const so = seated ? 92 : 0;
+
+    // Head outline.
+    let head;
+    if (P.faceShape === 'angular') {
+      head = `M ${cx - rx} ${cy} A ${rx} ${ry * 0.95} 0 0 1 ${cx + rx} ${cy} L ${cx + rx * 0.98} ${cy + ry * 0.42} L ${cx + jw} ${cy + ry * 0.84} L ${cx + jw * 0.32} ${cy + ry} L ${cx - jw * 0.32} ${cy + ry} L ${cx - jw} ${cy + ry * 0.84} L ${cx - rx * 0.98} ${cy + ry * 0.42} Z`;
+    } else {
+      const lo = P.faceShape === 'round' ? 0.78 : 0.55;
+      head = `M ${cx - rx} ${cy} A ${rx} ${ry * 0.95} 0 0 1 ${cx + rx} ${cy} C ${cx + rx} ${cy + ry * lo} ${cx + jw} ${cy + ry * 0.94} ${cx + off * 0.25} ${cy + ry} C ${cx - jw} ${cy + ry * 0.94} ${cx - rx} ${cy + ry * lo} ${cx - rx} ${cy} Z`;
+    }
+    const jawShade = `M ${cx - rx * 0.95} ${cy + ry * 0.25} C ${cx - rx * 0.9} ${cy + ry * 0.7} ${cx - jw} ${cy + ry * 0.95} ${cx} ${cy + ry} C ${cx - jw * 0.6} ${cy + ry * 0.8} ${cx - rx * 0.75} ${cy + ry * 0.6} ${cx - rx * 0.95} ${cy + ry * 0.25} Z`;
+
+    // Expression table: eye openness, brow lift, inner/outer brow offsets, mouth.
+    const EX = {
+      neutral: { open: 1, lift: 0, inner: 0, outer: 0, mouth: 'neutral' },
+      smile: { open: 0.74, lift: -3, inner: -1, outer: 0, mouth: 'smile' },
+      surprise: { open: 1.3, lift: -10, inner: -3, outer: 0, mouth: 'o' },
+      frown: { open: 0.86, lift: -2, inner: -7, outer: 3, mouth: 'frown' },
+      angry: { open: 0.78, lift: 2, inner: 8, outer: -3, mouth: 'tense' },
+      skeptical: { open: 0.92, lift: 0, inner: 0, outer: 0, mouth: 'smirk', skeptic: true },
+      embarrassed: { open: 0.72, lift: -2, inner: -5, outer: 2, mouth: 'small', blush: true },
+    }[expr] || { open: 1, lift: 0, inner: 0, outer: 0, mouth: 'neutral' };
+
+    // Eyes.
+    const es = k(P.eyeSize, 0.82, 1.2);
+    const ex = rx * 0.41;
+    const ey = cy + ry * (ill ? 0.03 : 0.05);
+    const gz = p.gaze === 'left' ? -1 : p.gaze === 'right' ? 1 : view === 'three' ? 0.7 : view === 'side' ? 1 : 0;
+    const eyeDefs = view === 'front' ? [{ x: cx - ex, s: 1, dir: 1 }, { x: cx + ex, s: 1, dir: -1 }]
+      : view === 'three' ? [{ x: cx - ex * 0.82 + off, s: 1, dir: 1 }, { x: cx + ex * 0.72 + off, s: 0.74, dir: -1 }]
+      : view === 'side' ? [{ x: cx + rx * 0.5, s: 0.62, dir: 1 }] : [];
+    const eyes = eyeDefs.map((d, i) => {
+      const open = Math.max(0.12, EX.open * (EX.skeptic && i === 1 ? 0.7 : 1));
+      const w = (ill ? 12.5 : 13) * es * d.s;
+      const h = (ill ? 7 : 10) * es * open;
+      const white = ill
+        ? `M ${d.x - w} ${ey} C ${d.x - w * 0.45} ${ey - h * 1.25} ${d.x + w * 0.55} ${ey - h * 1.25} ${d.x + w} ${ey - h * 0.1} C ${d.x + w * 0.45} ${ey + h * 0.95} ${d.x - w * 0.45} ${ey + h * 0.95} ${d.x - w} ${ey} Z`
+        : `M ${d.x - w} ${ey} A ${w} ${h} 0 1 1 ${d.x + w} ${ey} A ${w} ${h} 0 1 1 ${d.x - w} ${ey} Z`;
+      const ir = (ill ? 5.4 : 7.2) * es;
+      const ix = d.x + gz * w * 0.28;
+      const iy = ey + (ill ? 0.5 : 1);
+      const iry = Math.min(ir, h * (ill ? 0.95 : 0.98));
+      const lid = ill
+        ? `M ${d.x - w - 1} ${ey + 0.5} C ${d.x - w * 0.45} ${ey - h * 1.3} ${d.x + w * 0.55} ${ey - h * 1.3} ${d.x + w + 1.5} ${ey - h * 0.2}`
+        : `M ${d.x - w * 0.95} ${ey - h * 0.35} Q ${d.x} ${ey - h * 1.12} ${d.x + w * 0.95} ${ey - h * 0.35}`;
+      const by = ey - (ill ? 15 : 21) * es + EX.lift + (EX.skeptic && i === 0 ? -8 : 0);
+      const inner = EX.inner + (EX.skeptic && i === 1 ? 4 : 0);
+      const ox = d.x - d.dir * w * 1.05;
+      const ixb = d.x + d.dir * w * 0.95;
+      const brow = `M ${r1(ox)} ${r1(by + EX.outer)} Q ${r1(d.x)} ${r1(by - (ill ? 5 : 6) - (inner < 0 ? 2 : 0))} ${r1(ixb)} ${r1(by + inner)}`;
+      return {
+        white, ix: r1(ix), iy: r1(iy), irx: r1(ir * d.s), iry: r1(iry), prx: r1(ir * 0.46 * d.s), pry: r1(Math.min(ir * 0.46, iry * 0.8)),
+        hx: r1(ix + ir * 0.35), hy: r1(iy - iry * 0.4), hr: r1(Math.max(1, ir * 0.24)), lid, lidW: ill ? 2.4 : 3,
+        crease: `M ${d.x - w * 0.85} ${ey - h * 1.25} Q ${d.x} ${ey - h * 2} ${d.x + w * 0.9} ${ey - h * 1.2}`,
+        lower: `M ${d.x - w * 0.7} ${ey + h * 0.9} Q ${d.x} ${ey + h * 1.35} ${d.x + w * 0.75} ${ey + h * 0.85}`,
+        brow, gx: r1(d.x - w - 6), gy: r1(ey - 15 * es), gw: r1((w + 6) * 2), gh: r1(28 * es),
+      };
+    });
+    const bridge = eyes.length === 2 ? `M ${eyes[0].gx + eyes[0].gw} ${ey - 4} Q ${(eyes[0].gx + eyes[0].gw + eyes[1].gx) / 2} ${ey - 9} ${eyes[1].gx} ${ey - 4}` : '';
+
+    // Nose.
+    const nx = cx + off * 1.18;
+    const ny = cy + ry * (ill ? 0.33 : 0.3);
+    const nose = ill
+      ? `M ${nx - 2} ${ey + 6} Q ${nx + 3} ${ny - 6} ${nx + 6} ${ny + 2} Q ${nx + 2} ${ny + 7} ${nx - 4} ${ny + 5} M ${nx - 9} ${ny + 3} Q ${nx - 7} ${ny + 6} ${nx - 4} ${ny + 5}`
+      : `M ${nx - 1} ${ey + 10} L ${nx - 3} ${ny + 5} Q ${nx + 1} ${ny + 10} ${nx + 6} ${ny + 6}`;
+    const noseShade = `M ${nx + 1} ${ey + 8} Q ${nx + 9} ${ny - 4} ${nx + 7} ${ny + 4} Q ${nx + 4} ${ny} ${nx + 1} ${ey + 8} Z`;
+
+    // Mouth: expression shape, or a lip-sync viseme override.
+    const mx = cx + off * 1.05;
+    const my = cy + ry * (ill ? 0.6 : 0.6);
+    const mw = rx * (ill ? 0.3 : 0.33) * (view === 'three' ? 0.88 : view === 'side' ? 0.55 : 1);
+    const vis = p.mouth || null;
+    let shape = vis ? 'v_' + vis : EX.mouth;
+    let mouthOpen = false, teeth = false, tongue = false;
+    let mouthFill = '', teethPath = '', tonguePath = '', mouthLine = '';
+    const ellipse = (x, y, a, b) => `M ${x - a} ${y} A ${a} ${b} 0 1 1 ${x + a} ${y} A ${a} ${b} 0 1 1 ${x - a} ${y} Z`;
+    switch (shape) {
+      case 'smile':
+        mouthOpen = true; teeth = true;
+        mouthFill = `M ${mx - mw} ${my - 3} Q ${mx} ${my + mw * 0.95} ${mx + mw} ${my - 3} Q ${mx} ${my + 4} ${mx - mw} ${my - 3} Z`;
+        teethPath = `M ${mx - mw * 0.8} ${my - 1} Q ${mx} ${my + 6} ${mx + mw * 0.8} ${my - 1} Q ${mx} ${my + 2} ${mx - mw * 0.8} ${my - 1} Z`;
+        break;
+      case 'o': mouthOpen = true; mouthFill = ellipse(mx, my + 3, mw * 0.42, mw * 0.55); break;
+      case 'frown': mouthLine = `M ${mx - mw * 0.85} ${my + 5} Q ${mx} ${my - 6} ${mx + mw * 0.85} ${my + 5}`; break;
+      case 'tense': mouthLine = `M ${mx - mw * 0.8} ${my + 2} Q ${mx} ${my - 2} ${mx + mw * 0.8} ${my + 2}`; break;
+      case 'smirk': mouthLine = `M ${mx - mw * 0.75} ${my + 2} Q ${mx + mw * 0.1} ${my + 3} ${mx + mw * 0.9} ${my - 6}`; break;
+      case 'small': mouthLine = `M ${mx - mw * 0.5} ${my} Q ${mx} ${my + 5} ${mx + mw * 0.5} ${my}`; break;
+      case 'v_rest': mouthLine = `M ${mx - mw * 0.75} ${my} Q ${mx} ${my + 3} ${mx + mw * 0.75} ${my}`; break;
+      case 'v_mbp': mouthLine = `M ${mx - mw * 0.7} ${my + 1} L ${mx + mw * 0.7} ${my + 1}`; break;
+      case 'v_ee': mouthOpen = true; teeth = true; mouthFill = ellipse(mx, my + 2, mw * 0.9, 5); teethPath = `M ${mx - mw * 0.7} ${my - 1} L ${mx + mw * 0.7} ${my - 1} L ${mx + mw * 0.6} ${my + 2} L ${mx - mw * 0.6} ${my + 2} Z`; break;
+      case 'v_ah': mouthOpen = true; tongue = true; mouthFill = ellipse(mx, my + 5, mw * 0.62, 11); tonguePath = `M ${mx - mw * 0.4} ${my + 12} Q ${mx} ${my + 4} ${mx + mw * 0.4} ${my + 12} Z`; break;
+      case 'v_oh': mouthOpen = true; mouthFill = ellipse(mx, my + 4, mw * 0.45, 9); break;
+      case 'v_oo': mouthOpen = true; mouthFill = ellipse(mx, my + 3, mw * 0.25, 5.5); break;
+      case 'v_fv': mouthOpen = true; teeth = true; mouthFill = ellipse(mx, my + 2, mw * 0.6, 4); teethPath = `M ${mx - mw * 0.5} ${my} L ${mx + mw * 0.5} ${my} L ${mx + mw * 0.45} ${my + 3} L ${mx - mw * 0.45} ${my + 3} Z`; break;
+      case 'v_l': mouthOpen = true; tongue = true; mouthFill = ellipse(mx, my + 4, mw * 0.55, 8); tonguePath = `M ${mx - mw * 0.25} ${my + 2} Q ${mx} ${my - 3} ${mx + mw * 0.25} ${my + 2} Z`; break;
+      default: mouthLine = `M ${mx - mw * 0.75} ${my} Q ${mx} ${my + 3} ${mx + mw * 0.75} ${my}`;
+    }
+    const lipsFilled = ill && !mouthOpen;
+    const upperLip = `M ${mx - mw * 0.82} ${my + 1} Q ${mx - mw * 0.35} ${my - 5} ${mx} ${my - 2} Q ${mx + mw * 0.35} ${my - 5} ${mx + mw * 0.82} ${my + 1} Q ${mx} ${my + 1} ${mx - mw * 0.82} ${my + 1} Z`;
+    const lowerLip = `M ${mx - mw * 0.75} ${my + 1} Q ${mx} ${my + 9} ${mx + mw * 0.75} ${my + 1} Q ${mx} ${my + 2} ${mx - mw * 0.75} ${my + 1} Z`;
+
+    // Ears.
+    const earY = ey + (ill ? 6 : 8);
+    const earR = ill ? { rx: 7, ry: 11 } : { rx: 10, ry: 15 };
+    const earXs = view === 'front' || view === 'back' ? [cx - rx * 0.97, cx + rx * 0.97] : view === 'three' ? [cx - rx * 0.86 + off * 0.2] : [cx - rx * 0.15];
+    const ears = earXs.map((x) => ({ x: r1(x), y: r1(earY), rx: earR.rx, ry: earR.ry, irx: earR.rx * 0.45, iry: earR.ry * 0.5, ring: !!P.earrings && face, ringY: r1(earY + earR.ry + 2) }));
+
+    // Hair.
+    const v = k(P.hairVolume, 0.9, 1.16);
+    const len = k(P.hairLength, 0.8, 1.3);
+    const hs = P.hairStyle;
+    const hl = (side) => (hs === 'crop' ? -0.28 : side);
+    const cap = `M ${cx - rx * 1.05} ${cy + ry * hl(0.02)} C ${cx - rx * 1.2 * v} ${cy - ry * 1.22 * v} ${cx + rx * 1.2 * v} ${cy - ry * 1.22 * v} ${cx + rx * 1.05} ${cy + ry * hl(0.02)} C ${cx + rx * 0.98} ${cy - ry * 0.35} ${cx + rx * 0.62} ${cy - ry * 0.6} ${cx + off * 0.6} ${cy - ry * 0.58} C ${cx - rx * 0.6} ${cy - ry * 0.62} ${cx - rx * 0.98} ${cy - ry * 0.35} ${cx - rx * 1.05} ${cy + ry * hl(0.02)} Z`;
+    let hairBack = '', hairFront = cap, curls = [];
+    let bun = false;
+    if (!face) {
+      hairFront = `M ${cx - rx * 1.07} ${cy + ry * 0.45} C ${cx - rx * 1.25 * v} ${cy - ry * 1.3 * v} ${cx + rx * 1.25 * v} ${cy - ry * 1.3 * v} ${cx + rx * 1.07} ${cy + ry * 0.45} Q ${cx} ${cy + ry * 0.62} ${cx - rx * 1.07} ${cy + ry * 0.45} Z`;
+    }
+    if (hs === 'bun') bun = true;
+    if (hs === 'bob') {
+      hairBack = `M ${cx - rx * 1.22 * v} ${cy + ry * 0.72 * len} C ${cx - rx * 1.42 * v} ${cy - ry * 1.38 * v} ${cx + rx * 1.42 * v} ${cy - ry * 1.38 * v} ${cx + rx * 1.22 * v} ${cy + ry * 0.72 * len} Q ${cx} ${cy + ry * 0.6 * len} ${cx - rx * 1.22 * v} ${cy + ry * 0.72 * len} Z`;
+      if (face) hairFront = `M ${cx - rx * 1.04} ${cy - ry * 0.1} C ${cx - rx * 0.95} ${cy - ry * 1.12 * v} ${cx + rx * 0.98} ${cy - ry * 1.12 * v} ${cx + rx * 1.04} ${cy - ry * 0.15} Q ${cx + rx * 0.55} ${cy - ry * 0.45} ${cx + off - rx * 0.1} ${cy - ry * 0.36} Q ${cx - rx * 0.55} ${cy - ry * 0.25} ${cx - rx * 1.04} ${cy - ry * 0.1} Z`;
+    }
+    if (hs === 'long') {
+      hairBack = `M ${cx - rx * 1.14} ${cy - ry * 0.2} C ${cx - rx * 1.36 * v} ${cy - ry * 1.36 * v} ${cx + rx * 1.36 * v} ${cy - ry * 1.36 * v} ${cx + rx * 1.14} ${cy - ry * 0.2} L ${cx + rx * 1.28 * v} ${cy + ry * 2.25 * len} Q ${cx} ${cy + ry * 2.42 * len} ${cx - rx * 1.28 * v} ${cy + ry * 2.25 * len} Z`;
+    }
+    if (hs === 'curls') {
+      hairFront = face ? `M ${cx - rx * 1.02} ${cy - ry * 0.05} C ${cx - rx * 1.1} ${cy - ry * 1.15} ${cx + rx * 1.1} ${cy - ry * 1.15} ${cx + rx * 1.02} ${cy - ry * 0.05} Q ${cx} ${cy - ry * 0.62} ${cx - rx * 1.02} ${cy - ry * 0.05} Z` : hairFront;
+      hairBack = `M ${cx - rx * 1.3 * v} ${cy + ry * 0.5 * len} C ${cx - rx * 1.5 * v} ${cy - ry * 1.45 * v} ${cx + rx * 1.5 * v} ${cy - ry * 1.45 * v} ${cx + rx * 1.3 * v} ${cy + ry * 0.5 * len} Z`;
+      for (let i = 0; i <= 12; i++) {
+        const a = Math.PI * (0.98 + (i / 12) * 1.04);
+        curls.push({ x: r1(cx + Math.cos(a) * rx * 1.05 * v), y: r1(cy - ry * 0.12 + Math.sin(a) * ry * 0.98 * v), r: r1(rx * (0.24 + (i % 3) * 0.04) * v) });
+      }
+    }
+    if (hs === 'shaved') hairFront = cap;
+    const bunX = cx + off * 0.3;
+    const bunY = cy - ry * 1.12 * v;
+    const bunR = rx * 0.44 * v;
+    const strands = (hs === 'shaved' || hs === 'curls') ? [] : [-0.7, -0.45, -0.2, 0.05, 0.3, 0.55, 0.8].map((t) => ({
+      d: `M ${r1(cx + off * 0.6 + t * rx * 0.2)} ${r1(cy - ry * 1.02 * v)} Q ${r1(cx + t * rx * 1.05)} ${r1(cy - ry * 0.9)} ${r1(cx + t * rx * 1.15 + off * 0.3)} ${r1(cy - ry * (0.45 - Math.abs(t) * 0.3))}`,
+    }));
+    const hairShadow = hs === 'shaved' ? '' : `M ${cx - rx * 0.96} ${cy - ry * 0.18} C ${cx - rx * 0.6} ${cy - ry * 0.48} ${cx + rx * 0.6} ${cy - ry * 0.5} ${cx + rx * 0.96} ${cy - ry * 0.22} L ${cx + rx * 0.96} ${cy - ry * 0.12} C ${cx + rx * 0.6} ${cy - ry * 0.38} ${cx - rx * 0.6} ${cy - ry * 0.36} ${cx - rx * 0.96} ${cy - ry * 0.08} Z`;
+
+    // Body.
+    const tw = view === 'three' ? 0.88 : view === 'side' ? 0.6 : 1;
+    const sw = G.shW * k(P.shoulders, 0.85, 1.15) * tw;
+    const ww = G.waW * k(P.waist, 0.85, 1.15) * tw;
+    const hw = G.hipW * k(P.hips, 0.85, 1.15) * tw;
+    const S = G.sh, W = G.waist, H = G.hip;
+    const torso = `M ${cx - sw} ${S + 24} Q ${cx - sw} ${S} ${cx - sw + 24} ${S - 3} L ${cx + sw - 24} ${S - 3} Q ${cx + sw} ${S} ${cx + sw} ${S + 24} L ${cx + ww + 8} ${W + 14} Q ${cx} ${W + 20} ${cx - ww - 8} ${W + 14} Z`;
+    const ribs = [];
+    if (P.topStyle === 'sweater') for (let x = cx - sw + 14; x < cx + sw - 10; x += ill ? 7 : 10) ribs.push({ d: `M ${r1(x)} ${S + 10} L ${r1(cx + (x - cx) * (ww + 6) / sw)} ${W + 10}` });
+    const folds = ill ? [
+      { d: `M ${cx - sw * 0.55} ${S + 40} Q ${cx - sw * 0.4} ${(S + W) / 2} ${cx - ww * 0.6} ${W}` },
+      { d: `M ${cx + sw * 0.5} ${S + 50} Q ${cx + sw * 0.35} ${(S + W) / 2 + 20} ${cx + ww * 0.55} ${W + 4}` },
+      { d: `M ${cx - 14} ${W - 30} Q ${cx} ${W - 18} ${cx + 18} ${W - 26}` },
+    ] : [];
+    const pants = `M ${cx - ww - 4} ${W + 6} L ${cx + ww + 4} ${W + 6} L ${cx + hw} ${H + 30} L ${cx - hw} ${H + 30} Z`;
+    const legX = hw * 0.5;
+    const footY = G.foot - 16;
+    const legL = seated ? `M ${cx - legX} ${H + 22 + so} L ${cx - legX - 6} ${H + 52 + so} L ${cx - legX - 2} ${footY}` : `M ${cx - legX} ${H + 20} L ${cx - legX + 2} ${footY}`;
+    const legR = seated ? `M ${cx + legX} ${H + 22 + so} L ${cx + legX + 6} ${H + 52 + so} L ${cx + legX + 2} ${footY}` : `M ${cx + legX} ${H + 20} L ${cx + legX - 2} ${footY}`;
+
+    // Arms: the viewer-right arm carries gestures; the other rests.
+    const shoulderL = [cx - sw + 10, S + 18];
+    const shoulderR = [cx + sw - 10, S + 18];
+    const restHand = (sx, dir) => [sx + dir * 10, W + 34];
+    const handB = seated ? [cx - sw * 0.35, W + 18] : restHand(cx - sw, -1);
+    const elbowB = seated ? [cx - sw - 6, (S + W) / 2 + 30] : [cx - sw - 10, (S + W) / 2 + 12];
+    let elbowF = seated ? [cx + sw + 6, (S + W) / 2 + 30] : [cx + sw + 10, (S + W) / 2 + 12];
+    let handF = seated ? [cx + sw * 0.35, W + 18] : restHand(cx + sw, 1);
+    let pointing = false;
+    let finger = '';
+    if (gesture === 'talk') { elbowF = [cx + sw + 8, (S + W) / 2 + 26]; handF = [cx + sw * 0.55, W - 30]; }
+    if (gesture === 'wave') { elbowF = [cx + sw + 40, S + 30]; handF = [cx + sw + 44, S - 70]; }
+    if (gesture === 'point') { elbowF = [cx + sw + 30, S + 46]; handF = [cx + sw + 84, S + 14]; pointing = true; finger = `M ${handF[0] + 6} ${handF[1] - 2} L ${handF[0] + 22} ${handF[1] - 6}`; }
+    const armPath = (s, e, h) => `M ${r1(s[0])} ${r1(s[1])} Q ${r1(e[0])} ${r1(e[1])} ${r1(h[0])} ${r1(h[1])}`;
+    const short = P.topStyle === 'tee';
+    const mid = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    const sleeveB = `M ${r1(shoulderL[0])} ${r1(shoulderL[1])} L ${r1(mid(shoulderL, elbowB, 0.62)[0])} ${r1(mid(shoulderL, elbowB, 0.62)[1])}`;
+    const sleeveF = `M ${r1(shoulderR[0])} ${r1(shoulderR[1])} L ${r1(mid(shoulderR, elbowF, 0.62)[0])} ${r1(mid(shoulderR, elbowF, 0.62)[1])}`;
+
+    const skin = P.skin;
+    const top = P.top;
+    const symbols = [];
+    if (expr === 'surprise') symbols.push({ d: `M ${cx + rx * 1.15} ${cy - ry * 1.1} L ${cx + rx * 1.2} ${cy - ry * 0.75} M ${cx + rx * 1.21} ${cy - ry * 0.62} L ${cx + rx * 1.21} ${cy - ry * 0.6}`, color: '#f2b84b' });
+    if (expr === 'angry') symbols.push({ d: `M ${cx + rx * 0.7} ${cy - ry * 1.05} l 10 -6 M ${cx + rx * 0.82} ${cy - ry * 1.12} l 4 10`, color: '#e5484d' });
+
+    // Framing.
+    const headTop = cy - ry * 1.5 + so;
+    const vb = p.framing === 'face' ? `${r1(cx - rx * 2.1)} ${r1(cy - ry * 1.7 + so)} ${r1(rx * 4.2)} ${r1(ry * 3.3)}`
+      : p.framing === 'upper' ? `${r1(cx - 150)} ${r1(headTop - 10)} 300 ${r1(W + 40 + so - headTop)}` : '0 0 400 640';
+
+    return { c: {
+      label: `Character, ${view} view, ${expr}`,
+      viewBox: vb, aspect: p.framing === 'full' || !p.framing ? 'xMidYMax meet' : 'xMidYMid meet',
+      mirror: p.mirror ? 'translate(400 0) scale(-1 1)' : '',
+      upper: `translate(0 ${so})`,
+      ill, face, groundShadow: !seated, foot: G.foot - 2, groundRx: hw * 1.25,
+      idSkin: `sk-${uid}`, idTop: `tp-${uid}`, idHair: `hr-${uid}`, idPants: `pn-${uid}`,
+      skin, skinLight: sh(skin, 1.12), skinDark: sh(skin, 0.72), skinShade: sh(skin, 0.84),
+      skinFill: ill ? `url(#sk-${uid})` : skin,
+      lineColor: ill ? sh(skin, 0.55) : 'none', lineW: ill ? 1.1 : 0,
+      topLight: sh(top, 1.1), topDark: sh(top, 0.74), topFill: ill ? `url(#tp-${uid})` : top,
+      hairLight: sh(P.hair, 1.25), hairDark: sh(P.hair, 0.7), hairFill: ill ? `url(#hr-${uid})` : P.hair,
+      bottom: P.bottom, bottomDark: sh(P.bottom, 0.75), pantsFill: ill ? `url(#pn-${uid})` : P.bottom,
+      shoe: P.shoe, eye: P.eye, lip: P.lip, lipDark: sh(P.lip, 0.8), lipLine: ill ? sh(P.lip, 0.55) : sh(P.lip, 0.75),
+      lidColor: ill ? '#2a1c17' : sh(skin, 0.5), browColor: sh(P.hair, 0.95), browW: ill ? 3.4 : 5.2,
+      noseColor: ill ? sh(skin, 0.62) : sh(skin, 0.68), noseW: ill ? 1.6 : 2.6, freckle: sh(skin, 0.6),
+      ribColor: sh(top, 0.82), ribOpacity: ill ? 0.35 : 0.55,
+      strandColor: ill ? sh(P.hair, 1.6) : sh(P.hair, 0.6), strandW: ill ? 1.3 : 1.8, strandO: ill ? 0.5 : 0.45,
+      head, jawShade, hairShadow, eyes, bridge, nose, noseShade,
+      mouthOpen, mouthFill, teeth, teethPath, tongue, tonguePath, mouthLine, mouthW: ill ? 2 : 3.2,
+      lipsFilled, upperLip, lowerLip,
+      ears, hairBack, hairFront: hs === 'shaved' ? '' : hairFront, curls, bun, bunX: r1(bunX), bunY: r1(bunY), bunR: r1(bunR),
+      bunBand: `M ${r1(bunX - bunR * 0.85)} ${r1(bunY + bunR * 0.55)} Q ${r1(bunX)} ${r1(bunY + bunR * 0.95)} ${r1(bunX + bunR * 0.85)} ${r1(bunY + bunR * 0.55)}`,
+      strands: face ? strands : [],
+      blush: (EX.blush || ill) && face ? eyes.map((e, i) => ({ x: r1(e.ix + (i === 0 ? -6 : 6)), y: r1(ey + ry * 0.32), rx: 13, ry: 7, o: EX.blush ? 0.45 : 0.14 })) : [],
+      freckles: P.freckles && face ? [[-0.42, 0.22], [-0.36, 0.3], [-0.5, 0.3], [-0.3, 0.2], [0.42, 0.22], [0.36, 0.3], [0.5, 0.3], [0.3, 0.2], [-0.45, 0.38], [0.45, 0.38]].map(([fx, fy]) => ({ x: r1(cx + off + fx * rx), y: r1(cy + fy * ry), r: ill ? 1.2 : 1.8 })) : [],
+      glasses: !!P.glasses && face && view !== 'side',
+      headset: !!P.headset, headsetBand: `M ${cx - rx * 1.05} ${cy} C ${cx - rx * 1.1} ${cy - ry * 1.35} ${cx + rx * 1.1} ${cy - ry * 1.35} ${cx + rx * 1.05} ${cy}`, cupX: r1(cx - rx * 1.12 - 9), cupY: r1(cy - 12),
+      symbols,
+      neckX: r1(cx - rx * 0.24), neckY: r1(G.neck - 12), neckW: r1(rx * 0.48), neckH: r1(S - G.neck + 22),
+      neckShadow: `M ${cx - rx * 0.24} ${G.neck} Q ${cx} ${G.neck + 18} ${cx + rx * 0.24} ${G.neck} L ${cx + rx * 0.24} ${G.neck - 6} Q ${cx} ${G.neck + 8} ${cx - rx * 0.24} ${G.neck - 6} Z`,
+      torso, ribs, folds, pants, legL, legR, legW: G.leg,
+      shoeLx: r1(cx - legX - 4), shoeRx2: r1(cx + legX + 4), shoeY: G.foot - 10, shoeRx: G.leg * 0.78, shoeRy: 11,
+      crew: P.topStyle === 'sweater' || P.topStyle === 'tee', collar: `M ${cx - rx * 0.32} ${S - 2} Q ${cx} ${S + 16} ${cx + rx * 0.32} ${S - 2}`,
+      turtle: P.topStyle === 'turtleneck', turtleX: r1(cx - rx * 0.32), turtleY: r1(G.neck - 2), turtleW: r1(rx * 0.64), turtleH: r1(S - G.neck + 8), turtleLine: `M ${cx - rx * 0.3} ${G.neck + 10} L ${cx + rx * 0.3} ${G.neck + 10}`,
+      blazer: P.topStyle === 'blazer', shirtV: `M ${cx - 24} ${S - 2} L ${cx + 24} ${S - 2} L ${cx} ${S + 90} Z`,
+      lapelL: `M ${cx - 26} ${S - 2} L ${cx - 6} ${S + 92} L ${cx - 30} ${S + 46} Z`, lapelR: `M ${cx + 26} ${S - 2} L ${cx + 6} ${S + 92} L ${cx + 30} ${S + 46} Z`,
+      btnX: cx, btnY1: S + 104, btnY2: S + 128,
+      hood: P.topStyle === 'hoodie', hoodPath: `M ${cx - rx * 0.8} ${S + 8} Q ${cx - rx * 0.95} ${G.neck - 30} ${cx} ${G.neck - 24} Q ${cx + rx * 0.95} ${G.neck - 30} ${cx + rx * 0.8} ${S + 8} Z`,
+      strings: `M ${cx - 10} ${S + 4} L ${cx - 12} ${S + 50} M ${cx + 10} ${S + 4} L ${cx + 12} ${S + 50}`,
+      pocket: `M ${cx - ww * 0.7} ${W - 50} L ${cx + ww * 0.7} ${W - 50} L ${cx + ww * 0.85} ${W} L ${cx - ww * 0.85} ${W} Z`,
+      armW: G.arm, sleeveW: G.arm + 3, shortSleeves: short, sleeveB, sleeveF,
+      armBackPath: armPath(shoulderL, elbowB, handB), armFrontPath: armPath(shoulderR, elbowF, handF),
+      armBackColor: short ? skin : top, armFrontColor: short ? skin : top,
+      handBx: r1(handB[0]), handBy: r1(handB[1]), handFx: r1(handF[0]), handFy: r1(handF[1]), handRx: r1(G.arm * 0.56), handRy: r1(G.arm * 0.66),
+      pointing, finger,
+    } };
+  }
+}
+</script>
+</body>
+</html>
