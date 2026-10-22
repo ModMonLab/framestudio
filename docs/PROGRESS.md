@@ -59,7 +59,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-AST-05 | Not started | — | Versions |
 | FR-AST-06 | Not started | — | Favourites and collections |
 | FR-AST-07 | Not started | — | Thumbnails |
-| FR-AST-08 | Not started | — | Rig check and asset validator |
+| FR-AST-08 | In progress | packages/rig/src/check.ts; packages/rig/test/check.test.ts; coverage validator column | Rig check and asset validator — Static contract check done; composition against reference characters and the action compatibility matrix pending |
 | FR-IMP-01 | Not started | — | Imports validate type, size and content before acceptance and report p |
 | FR-IMP-02 | Not started | — | Imported assets record provenance (file name, date, user statement of |
 | FR-IMP-03 | Not started | — | Rigging assistant |
@@ -221,7 +221,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | API-04 | Done | fixture engine; every response fixture:true; Studio/CLI/report label “not real speech” | A **fixture worker** implementing the same API with deterministic cann |
 | CAT-01 | In progress | docs/catalog/coverage.md | Completeness — 446 / 1254 items have manifests |
 | CAT-02 | In progress | coverage.md families/views columns | Families and views — Authored items carry both families and four views or exemptions; per-list status in the report |
-| CAT-03 | Not started | — | Rig contract |
+| CAT-03 | In progress | rig check in coverage report (all authored character parts pass the static check) | Rig contract — Action compatibility matrix not generated |
 | CAT-04 | In progress | coverage.md | Manifests and previews — Manifests valid; rendered previews (both families) not generated yet |
 | CAT-05 | In progress | coverage.md licence column | Licensing and provenance — Every bundled manifest records licence LicenseRef-Frame-Bundled and provenance |
 | CAT-06 | Not verified | — | Quality bar — Human visual review (owner); all items review: pending |
@@ -281,8 +281,8 @@ The Notes column starts with the requirement's short title from the SRS.
 
 ## Catalog coverage
 Report: [docs/catalog/coverage.md](catalog/coverage.md) (`pnpm catalog:coverage`). **Green: 0 / 1254 (0 %)**;
-manifests present for 446 / 1254 (35.6 %). Nothing is green yet because previews are not rendered, the rig check
-(FR-AST-08) is not implemented, and no item has passed human visual review (CAT-06). Lists with authored content:
+manifests present for 446 / 1254 (35.6 %). Nothing is green yet because previews are not rendered and no item has passed human visual
+review (CAT-06); all authored character parts pass the static rig check (FR-AST-08). Lists with authored content:
 A1–A19 face/body parts and controls, B1–B5 wardrobe (part), E1 expressions (83), F1 actions (19 of 118), D1 cast (14),
 H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output presets (12).
 

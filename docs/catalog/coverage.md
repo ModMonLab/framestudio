@@ -84,16 +84,16 @@ An item is green when it has a manifest, both families and all four views (or do
 | `stage.young-adult` | n/a | n/a | ok | n/a | pending | ok |
 | `stage.adult` | n/a | n/a | ok | n/a | pending | ok |
 | `stage.senior` | n/a | n/a | ok | n/a | pending | ok |
-| `head.oval` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `head.round` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `head.square` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `head.angular` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `head.long` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `head.heart` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `head.diamond` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `head.triangle` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `head.pear` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `head.rectangle` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
+| `head.oval` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `head.round` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `head.square` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `head.angular` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `head.long` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `head.heart` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `head.diamond` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `head.triangle` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `head.pear` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `head.rectangle` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
 | `face-ctl.face-width` | n/a | n/a | ok | n/a | pending | ok |
 | `face-ctl.face-length` | n/a | n/a | ok | n/a | pending | ok |
 | `face-ctl.jaw-width` | n/a | n/a | ok | n/a | pending | ok |
@@ -104,20 +104,20 @@ An item is green when it has a manifest, both families and all four views (or do
 | `face-ctl.forehead-height` | n/a | n/a | ok | n/a | pending | ok |
 | `face-ctl.neck-width` | n/a | n/a | ok | n/a | pending | ok |
 | `face-ctl.neck-length` | n/a | n/a | ok | n/a | pending | ok |
-| `eyes.almond` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.round` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.hooded` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.monolid` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.downturned` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.upturned` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.narrow` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.wide-set` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.close-set` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.deep-set` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.protruding` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.sleepy` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.large-cartoon` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `eyes.dot` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
+| `eyes.almond` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.round` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.hooded` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.monolid` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.downturned` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.upturned` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.narrow` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.wide-set` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.close-set` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.deep-set` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.protruding` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.sleepy` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.large-cartoon` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `eyes.dot` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
 | `eye-ctl.eye-size` | n/a | n/a | ok | n/a | pending | ok |
 | `eye-ctl.eye-spacing` | n/a | n/a | ok | n/a | pending | ok |
 | `eye-ctl.eye-tilt` | n/a | n/a | ok | n/a | pending | ok |
@@ -129,88 +129,88 @@ An item is green when it has a manifest, both families and all four views (or do
 | `eye-ctl.lower-lash-line` | n/a | n/a | ok | n/a | pending | ok |
 | `eye-ctl.eyelid-crease` | n/a | n/a | ok | n/a | pending | ok |
 | `eye-ctl.heterochromia` | n/a | n/a | ok | n/a | pending | ok |
-| `brow.straight` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.soft-arch` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.high-arch` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.angled` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.thick` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.thin` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.bushy` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.unibrow` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.feathered` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.short` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.rounded` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `brow.scarred` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.button` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.straight` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.roman` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.aquiline` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.snub` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.wide` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.narrow` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.hooked` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.upturned` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.flat` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.long` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `nose.rounded` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.full` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.thin` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.wide` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.small` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.bow` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.downturned` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.upturned` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.asymmetric` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.gap-toothed` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `mouth.overbite` | ok (flat, illustrated) | ok (3) | not run | missing | pending | ok |
-| `ears.small` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `ears.average` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `ears.large` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `ears.pointed` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `ears.round` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `ears.attached-lobe` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `ears.protruding` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `ears.elf` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.buzz` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.crew-cut` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.crop` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.undercut` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.fade` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.spiky` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.slick-back` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.side-part` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.short-curls` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.shaved` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.bob` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.lob` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.shag` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.mop` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.wavy-medium` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.mullet` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.curtains` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.pixie` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.afro-medium` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.two-strand-twists` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.straight-long` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.wavy-long` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.curly-long` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.braids` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.box-braids` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.ponytail` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.high-bun` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.low-bun` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.top-knot` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.half-up` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.pigtails` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.locs` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.cornrows` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.afro` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.side-swept-long` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.bald` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.receding` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.headwrap` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.hijab` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hair.durag` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
+| `brow.straight` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.soft-arch` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.high-arch` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.angled` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.thick` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.thin` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.bushy` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.unibrow` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.feathered` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.short` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.rounded` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `brow.scarred` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.button` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.straight` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.roman` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.aquiline` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.snub` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.wide` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.narrow` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.hooked` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.upturned` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.flat` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.long` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `nose.rounded` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.full` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.thin` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.wide` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.small` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.bow` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.downturned` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.upturned` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.asymmetric` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.gap-toothed` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `mouth.overbite` | ok (flat, illustrated) | ok (3) | ok | missing | pending | ok |
+| `ears.small` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `ears.average` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `ears.large` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `ears.pointed` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `ears.round` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `ears.attached-lobe` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `ears.protruding` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `ears.elf` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.buzz` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.crew-cut` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.crop` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.undercut` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.fade` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.spiky` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.slick-back` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.side-part` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.short-curls` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.shaved` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.bob` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.lob` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.shag` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.mop` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.wavy-medium` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.mullet` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.curtains` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.pixie` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.afro-medium` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.two-strand-twists` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.straight-long` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.wavy-long` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.curly-long` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.braids` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.box-braids` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.ponytail` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.high-bun` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.low-bun` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.top-knot` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.half-up` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.pigtails` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.locs` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.cornrows` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.afro` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.side-swept-long` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.bald` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.receding` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.headwrap` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.hijab` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hair.durag` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
 | `hair-ctl.volume` | n/a | n/a | ok | n/a | pending | ok |
 | `hair-ctl.length` | n/a | n/a | ok | n/a | pending | ok |
 | `hair-ctl.curl-tightness` | n/a | n/a | ok | n/a | pending | ok |
@@ -300,31 +300,31 @@ An item is green when it has a manifest, both families and all four views (or do
 | `makeup.glitter` | — | — | — | — | — | — (no manifest) |
 | `makeup.stage-makeup` | — | — | — | — | — | — (no manifest) |
 | `makeup.face-paint` | — | — | — | — | — | — (no manifest) |
-| `hand.relaxed` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.open-palm` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.fist` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.point` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.thumbs-up` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.thumbs-down` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.peace` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.ok` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.grip` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.pinch` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.wave-flat` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.count-one` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.count-two` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.count-three` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.count-four` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.count-five` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.clasped` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.cupped` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.typing` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `hand.phone-hold` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `feet.barefoot` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `feet.flat` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `feet.heel` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `feet.boot` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `feet.sneaker` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
+| `hand.relaxed` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.open-palm` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.fist` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.point` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.thumbs-up` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.thumbs-down` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.peace` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.ok` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.grip` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.pinch` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.wave-flat` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.count-one` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.count-two` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.count-three` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.count-four` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.count-five` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.clasped` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.cupped` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.typing` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `hand.phone-hold` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `feet.barefoot` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `feet.flat` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `feet.heel` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `feet.boot` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `feet.sneaker` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
 | `mouthshape.x-rest` | missing (—) | missing (0) | not run | missing | pending | ok |
 | `mouthshape.a-closed` | missing (—) | missing (0) | not run | missing | pending | ok |
 | `mouthshape.b-slightly-open` | missing (—) | missing (0) | not run | missing | pending | ok |
@@ -365,77 +365,77 @@ An item is green when it has a manifest, both families and all four views (or do
 | `identity.visible-pregnancy` | — | — | — | — | — | — (no manifest) |
 | `identity.albinism-palette` | — | — | — | — | — | — (no manifest) |
 | `identity.limb-difference` | — | — | — | — | — | — (no manifest) |
-| `top.t-shirt` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.long-sleeve-tee` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.v-neck-tee` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.tank-top` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.polo` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.button-up-shirt` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.blouse` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.ribbed-sweater` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.crewneck-sweater` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.turtleneck` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.cardigan` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.hoodie` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.sweatshirt` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.crop-top` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.graphic-tee` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.henley` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.flannel-shirt` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `top.uniform-shirt` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.blazer` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.suit-jacket` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.denim-jacket` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.leather-jacket` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.bomber-jacket` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.parka` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.trench-coat` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.raincoat` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.puffer-jacket` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.vest` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.lab-coat` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.apron` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.hi-vis-vest` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `outer.cape` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.trousers` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.jeans` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.chinos` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.cargo-pants` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.joggers` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.shorts` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.skirt` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.pencil-skirt` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.pleated-skirt` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.long-skirt` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.leggings` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.suit-trousers` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `bottom.overalls` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.casual-dress` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.shirt-dress` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.wrap-dress` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.evening-gown` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.sundress` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.jumpsuit` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.business-suit` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.tracksuit` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.hospital-scrubs` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.pyjamas` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.robe` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.kurta` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.abaya` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `dress.kimono-style-robe` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.canvas-sneakers` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.running-shoes` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.loafers` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.oxfords` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.ballet-flats` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.sandals` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.slippers` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.ankle-boots` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.knee-boots` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.work-boots` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.heels` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
-| `shoe.wedges` | ok (flat, illustrated) | ok (4) | not run | missing | pending | ok |
+| `top.t-shirt` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.long-sleeve-tee` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.v-neck-tee` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.tank-top` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.polo` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.button-up-shirt` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.blouse` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.ribbed-sweater` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.crewneck-sweater` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.turtleneck` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.cardigan` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.hoodie` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.sweatshirt` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.crop-top` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.graphic-tee` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.henley` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.flannel-shirt` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `top.uniform-shirt` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.blazer` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.suit-jacket` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.denim-jacket` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.leather-jacket` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.bomber-jacket` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.parka` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.trench-coat` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.raincoat` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.puffer-jacket` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.vest` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.lab-coat` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.apron` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.hi-vis-vest` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `outer.cape` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.trousers` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.jeans` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.chinos` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.cargo-pants` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.joggers` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.shorts` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.skirt` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.pencil-skirt` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.pleated-skirt` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.long-skirt` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.leggings` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.suit-trousers` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `bottom.overalls` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.casual-dress` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.shirt-dress` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.wrap-dress` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.evening-gown` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.sundress` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.jumpsuit` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.business-suit` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.tracksuit` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.hospital-scrubs` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.pyjamas` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.robe` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.kurta` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.abaya` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `dress.kimono-style-robe` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.canvas-sneakers` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.running-shoes` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.loafers` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.oxfords` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.ballet-flats` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.sandals` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.slippers` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.ankle-boots` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.knee-boots` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.work-boots` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.heels` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
+| `shoe.wedges` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
 | `pattern.solid` | — | — | — | — | — | — (no manifest) |
 | `pattern.stripes` | — | — | — | — | — | — (no manifest) |
 | `pattern.pinstripe` | — | — | — | — | — | — (no manifest) |
