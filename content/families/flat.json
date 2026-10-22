@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "family": "flat",
+  "name": "Flat",
+  "description": "Clean shapes, limited palette, one cel-shadow tone, no outlines, bold expressions (Vision §7).",
+  "headRatio": 4,
+  "height": 600,
+  "lineWidth": 0,
+  "shadeFactor": 0.86,
+  "lightFactor": 1.16,
+  "shadeTint": "#5B3F6E",
+  "shadeTintAmount": 0.12
+}

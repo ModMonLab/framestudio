@@ -141,6 +141,15 @@ importers:
         specifier: 0.40.0
         version: 0.40.0
 
+  packages/rig:
+    dependencies:
+      '@frame/render':
+        specifier: workspace:*
+        version: link:../render
+      '@frame/schema':
+        specifier: workspace:*
+        version: link:../schema
+
   packages/schema:
     dependencies:
       '@sinclair/typebox':

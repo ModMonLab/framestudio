@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "family": "illustrated",
+  "name": "Illustrated",
+  "description": "Semi-realistic proportions, soft painted shading, thin warm line work, nuanced faces and fabric folds (Vision §7).",
+  "headRatio": 7.5,
+  "height": 600,
+  "lineWidth": 1.1,
+  "shadeFactor": 0.8,
+  "lightFactor": 1.12,
+  "shadeTint": "#4A3360",
+  "shadeTintAmount": 0.16
+}
