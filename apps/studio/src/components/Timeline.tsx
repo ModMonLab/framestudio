@@ -1,9 +1,10 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Bot, ChevronRight, HelpCircle, Eye, EyeOff, Lock, Maximize, Scan, SkipBack, Sparkles, SplitSquareHorizontal, Video, Volume2 } from 'lucide-react';
 import { applyOverrides, conflictingClipIds, duckCurve, scheduleSceneAudio, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
 import type { Clip, MouthBlock, MouthShape, Scene, Track } from '@frame/schema';
 import { LevelMeter } from './LevelMeter.js';
+import { scrubAudio } from '../lib/playback.js';
 import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
@@ -42,12 +43,65 @@ export function Timeline() {
   const scroller = useRef<HTMLDivElement>(null);
   const scene = sceneId ? project.scenes[sceneId] : undefined;
   const fps = project.project.frameRate;
+  // Pinch zoom (FR-TML-08): trackpad pinch (ctrl + wheel) and two-finger touch, anchored under the fingers.
+  const pxRef = useRef(pxPerSec);
+  pxRef.current = pxPerSec;
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const zoomAt = (clientX: number, factor: number) => {
+      const old = pxRef.current;
+      const next = Math.max(10, Math.min(300, old * factor));
+      if (next === old) return;
+      const local = clientX - el.getBoundingClientRect().left - HEADER + el.scrollLeft;
+      setPx(next);
+      requestAnimationFrame(() => el.scrollTo({ left: Math.max(0, (local / old) * next - (clientX - el.getBoundingClientRect().left - HEADER)) }));
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      zoomAt(e.clientX, Math.exp(-e.deltaY * 0.01));
+    };
+    const touches = new Map<number, number>();
+    let span = 0;
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      touches.set(e.pointerId, e.clientX);
+      if (touches.size === 2) span = Math.abs([...touches.values()].reduce((a, b) => a - b));
+    };
+    const move = (e: PointerEvent) => {
+      if (!touches.has(e.pointerId)) return;
+      touches.set(e.pointerId, e.clientX);
+      if (touches.size !== 2 || span < 10) return;
+      const xs = [...touches.values()];
+      const now = Math.abs(xs[0]! - xs[1]!);
+      zoomAt((xs[0]! + xs[1]!) / 2, now / span);
+      span = now;
+    };
+    const up = (e: PointerEvent) => touches.delete(e.pointerId);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+    };
+  }, [sceneId]);
 
   const groups = useMemo<Group[]>(() => {
     if (!scene) return [];
     const byOwner = (owner: string) => scene.tracks.filter((t) => t.owner === owner);
     const g: Group[] = [{ id: 'camera', name: 'Camera', key: 'camera', tracks: scene.tracks.filter((t) => t.owner === 'scene' && (t.kind === 'shot' || t.kind === 'camera-move')) }];
     for (const i of scene.instances.filter((x) => x.kind === 'character')) g.push({ id: i.id, name: i.name, key: 'character', tracks: byOwner(i.id) });
+    // Props with their own tracks (state changes, FR-TML-01); interactions stay on the character's Acting lane.
+    const props = scene.instances.filter((i) => i.kind !== 'character').map((i) => i.id);
+    const propTracks = scene.tracks.filter((t) => props.includes(t.owner)).map((t) => ({ ...t, name: `${scene.instances.find((i) => i.id === t.owner)!.name} · ${t.name}` }));
+    if (propTracks.length) g.push({ id: 'props', name: 'Props', key: 'prop', tracks: propTracks });
     g.push({ id: 'fx', name: 'Effects and text', key: 'effect', tracks: scene.tracks.filter((t) => t.owner === 'scene' && (t.kind === 'effect' || t.kind === 'text')) });
     g.push({ id: 'sound', name: 'Sound', key: 'sound', tracks: scene.tracks.filter((t) => t.owner === 'scene' && (t.kind === 'music' || t.kind === 'ambience' || t.kind === 'sfx')) });
     return g
@@ -63,10 +117,12 @@ export function Timeline() {
   if (!scene) return null;
   const width = Math.max(600, (scene.duration / 48000) * pxPerSec + 40);
   const x = (ticks: number) => (ticks / 48000) * pxPerSec;
-  const seekFromEvent = (e: React.PointerEvent | React.MouseEvent) => {
+  const seekFromEvent = (e: React.PointerEvent | React.MouseEvent, scrub = false) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const t = Math.round(((e.clientX - r.left) / pxPerSec) * fps) * (48000 / fps);
-    studio.set({ time: Math.max(0, Math.min(scene.duration - 1, t)), playing: false });
+    const t = Math.max(0, Math.min(scene.duration - 1, Math.round(((e.clientX - r.left) / pxPerSec) * fps) * (48000 / fps)));
+    studio.set({ time: t, playing: false });
+    // Dragging the playhead plays the mix under it (FR-TML-05).
+    if (scrub) scrubAudio(pid, scene, () => scheduleSceneAudio(project, scene, undefined, { manifest: (ref) => assets.manifest(ref) }), t / 48000);
   };
   const selIds = new Set(selection.map((s) => s.id));
   const selClips = scene.clips.filter((c) => selIds.has(c.id));
@@ -137,7 +193,7 @@ export function Timeline() {
         <div className="st-tl-grid" style={{ width: HEADER + width }}>
           <div className="st-tl-ruler-row">
             <div className="st-tl-corner" style={{ width: HEADER }} />
-            <div className="st-tl-ruler" style={{ width }} onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); seekFromEvent(e); }} onPointerMove={(e) => e.buttons & 1 && seekFromEvent(e)} role="slider" aria-label="Playhead" aria-valuemin={0} aria-valuemax={scene.duration / 48000} aria-valuenow={time / 48000} aria-valuetext={formatTimecode(time)} tabIndex={0}>
+            <div className="st-tl-ruler" style={{ width }} onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); seekFromEvent(e); }} onPointerMove={(e) => e.buttons & 1 && seekFromEvent(e, true)} role="slider" aria-label="Playhead" aria-valuemin={0} aria-valuemax={scene.duration / 48000} aria-valuenow={time / 48000} aria-valuetext={formatTimecode(time)} tabIndex={0}>
               {ticksFor(scene.duration, pxPerSec).map((s) => <span key={s} className="st-tick" style={{ left: s * pxPerSec }}>{s % 60 === 0 && s >= 60 ? `${s / 60}:00` : `${s}s`}</span>)}
               {scene.markers.map((m) => (
                 <button key={m.id} type="button" className="st-marker" style={{ left: x(m.at) }} title={`${m.name} (double-click to rename, right-click to delete)`} aria-label={`Marker ${m.name}`}

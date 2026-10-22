@@ -345,3 +345,4 @@
 .st-voices { flex: 1; min-height: 0; display: grid; grid-template-columns: 320px 1fr; gap: 1px; background: var(--color-divider); }
 .st-voices > .fr-panel { background: var(--color-panel); min-height: 0; }
 .st-voice-ref { display: flex; align-items: center; gap: var(--space-3); min-height: var(--size-row); padding: 0 var(--space-3); }
+.st-key--prop { background: var(--clip-move); }

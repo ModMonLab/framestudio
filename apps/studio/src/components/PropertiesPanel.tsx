@@ -1,7 +1,7 @@
 /** Properties panel (Design System §7.1): Properties / Acting / Audio tabs with collapsible sections. */
 import { useEffect, useRef, useState } from 'react';
 import { Mic, Pause, Play, Plus, Sparkles, Upload, UserCog } from 'lucide-react';
-import { lineTakeState, lookAt, trackFor, type ProjectState } from '@frame/core';
+import { lineTakeState, lookAt, randomId, trackFor, type ProjectState } from '@frame/core';
 import type { Clip, Instance, Scene, Take } from '@frame/schema';
 import { Button, Chip, Dialog, EmptyState, IconButton, NumberField, Panel, Section, Segmented, Select, SliderRow, StatusBadge, Tabs, TextArea, ToggleRow, useSectionState, useToasts, type EditPhase } from '@frame/ui';
 import { api, type WorkerStatus } from '../lib/api.js';
@@ -98,7 +98,41 @@ function InstanceProps({ scene, inst }: { scene: Scene; inst: Instance }) {
         </Section>
       )}
       {inst.kind === 'set-piece' && inst.asset && typeof inst.params.part === 'string' && <KitLook scene={scene} inst={inst} />}
+      {inst.kind === 'prop' && <PropStates scene={scene} inst={inst} />}
     </>
+  );
+}
+
+/**
+ * Prop states (FR-PRP-01, FR-TML-01): the state at the start of the scene, and timed state changes on the prop's own
+ * track in the timeline's Props group (open the door at 3 s, close it at 6 s).
+ */
+function PropStates({ scene, inst }: { scene: Scene; inst: Instance }) {
+  const { studio, assets } = useCtx();
+  const time = useStudio(studio, (s) => s.time);
+  const [open, toggle] = useSections('propstate', { states: true });
+  const [next, setNext] = useState<string>();
+  const states = (inst.asset ? (assets.manifest(inst.asset)?.parameters ?? []) : []).find((p) => p.key === 'state')?.options ?? [];
+  if (states.length < 2) return null;
+  const label = (s: string) => s[0]!.toUpperCase() + s.slice(1).replace(/-/g, ' ');
+  const track = scene.tracks.find((t) => t.owner === inst.id);
+  const add = () => {
+    if (!next) return;
+    const trackId = track?.id ?? randomId('trk');
+    void studio.exec([
+      ...(track ? [] : [{ name: 'track.add', params: { scene: scene.id, id: trackId, kind: 'acting', owner: inst.id, name: 'State' } }]),
+      { name: 'clip.add', params: { scene: scene.id, track: trackId, start: time, end: Math.min(scene.duration, time + 96000), name: `${label(next)}`, params: { state: next } } },
+    ], `${inst.name}: ${label(next)} at ${(time / 48000).toFixed(1)} s`);
+  };
+  return (
+    <Section title="State" summary={label(inst.propState ?? 'default')} open={open.states!} onToggle={(o) => toggle('states', o)}>
+      <Select label="At the start" value={inst.propState ?? states[0]} options={states.map((s) => ({ value: s, label: label(s) }))} onChange={(v) => void studio.exec([{ name: 'instance.update', params: { scene: scene.id, id: inst.id, set: { propState: v } } }], `${inst.name} starts ${label(v)}`)} />
+      <div className="st-row">
+        <div style={{ flex: 1 }}><Select label="Change to" value={next} placeholder="Choose a state" options={states.map((s) => ({ value: s, label: label(s) }))} onChange={setNext} /></div>
+        <Button disabled={!next} disabledReason="Choose a state" onClick={add}>Add at playhead</Button>
+      </div>
+      <p className="fr-hint">State changes are clips in the timeline's Props group; drag or trim them there.</p>
+    </Section>
   );
 }
 
