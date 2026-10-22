@@ -23,7 +23,7 @@ const FILTERS: Record<string, { title: string; kinds?: string[]; empty: string }
   cast: { title: 'Cast', kinds: ['chr'], empty: 'No characters in the library.' },
   text: { title: 'Text', kinds: ['txt'], empty: 'No text styles in the library.' },
   effects: { title: 'Effects', kinds: ['fx', 'atmo', 'tr'], empty: 'Effects are not in the library yet. They arrive with the effects content set.' },
-  audio: { title: 'Audio', kinds: ['snd', 'mus', 'amb', 'sfx', 'voice'], empty: 'Sounds are not in the library yet. Import audio or design a voice from the Scene menu.' },
+  audio: { title: 'Audio', kinds: ['music', 'cue', 'amb', 'sfx', 'voice'], empty: 'Sounds are not in the library yet; they arrive with the sound content set. Voices you design (Scene → Design a voice) appear here.' },
   templates: { title: 'Templates', kinds: ['tpl'], empty: 'Templates are not in the library yet. They arrive with the templates content set.' },
 };
 

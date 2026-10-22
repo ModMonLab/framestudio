@@ -19,7 +19,8 @@
     "content:build": "tsx tools/content/build.ts",
     "studio:build": "pnpm --filter @frame/studio build",
     "test:e2e": "pnpm --filter @frame/studio exec playwright test",
-    "sample": "tsx tools/demo/make-sample.ts"
+    "sample": "tsx tools/demo/make-sample.ts",
+    "catalog:coverage": "tsx tools/catalog/coverage.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",

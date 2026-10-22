@@ -219,16 +219,16 @@ The Notes column starts with the requirement's short title from the SRS.
 | API-02 | Done | workflow.ts stores audio as project media before alignment; slice.test.ts | Frame stores all generated audio as project media immediately after do |
 | API-03 | In progress | Studio delivery controls from capabilities | The capability report is authoritative for UI controls (FR-VOI-08) — Range/voice-design screens to follow the same rule |
 | API-04 | Done | fixture engine; every response fixture:true; Studio/CLI/report label “not real speech” | A **fixture worker** implementing the same API with deterministic cann |
-| CAT-01 | Not started | — | Completeness |
-| CAT-02 | Not started | — | Families and views |
+| CAT-01 | In progress | docs/catalog/coverage.md | Completeness — 446 / 1254 items have manifests |
+| CAT-02 | In progress | coverage.md families/views columns | Families and views — Authored items carry both families and four views or exemptions; per-list status in the report |
 | CAT-03 | Not started | — | Rig contract |
-| CAT-04 | Not started | — | Manifests and previews |
-| CAT-05 | Not started | — | Licensing and provenance |
-| CAT-06 | Not started | — | Quality bar |
+| CAT-04 | In progress | coverage.md | Manifests and previews — Manifests valid; rendered previews (both families) not generated yet |
+| CAT-05 | In progress | coverage.md licence column | Licensing and provenance — Every bundled manifest records licence LicenseRef-Frame-Bundled and provenance |
+| CAT-06 | Not verified | — | Quality bar — Human visual review (owner); all items review: pending |
 | CAT-07 | In progress | catalog/*.yaml; packages/assets/test/catalog.test.ts | Content pipeline — Content pipeline pending |
 | CAT-08 | Not started | — | Sound assets |
 | CAT-09 | Not started | — | Starter voices |
-| CAT-10 | Not started | — | Coverage report |
+| CAT-10 | Done | packages/assets/src/coverage.ts; packages/assets/test/coverage.test.ts; `pnpm catalog:coverage` → docs/catalog/coverage.md | Coverage report — Report exists; currently 0 % green (release needs 100 %) |
 | UI-01 | In progress | apps/studio (shell, rail, resizable panels, canvas, timeline, properties); studio e2e | The Studio implements the shell, modes, rail, panels, canvas, timeline — Panel collapse shortcuts exist (\\ and View menu); 125 % zoom check pending |
 | UI-02 | In progress | apps/studio Workspace + Builder | The Studio workspace and Character builder match the reference screens — Visual comparison with mockups pending owner sign-off |
 | UI-03 | Not started | — | Every screen listed in 02 §7 |
@@ -280,11 +280,11 @@ The Notes column starts with the requirement's short title from the SRS.
 | AC-24 | Not verified | — | Fresh setup — Requires clean Windows 11 laptop (owner checklist §3) |
 
 ## Catalog coverage
-Catalog source: `catalog/` (53 lists, 1254 items; document 03 is generated from it). Bundled manifests exist for
-446 catalog items (plus 2 infrastructure assets) in `content/assets/` — all with licence and provenance, all
-`review: pending` (CAT-06 human review not done). Lists with authored content: A1–A19 face/body parts and controls,
-B1–B5 wardrobe (part), E1 expressions (83), F actions (19 of the list), C1 cast (14), H props (8), kit podcast studio,
-O1 caption styles (6), R1 output presets (12). CAT-10 coverage report not generated yet → 0 % green by its definition.
+Report: [docs/catalog/coverage.md](catalog/coverage.md) (`pnpm catalog:coverage`). **Green: 0 / 1254 (0 %)**;
+manifests present for 446 / 1254 (35.6 %). Nothing is green yet because previews are not rendered, the rig check
+(FR-AST-08) is not implemented, and no item has passed human visual review (CAT-06). Lists with authored content:
+A1–A19 face/body parts and controls, B1–B5 wardrobe (part), E1 expressions (83), F1 actions (19 of 118), D1 cast (14),
+H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output presets (12).
 
 ## Next actions (ordered)
 1. CI is green on all jobs (run 12). Keep it green.
