@@ -27,7 +27,7 @@ import { ATMOSPHERE, EFFECTS, TRANSITIONS } from './fx-specs.js';
 import { TEMPLATES } from './template-specs.js';
 import { IDENTITY, identityPart } from './parts/identity.js';
 import { ACCESSORIES, MAKEUP, SKIN_DETAILS, WORN_PROPS, wornPropPart, accessoryPart, makeupPart, skinDetailPart } from './parts/accessories.js';
-import { BEDROOM_KIT, CLASSROOM_KIT, LIVING_ROOM_KIT, NEWSROOM_KIT, OFFICE_KIT, PARK_KIT } from './parts/kits.js';
+import { BEDROOM_KIT, CITY_STREET_KIT, CLASSROOM_KIT, FOREST_KIT, GYM_KIT, HOSPITAL_KIT, KITCHEN_KIT, LIBRARY_KIT, LIVING_ROOM_KIT, NEWSROOM_KIT, OFFICE_KIT, PARK_KIT, STAGE_KIT, TRAIN_KIT } from './parts/kits.js';
 import type { KitParts } from './parts/props.js';
 
 type Mark = { name: string; x: number; y: number; facing: 'left' | 'right' | 'front' };
@@ -38,6 +38,14 @@ const MORE_KITS: Record<string, { parts: KitParts; marks: Mark[]; ambience?: str
   newsroom: { parts: NEWSROOM_KIT, marks: [{ name: 'Anchor', x: 960, y: 1000, facing: 'front' }], ambience: 'amb.newsroom-bustle@1', props: ['prop.desk-microphone@1'] },
   park: { parts: PARK_KIT, marks: [{ name: 'Path left', x: 700, y: 1000, facing: 'right' }, { name: 'Bench', x: 1540, y: 1000, facing: 'left' }], ambience: 'amb.park-birds@1', props: ['prop.potted-plant@1'] },
   bedroom: { parts: BEDROOM_KIT, marks: [{ name: 'Bedside', x: 1180, y: 1000, facing: 'left' }], ambience: 'amb.bedroom-quiet@1', props: ['prop.floor-lamp@1'] },
+  kitchen: { parts: KITCHEN_KIT, marks: [{ name: 'Stove', x: 900, y: 1000, facing: 'right' }, { name: 'Window', x: 1500, y: 1000, facing: 'left' }], ambience: 'amb.kitchen-ambience@1', props: ['prop.mug@1', 'prop.round-table@1', 'prop.studio-chair@1'] },
+  'city-street': { parts: CITY_STREET_KIT, marks: [{ name: 'Shop door', x: 700, y: 1000, facing: 'right' }, { name: 'Lamp post', x: 1500, y: 1000, facing: 'left' }], ambience: 'amb.city-street@1', props: ['prop.phone@1'] },
+  hospital: { parts: HOSPITAL_KIT, marks: [{ name: 'Bedside', x: 1200, y: 1000, facing: 'left' }], ambience: 'amb.hospital-ward@1', props: ['prop.studio-chair@1'] },
+  'stage-and-auditorium': { parts: STAGE_KIT, marks: [{ name: 'Centre stage', x: 960, y: 1000, facing: 'front' }], ambience: 'amb.auditorium-crowd@1', props: ['prop.desk-microphone@1'] },
+  library: { parts: LIBRARY_KIT, marks: [{ name: 'Table', x: 700, y: 1000, facing: 'right' }, { name: 'Shelves', x: 1300, y: 1000, facing: 'left' }], ambience: 'amb.library-hush@1', props: ['prop.studio-chair@1'] },
+  gym: { parts: GYM_KIT, marks: [{ name: 'Rack', x: 800, y: 1000, facing: 'right' }, { name: 'Mirror', x: 1350, y: 1000, facing: 'left' }], ambience: 'amb.gym-ambience@1', props: [] },
+  'train-interior': { parts: TRAIN_KIT, marks: [{ name: 'Aisle', x: 960, y: 1000, facing: 'right' }], ambience: 'amb.train-carriage@1', props: ['prop.phone@1'] },
+  'fantasy-forest': { parts: FOREST_KIT, marks: [{ name: 'Clearing', x: 960, y: 1000, facing: 'front' }], ambience: 'amb.enchanted-forest@1', props: [] },
 };
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';

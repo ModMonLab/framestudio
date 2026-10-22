@@ -2,7 +2,7 @@
 
 Generated 2026-10-22 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
 
-**Green: 0 / 1254 (0 %)** · manifests present: 806 / 1254 (64.3 %)
+**Green: 0 / 1254 (0 %)** · manifests present: 862 / 1254 (68.7 %)
 
 An item is green when it has a manifest, both families and all four views (or documented exemptions) where they apply, passes the validators (schema and, for character-attached items, the rig check), has previews in both families, is approved in visual review (CAT-06) and carries a redistributable, commercial-use licence with provenance.
 
@@ -45,17 +45,17 @@ An item is green when it has a manifest, both families and all four views (or do
 | F1 Performance clips | `act` | 118 | 34 | 0 |
 | G1 Performance recipes | `rcp` | 24 | 18 | 0 |
 | H1 Props | `prop` | 142 | 11 | 0 |
-| I1 Location kits | `kit` | 16 | 8 | 0 |
+| I1 Location kits | `kit` | 16 | 16 | 0 |
 | I2 Ready-made sets | `set` | 32 | 0 | 0 |
 | I3 Environment layers | `layer` | 10 | 0 | 0 |
 | J1 Scene atmosphere | `atmo` | 54 | 42 | 0 |
 | K1 Motion and visual effects | `fx` | 38 | 24 | 0 |
 | K2 Transitions | `tr` | 18 | 17 | 0 |
 | M1 Camera language | `cam` | 49 | 40 | 0 |
-| N1 Music | `music` | 20 | 12 | 0 |
+| N1 Music | `music` | 20 | 20 | 0 |
 | N2 Musical cues and stings | `cue` | 12 | 12 | 0 |
 | N3 Ambience | `amb` | 20 | 20 | 0 |
-| N4 Sound effects | `sfx` | 60 | 20 | 0 |
+| N4 Sound effects | `sfx` | 60 | 60 | 0 |
 | O1 Text, graphics and finishing | `txt` | 36 | 36 | 0 |
 | P1 Production templates | `tpl` | 16 | 16 | 0 |
 | Q1 Starter voices | `voice` | 16 | 0 | 0 |
@@ -901,20 +901,20 @@ An item is green when it has a manifest, both families and all four views (or do
 | `prop.red-carpet` | — | — | — | — | — | — (no manifest) |
 | `kit.podcast-studio` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.living-room` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `kit.kitchen` | — | — | — | — | — | — (no manifest) |
+| `kit.kitchen` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.office` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.classroom` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.coffee-shop` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.newsroom` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `kit.city-street` | — | — | — | — | — | — (no manifest) |
+| `kit.city-street` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.park` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.bedroom` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `kit.hospital` | — | — | — | — | — | — (no manifest) |
-| `kit.stage-and-auditorium` | — | — | — | — | — | — (no manifest) |
-| `kit.library` | — | — | — | — | — | — (no manifest) |
-| `kit.gym` | — | — | — | — | — | — (no manifest) |
-| `kit.train-interior` | — | — | — | — | — | — (no manifest) |
-| `kit.fantasy-forest` | — | — | — | — | — | — (no manifest) |
+| `kit.hospital` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `kit.stage-and-auditorium` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `kit.library` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `kit.gym` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `kit.train-interior` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `kit.fantasy-forest` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `set.two-host-podcast` | — | — | — | — | — | — (no manifest) |
 | `set.solo-podcast` | — | — | — | — | — | — (no manifest) |
 | `set.four-person-panel` | — | — | — | — | — | — (no manifest) |
@@ -1121,20 +1121,20 @@ An item is green when it has a manifest, both families and all four views (or do
 | `music.upbeat-explainer` | n/a | n/a | ok | n/a | pending | ok |
 | `music.curious-minds` | n/a | n/a | ok | n/a | pending | ok |
 | `music.late-night-talk` | n/a | n/a | ok | n/a | pending | ok |
-| `music.newsroom-theme` | — | — | — | — | — | — (no manifest) |
-| `music.breaking-news-sting` | — | — | — | — | — | — (no manifest) |
+| `music.newsroom-theme` | n/a | n/a | ok | n/a | pending | ok |
+| `music.breaking-news-sting` | n/a | n/a | ok | n/a | pending | ok |
 | `music.quirky-comedy` | n/a | n/a | ok | n/a | pending | ok |
 | `music.sneaky-moment` | n/a | n/a | ok | n/a | pending | ok |
 | `music.sad-piano` | n/a | n/a | ok | n/a | pending | ok |
-| `music.hopeful-strings` | — | — | — | — | — | — (no manifest) |
+| `music.hopeful-strings` | n/a | n/a | ok | n/a | pending | ok |
 | `music.tension-pulse` | n/a | n/a | ok | n/a | pending | ok |
-| `music.mystery-noir` | — | — | — | — | — | — (no manifest) |
-| `music.action-chase` | — | — | — | — | — | — (no manifest) |
-| `music.victory-fanfare` | — | — | — | — | — | — (no manifest) |
-| `music.fantasy-adventure` | — | — | — | — | — | — (no manifest) |
+| `music.mystery-noir` | n/a | n/a | ok | n/a | pending | ok |
+| `music.action-chase` | n/a | n/a | ok | n/a | pending | ok |
+| `music.victory-fanfare` | n/a | n/a | ok | n/a | pending | ok |
+| `music.fantasy-adventure` | n/a | n/a | ok | n/a | pending | ok |
 | `music.calm-ambient` | n/a | n/a | ok | n/a | pending | ok |
 | `music.retro-game` | n/a | n/a | ok | n/a | pending | ok |
-| `music.party-groove` | — | — | — | — | — | — (no manifest) |
+| `music.party-groove` | n/a | n/a | ok | n/a | pending | ok |
 | `music.credits-roll` | n/a | n/a | ok | n/a | pending | ok |
 | `cue.comedy-sting` | n/a | n/a | ok | n/a | pending | ok |
 | `cue.rimshot` | n/a | n/a | ok | n/a | pending | ok |
@@ -1169,65 +1169,65 @@ An item is green when it has a manifest, both families and all four views (or do
 | `amb.thunderstorm` | n/a | n/a | ok | n/a | pending | ok |
 | `amb.wind` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.footsteps-wood` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.footsteps-concrete` | — | — | — | — | — | — (no manifest) |
-| `sfx.footsteps-grass` | — | — | — | — | — | — (no manifest) |
-| `sfx.running-steps` | — | — | — | — | — | — (no manifest) |
+| `sfx.footsteps-concrete` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.footsteps-grass` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.running-steps` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.chair-creak` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.sit-on-sofa` | — | — | — | — | — | — (no manifest) |
-| `sfx.clothes-rustle` | — | — | — | — | — | — (no manifest) |
-| `sfx.body-fall` | — | — | — | — | — | — (no manifest) |
+| `sfx.sit-on-sofa` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.clothes-rustle` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.body-fall` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.door-open` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.door-close` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.door-slam` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.knock` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.doorbell` | — | — | — | — | — | — (no manifest) |
+| `sfx.doorbell` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.mug-on-table` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.cup-clink` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.pour-drink` | — | — | — | — | — | — (no manifest) |
-| `sfx.paper-rustle` | — | — | — | — | — | — (no manifest) |
-| `sfx.page-turn` | — | — | — | — | — | — (no manifest) |
-| `sfx.pen-click` | — | — | — | — | — | — (no manifest) |
-| `sfx.keyboard-typing` | — | — | — | — | — | — (no manifest) |
-| `sfx.mouse-click` | — | — | — | — | — | — (no manifest) |
+| `sfx.pour-drink` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.paper-rustle` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.page-turn` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.pen-click` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.keyboard-typing` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.mouse-click` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.phone-ring` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.phone-vibrate` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.phone-notification` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.camera-shutter` | — | — | — | — | — | — (no manifest) |
-| `sfx.zipper` | — | — | — | — | — | — (no manifest) |
-| `sfx.glass-break` | — | — | — | — | — | — (no manifest) |
-| `sfx.kettle-whistle` | — | — | — | — | — | — (no manifest) |
-| `sfx.microwave-ding` | — | — | — | — | — | — (no manifest) |
-| `sfx.toaster-pop` | — | — | — | — | — | — (no manifest) |
+| `sfx.camera-shutter` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.zipper` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.glass-break` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.kettle-whistle` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.microwave-ding` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.toaster-pop` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.record-beep` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.computer-startup` | — | — | — | — | — | — (no manifest) |
+| `sfx.computer-startup` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.error-beep` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.notification-chime` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.static-noise` | — | — | — | — | — | — (no manifest) |
-| `sfx.applause` | — | — | — | — | — | — (no manifest) |
-| `sfx.laugh-track` | — | — | — | — | — | — (no manifest) |
-| `sfx.gasp-crowd` | — | — | — | — | — | — (no manifest) |
-| `sfx.boo` | — | — | — | — | — | — (no manifest) |
-| `sfx.cheer` | — | — | — | — | — | — (no manifest) |
+| `sfx.static-noise` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.applause` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.laugh-track` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.gasp-crowd` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.boo` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.cheer` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.whoosh` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.swish` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.zip-pass` | — | — | — | — | — | — (no manifest) |
+| `sfx.zip-pass` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.boing` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.pop` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.slide-whistle` | — | — | — | — | — | — (no manifest) |
+| `sfx.slide-whistle` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.bonk` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.punch-impact` | — | — | — | — | — | — (no manifest) |
+| `sfx.punch-impact` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.thud` | n/a | n/a | ok | n/a | pending | ok |
-| `sfx.crash` | — | — | — | — | — | — (no manifest) |
-| `sfx.explosion-small` | — | — | — | — | — | — (no manifest) |
-| `sfx.throat-clear` | — | — | — | — | — | — (no manifest) |
-| `sfx.sigh` | — | — | — | — | — | — (no manifest) |
-| `sfx.cough` | — | — | — | — | — | — (no manifest) |
-| `sfx.sniff` | — | — | — | — | — | — (no manifest) |
-| `sfx.yawn` | — | — | — | — | — | — (no manifest) |
-| `sfx.car-pass` | — | — | — | — | — | — (no manifest) |
-| `sfx.car-horn` | — | — | — | — | — | — (no manifest) |
-| `sfx.bicycle-bell` | — | — | — | — | — | — (no manifest) |
-| `sfx.train-horn` | — | — | — | — | — | — (no manifest) |
+| `sfx.crash` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.explosion-small` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.throat-clear` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.sigh` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.cough` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.sniff` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.yawn` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.car-pass` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.car-horn` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.bicycle-bell` | n/a | n/a | ok | n/a | pending | ok |
+| `sfx.train-horn` | n/a | n/a | ok | n/a | pending | ok |
 | `txt.podcast-captions` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `txt.bold-karaoke-captions` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `txt.minimal-captions` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |

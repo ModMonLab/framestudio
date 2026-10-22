@@ -216,3 +216,221 @@ export const BEDROOM_KIT: KitParts = {
     d.ellipse(100, -140, 520, 80, 'rug', { flat: true });
   }),
 };
+
+export const KITCHEN_KIT: KitParts = {
+  wall: wall('Tiled wall', { wall: '#E9E4D8', tile: '#DCD6C8', trim: '#8A9A8E' }, (d) => {
+    for (let r = 0; r < 4; r++) for (let c = -14; c < 14; c++) d.rect(c * 100 + 2, -300 + r * 70 + 2, 96, 66, 'tile', { flat: true });
+  }),
+  cabinets: {
+    name: 'Wall cabinets', plane: 'back', order: 1, at: [700, 320],
+    spec: { colors: { wood: '#9FB7A4', handle: '#3A3F48' }, bounds: [-520, -140, 1040, 280], draw: (d) => {
+      for (let i = 0; i < 4; i++) { d.rect(-520 + i * 260, -140, 250, 260, 'wood', { r: 6 }); d.rect(-520 + i * 260 + 110, -20, 30, 8, 'handle', { flat: true }); }
+    } },
+  },
+  window: {
+    name: 'Kitchen window', plane: 'back', order: 2, at: [1500, 420],
+    spec: { colors: { sky: '#BFDCEB', frame: '#F4EEE4', plant: '#5E9C66' }, bounds: [-240, -240, 480, 260], draw: (d) => {
+      windowAt(d, -200, -220, 400, 220);
+      for (const x of [-120, 0, 120]) d.ellipse(x, 0, 40, 30, 'plant', { flat: true });
+    } },
+  },
+  counter: {
+    name: 'Counter and stove', plane: 'mid', order: 0, at: [700, 1010],
+    spec: { colors: { front: '#9FB7A4', top: '#E8E2D6', stove: '#3A3F48', knob: '#C9CED6', pot: '#B5553F' }, bounds: [-560, -420, 1120, 420], draw: (d) => {
+      d.rect(-560, -300, 1120, 300, 'front');
+      for (let i = 0; i < 4; i++) d.rect(-540 + i * 280, -270, 260, 240, 'front', { r: 6 });
+      d.rect(-580, -320, 1160, 30, 'top', { r: 6 });
+      d.rect(120, -326, 300, 12, 'stove', { flat: true });
+      for (let i = 0; i < 4; i++) d.ellipse(150 + i * 80, -150, 14, 14, 'knob', { flat: true });
+      d.rect(160, -420, 140, 100, 'pot', { r: 14 });
+    } },
+  },
+  floor: floor('Checked floor', { floor: '#E5DCCB', check: '#C8BBA6' }, (d) => {
+    for (let row = 0; row < 6; row++) for (let col = -14; col < 14; col++) if ((row + col) % 2) d.rect(col * 100, -460 + row * 80, 100, 80, 'check', { flat: true });
+  }),
+};
+
+export const CITY_STREET_KIT: KitParts = {
+  sky: {
+    name: 'Skyline', plane: 'far', order: 0, at: [960, 700],
+    spec: { colors: { sky: '#BFD6E6', far: '#9FB0C0', near: '#8698AA', lit: '#F2E6B0' }, bounds: [-1600, -800, 3200, 900], draw: (d) => {
+      d.rect(-1600, -800, 3200, 900, 'sky', { flat: true });
+      for (let i = 0; i < 16; i++) { const x = -1600 + i * 200; const h = 300 + ((i * 137) % 350); d.rect(x, -h, 190, h + 100, i % 2 ? 'far' : 'near', { flat: true }); for (let r = 0; r < Math.floor(h / 80); r++) d.rect(x + 30, -h + 30 + r * 80, 40, 30, 'lit', { flat: true, opacity: (i + r) % 3 ? 0.4 : 0.9 }); }
+    } },
+  },
+  shopfront: {
+    name: 'Shop fronts', plane: 'back', order: 0, at: [960, 760],
+    spec: { colors: { brick: '#B4775A', glass: '#A9C9DA', awning: '#2F6B57', door: '#3E2B20', sign: '#F2E6C8' }, bounds: [-1400, -640, 2800, 660], draw: (d) => {
+      d.rect(-1400, -640, 2800, 660, 'brick', { flat: true });
+      for (const x of [-1200, -500, 200, 900]) {
+        d.rect(x, -380, 460, 300, 'glass', { flat: true });
+        for (let k = 0; k < 6; k++) d.rect(x - 20 + k * 83, -440, 83, 60, k % 2 ? 'sign' : 'awning', { flat: true });
+        d.rect(x + 470, -340, 110, 340, 'door', { flat: true });
+      }
+    } },
+  },
+  lamp: {
+    name: 'Street lamp', plane: 'mid', order: 0, at: [1640, 1000],
+    spec: { colors: { pole: '#2F3640', glow: '#FFE9B8' }, bounds: [-80, -620, 160, 630], draw: (d) => {
+      d.rect(-12, -600, 24, 600, 'pole', { flat: true });
+      d.rect(-50, -640, 100, 50, 'pole', { r: 10 });
+      d.ellipse(0, -580, 60, 30, 'glow', { flat: true, opacity: 0.5 });
+    } },
+  },
+  floor: floor('Pavement and road', { floor: '#A8A39A', kerb: '#C9C3B8', road: '#4A4E58', line: '#E8E4D8' }, (d) => {
+    d.rect(-1400, -460, 2800, 30, 'kerb', { flat: true });
+    d.rect(-1400, -160, 2800, 180, 'road', { flat: true });
+    for (let i = -14; i < 14; i++) d.rect(i * 200, -80, 110, 12, 'line', { flat: true });
+  }),
+};
+
+export const HOSPITAL_KIT: KitParts = {
+  wall: wall('Ward wall', { wall: '#E4EEF0', trim: '#7FA7A0', stripe: '#BFD8D4' }, (d) => { d.rect(-1400, -320, 2800, 40, 'stripe', { flat: true }); }),
+  window: {
+    name: 'Ward window', plane: 'back', order: 1, at: [1500, 500],
+    spec: { colors: { sky: '#CFE4EE', frame: '#F4F6F6', blind: '#E2E6E8' }, bounds: [-260, -320, 520, 340], draw: (d) => {
+      windowAt(d, -220, -300, 440, 300);
+      for (let i = 0; i < 5; i++) d.rect(-220, -300 + i * 24, 440, 14, 'blind', { flat: true, opacity: 0.8 });
+    } },
+  },
+  bed: {
+    name: 'Hospital bed', plane: 'back', order: 2, at: [700, 1000],
+    spec: { colors: { frame: '#B9C2CA', sheet: '#F7F8F8', blanket: '#8FB6C9', wheel: '#3A3F48' }, bounds: [-460, -360, 920, 370], draw: (d) => {
+      d.rect(-460, -360, 40, 320, 'frame', { r: 8 }); d.rect(420, -260, 40, 220, 'frame', { r: 8 });
+      d.rect(-430, -200, 860, 70, 'sheet', { r: 16 }); d.rect(-200, -215, 620, 90, 'blanket', { r: 20 });
+      d.rect(-440, -130, 880, 30, 'frame', { flat: true });
+      for (const x of [-400, 400]) { d.rect(x - 6, -100, 12, 70, 'frame', { flat: true }); d.ellipse(x, -18, 18, 18, 'wheel', { flat: true }); }
+    } },
+  },
+  monitor: {
+    name: 'Monitor', plane: 'back', order: 3, at: [1180, 640],
+    spec: { colors: { case: '#3A3F48', screen: '#13282C', trace: '#4FD18B' }, bounds: [-110, -90, 220, 380], draw: (d) => {
+      d.rect(-100, -90, 200, 150, 'case', { r: 10 }); d.rect(-84, -76, 168, 110, 'screen', { flat: true });
+      d.stroke([[-80, -20], [-40, -20], [-30, -60], [-15, 20], [0, -20], [80, -20]], 'trace', 3);
+      d.rect(-6, 60, 12, 300, 'case', { flat: true });
+    } },
+  },
+  floor: floor('Vinyl floor', { floor: '#CFD8D6', fleck: '#BAC5C2' }, (d) => {
+    for (let i = 0; i < 40; i++) d.rect(-1400 + ((i * 331) % 2800), -440 + ((i * 97) % 440), 26, 6, 'fleck', { flat: true });
+  }),
+};
+
+export const STAGE_KIT: KitParts = {
+  wall: wall('Stage backdrop', { wall: '#2A1F3D', trim: '#120D1A', curtain: '#8C1F2E', fold: '#6E1622' }, (d) => {
+    for (let i = -14; i < 14; i++) d.rect(i * 100, -800, 60, 780, i % 2 ? 'curtain' : 'fold', { flat: true });
+  }),
+  lights: {
+    name: 'Stage lights', plane: 'back', order: 1, at: [960, 0],
+    spec: { colors: { rig: '#1A1A20', beam: '#FFF2C8' }, bounds: [-900, 0, 1800, 900], draw: (d) => {
+      d.rect(-900, 10, 1800, 24, 'rig', { flat: true });
+      for (const x of [-600, -200, 200, 600]) { d.rect(x - 30, 34, 60, 60, 'rig', { r: 10 }); d.poly([[x - 30, 94], [x + 30, 94], [x + 220, 900], [x - 220, 900]], 'beam', { flat: true, opacity: 0.12 }); }
+    } },
+  },
+  stage: {
+    name: 'Stage front', plane: 'front', order: 0, at: [960, 1080],
+    spec: { colors: { edge: '#3E2B20', seat: '#5A1622', head: '#1A1214' }, bounds: [-1400, -160, 2800, 170], draw: (d) => {
+      d.rect(-1400, -160, 2800, 40, 'edge', { flat: true });
+      for (let i = -13; i < 13; i++) { d.ellipse(i * 110 + 55, -40, 42, 44, 'head', { flat: true }); d.rect(i * 110 + 15, -10, 80, 30, 'seat', { r: 8 }); }
+    } },
+  },
+  floor: floor('Stage boards', { floor: '#7A5236', board: '#6B4730' }, (d) => {
+    for (let i = 0; i < 8; i++) d.rect(-1400, -460 + i * 60, 2800, 4, 'board', { flat: true });
+  }),
+};
+
+export const LIBRARY_KIT: KitParts = {
+  wall: wall('Library wall', { wall: '#C8B48F', trim: '#6B4B34' }),
+  shelves: {
+    name: 'Bookshelves', plane: 'back', order: 1, at: [960, 1000],
+    spec: { colors: { wood: '#6B4B34', b1: '#8C2F3A', b2: '#2F5E8C', b3: '#3F6E5A', b4: '#C9A74A', b5: '#5E4A7A' }, bounds: [-1100, -820, 2200, 830], draw: (d) => {
+      d.rect(-1100, -820, 2200, 820, 'wood', { flat: true });
+      const cols = ['b1', 'b2', 'b3', 'b4', 'b5'];
+      for (let r = 0; r < 5; r++) {
+        d.rect(-1080, -800 + r * 160, 2160, 140, 'wood', { flat: true });
+        for (let x = -1070, k = r * 7; x < 1060; k++) { const w = 22 + (k * 13) % 18; const h = 100 + (k * 7) % 34; d.rect(x, -800 + r * 160 + 140 - h, w, h, cols[k % 5]!, { flat: true }); x += w + 3; }
+        d.rect(-1100, -800 + r * 160 + 140, 2200, 20, 'wood', { flat: true });
+      }
+    } },
+  },
+  table: {
+    name: 'Reading table', plane: 'mid', order: 0, at: [960, 1010],
+    spec: { colors: { top: '#8C6A45', leg: '#5A3E2B', lamp: '#2F6B57', glow: '#FFE9B8' }, bounds: [-420, -380, 840, 390], draw: (d) => {
+      d.rect(-420, -240, 840, 30, 'top', { r: 6 });
+      d.rect(-380, -210, 30, 210, 'leg', { flat: true }); d.rect(350, -210, 30, 210, 'leg', { flat: true });
+      d.rect(180, -330, 10, 90, 'leg', { flat: true }); d.poly([[140, -330], [240, -330], [215, -380], [165, -380]], 'lamp');
+      d.ellipse(190, -310, 80, 30, 'glow', { flat: true, opacity: 0.4 });
+    } },
+  },
+  floor: floor('Library carpet', { floor: '#7A2E35', pattern: '#6B2730' }, (d) => {
+    for (let i = -7; i < 7; i++) d.ellipse(i * 200 + 100, -230, 60, 20, 'pattern', { flat: true });
+  }),
+};
+
+export const GYM_KIT: KitParts = {
+  wall: wall('Gym wall', { wall: '#DCE3E8', trim: '#C8323C', band: '#2F5E8C' }, (d) => { d.rect(-1400, -420, 2800, 60, 'band', { flat: true }); }),
+  rack: {
+    name: 'Weights rack', plane: 'back', order: 1, at: [500, 1000],
+    spec: { colors: { metal: '#3A3F48', plate: '#202024', grip: '#C9CED6' }, bounds: [-300, -420, 600, 430], draw: (d) => {
+      d.rect(-280, -420, 20, 420, 'metal', { flat: true }); d.rect(260, -420, 20, 420, 'metal', { flat: true });
+      for (const y of [-340, -220, -100]) { d.rect(-260, y, 520, 12, 'grip', { flat: true }); d.rect(-250, y - 40, 30, 90, 'plate', { r: 6 }); d.rect(220, y - 40, 30, 90, 'plate', { r: 6 }); }
+    } },
+  },
+  mirror: {
+    name: 'Mirror wall', plane: 'back', order: 2, at: [1350, 620],
+    spec: { colors: { glass: '#CFE0EA', frame: '#9AA5AE', shine: '#FFFFFF' }, bounds: [-420, -340, 840, 360], draw: (d) => {
+      d.rect(-420, -340, 840, 360, 'frame', { flat: true }); d.rect(-400, -320, 800, 320, 'glass', { flat: true });
+      d.poly([[-300, -320], [-220, -320], [-380, 0], [-400, 0], [-400, -120]], 'shine', { flat: true, opacity: 0.4 });
+    } },
+  },
+  floor: floor('Rubber floor', { floor: '#3A3F48', mat: '#4A5058', line: '#C8323C' }, (d) => {
+    for (let c = -7; c < 7; c++) d.rect(c * 200 + 4, -456, 192, 472, 'mat', { flat: true });
+    d.rect(-1400, -300, 2800, 10, 'line', { flat: true });
+  }),
+};
+
+export const TRAIN_KIT: KitParts = {
+  wall: wall('Carriage wall', { wall: '#D9DDE2', trim: '#2F5E8C', panel: '#C6CCD3' }, (d) => { d.rect(-1400, -240, 2800, 220, 'panel', { flat: true }); }),
+  windows: {
+    name: 'Carriage windows', plane: 'back', order: 1, at: [960, 520],
+    spec: { colors: { sky: '#A9D6EE', hill: '#8FBF73', frame: '#8A939C' }, bounds: [-1200, -300, 2400, 320], draw: (d) => {
+      for (const x of [-1150, -550, 50, 650]) {
+        d.rect(x - 14, -294, 528, 288, 'frame', { r: 30 });
+        d.rect(x, -280, 500, 260, 'sky', { r: 24, id: `w${x}` });
+        d.ellipse(x + 250, -20, 360, 90, 'hill', { flat: true, clip: `w${x}` });
+      }
+    } },
+  },
+  seats: {
+    name: 'Seats', plane: 'mid', order: 0, at: [960, 1010],
+    spec: { colors: { seat: '#2F5E8C', cushion: '#3B6FA0', leg: '#5A636C' }, bounds: [-1000, -340, 2000, 350], draw: (d) => {
+      for (const x of [-900, 500]) { d.rect(x, -340, 60, 280, 'seat', { r: 16 }); d.rect(x, -120, 360, 70, 'cushion', { r: 14 }); d.rect(x + 20, -50, 16, 50, 'leg', { flat: true }); d.rect(x + 320, -50, 16, 50, 'leg', { flat: true }); }
+    } },
+  },
+  floor: floor('Carriage floor', { floor: '#5A636C', strip: '#E8C64A' }, (d) => { d.rect(-1400, -460, 2800, 10, 'strip', { flat: true }); }),
+};
+
+export const FOREST_KIT: KitParts = {
+  sky: {
+    name: 'Enchanted sky', plane: 'far', order: 0, at: [960, 700],
+    spec: { colors: { sky: '#2E3F6B', glow: '#7FD3C4', moon: '#F7F1CF', far: '#24456A' }, bounds: [-1600, -800, 3200, 900], draw: (d) => {
+      d.rect(-1600, -800, 3200, 900, 'sky', { flat: true });
+      d.ellipse(700, -560, 70, 70, 'moon', { flat: true });
+      d.ellipse(0, -100, 1600, 300, 'glow', { flat: true, opacity: 0.25 });
+      for (let i = 0; i < 14; i++) d.poly([[-1600 + i * 240, 100], [-1480 + i * 240, -380 - (i % 3) * 60], [-1360 + i * 240, 100]], 'far', { flat: true });
+    } },
+  },
+  trees: {
+    name: 'Giant trees', plane: 'back', order: 0, at: [960, 1000],
+    spec: { colors: { trunk: '#4A3A5A', leaf: '#2F6B57', leaf2: '#3F8C6E', mush: '#C94F6D', dot: '#F4EEE4' }, bounds: [-1300, -900, 2600, 910], draw: (d) => {
+      for (const [x, s] of [[-1050, 1.2], [-500, 0.9], [600, 1.1], [1150, 1]] as const) {
+        d.poly([[x - 50 * s, 0], [x - 30 * s, -500 * s], [x + 30 * s, -500 * s], [x + 50 * s, 0]], 'trunk');
+        d.ellipse(x, -600 * s, 220 * s, 170 * s, 'leaf', { flat: true }); d.ellipse(x + 90 * s, -700 * s, 140 * s, 110 * s, 'leaf2', { flat: true });
+      }
+      for (const x of [-800, 300, 900]) { d.rect(x - 8, -60, 16, 60, 'dot', { flat: true }); d.ellipse(x, -66, 50, 30, 'mush', { flat: true }); d.ellipse(x - 15, -72, 7, 6, 'dot', { flat: true }); d.ellipse(x + 18, -64, 6, 5, 'dot', { flat: true }); }
+    } },
+  },
+  floor: floor('Mossy ground', { floor: '#2F5E4A', moss: '#3F7A5E', glow: '#7FD3C4' }, (d) => {
+    for (let i = 0; i < 26; i++) d.ellipse(-1380 + ((i * 263) % 2760), -420 + ((i * 97) % 380), 40, 12, 'moss', { flat: true });
+    for (let i = 0; i < 18; i++) d.ellipse(-1380 + ((i * 419) % 2760), -440 + ((i * 151) % 400), 4, 4, 'glow', { flat: true, opacity: 0.8 });
+  }),
+};

@@ -127,7 +127,7 @@ command({
     { name: 'template', description: 'Start from a production template (see `frame template list`)' },
     { name: 'cast', description: 'With --template: role=chr.…@1,role=chr.…@1' },
   ],
-  examples: ['frame init MyShow.frame --name "My show" --family illustrated --fps 24', 'frame init Pod.frame --template tpl.two-person-podcast@1 --cast host=chr.aiko-tanaka@1'],
+  examples: ['frame init MyShow.frame --name "My show" --family illustrated --fps 24', 'frame init Pod.frame --template <template ref> --cast <role>=<character ref>'],
   run: (ctx) => {
     const dir = path.resolve(ctx.io.cwd, String(ctx.args.path));
     const defaults = libraryDefaults();

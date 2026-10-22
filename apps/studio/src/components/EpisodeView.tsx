@@ -62,7 +62,7 @@ export function EpisodeView() {
           return (
             <li key={id} className={`st-ep-card ${id === sceneId ? 'st-ep-card--current' : ''}`}>
               <div className="st-ep-into">
-                <Select label={i === 0 ? `Into ${sc.name} (from black)` : `Into ${sc.name}`} value={typeof tr === 'string' ? tr : 'cut'} onChange={(v) => setTransition(sc, v)} options={[{ value: 'cut', label: 'Cut' }, ...transitions.filter((t) => !t.value.startsWith('tr.cut@'))]} />
+                <Select label={i === 0 ? `Into ${sc.name} (from black)` : `Into ${sc.name}`} value={typeof tr === 'string' ? tr : 'cut'} onChange={(v) => setTransition(sc, v)} options={[{ value: 'cut', label: 'No transition' }, ...transitions]} />
               </div>
               <button type="button" className="st-ep-thumb" aria-label={`Open ${sc.name}`} aria-current={id === sceneId} onClick={() => studio.set({ scene: id, time: 0, selection: [], episodeView: false })}>
                 <img src={`/api/projects/${encodeURIComponent(pid)}/frame?scene=${id}&t=${Math.round(sc.duration / 2)}&width=192&height=108&r=${revision}`} width={192} height={108} alt="" loading="lazy" />
