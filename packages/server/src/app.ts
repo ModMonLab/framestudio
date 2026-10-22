@@ -8,11 +8,11 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { describeCommands, evaluateFrame, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { buildCharacter, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
-import { decodeAudioFile, renderExport, rmsEnvelope, type OutputPreset } from '@frame/io';
-import { exitCodeFor, FrameError, type CommandBatch, type ErrorCode } from '@frame/schema';
+import { decodeAudioFile, OpenProject, renderExport, rmsEnvelope, type OutputPreset } from '@frame/io';
+import { exitCodeFor, FrameError, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
 import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
@@ -121,6 +121,27 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
+  // New project folder with the library defaults (same as `frame init`), then opened.
+  app.post<{ Body: { path: string; name?: string; styleFamily?: StyleFamily; frameRate?: number } }>('/api/projects/create', async (req, reply) => {
+    try {
+      const b = req.body;
+      if (!b?.path) throw new FrameError('USAGE', 'path is required');
+      const dir = path.resolve(b.path);
+      const d = libraryDefaults;
+      const family = b.styleFamily ?? d.styleFamily;
+      const fps = b.frameRate ?? d.frameRate;
+      if (family !== 'flat' && family !== 'illustrated') throw new FrameError('USAGE', 'styleFamily must be flat or illustrated');
+      if (!fps || ![24, 25, 30].includes(fps)) throw new FrameError('USAGE', 'frameRate must be 24, 25 or 30');
+      if (!d.output) throw new FrameError('INTERNAL', 'The content library has no default output preset');
+      if (fs.existsSync(dir) && fs.readdirSync(dir).length > 0) throw new FrameError('CONFLICT', `${dir} is not empty`, undefined, 'Choose a new folder name.');
+      const name = b.name ?? path.basename(dir).replace(/\.frame$/, '');
+      OpenProject.create(dir, { name, styleFamily: family, frameRate: fps as 24, output: d.output, appVersion: SERVER_VERSION, newId: randomId, ...(d.captionStyle ? { captionStyle: d.captionStyle } : {}) }).close();
+      const p = hub.open(dir);
+      return { id: p.id, root: p.root, revision: p.open.session.revision, name };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
   app.post<{ Params: { pid: string } }>('/api/projects/:pid/close', async (req, reply) => {
     try {
       hub.close(req.params.pid);
@@ -142,10 +163,9 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   app.post<{ Params: { pid: string }; Body: CommandBatch & { dryRun?: boolean } }>('/api/projects/:pid/commands', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
-      const agent = req.headers['x-frame-agent'];
       const body = req.body;
       if (!body || !Array.isArray(body.commands)) throw new FrameError('USAGE', 'commands[] is required');
-      const batch: CommandBatch = { ...body, source: typeof agent === 'string' && agent ? `agent:${agent}` : body.source ?? 'user' };
+      const batch: CommandBatch = { ...body, source: req.headers['x-frame-agent'] ? sourceOf(req) : body.source ?? 'user' };
       const r = p.open.session.apply(batch, { dryRun: body.dryRun === true });
       return { revision: r.revision, baseRevision: r.baseRevision, rebased: r.rebased, dryRun: r.dryRun, label: r.label, commands: r.commands, changed: r.changed, reports: r.reports };
     } catch (e) {
@@ -156,6 +176,12 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     app.post<{ Params: { pid: string } }>(`/api/projects/:pid/${op}`, async (req, reply) => {
       try {
         const p = hub.get(req.params.pid);
+        // An agent undoes only its own latest change, never a person's (FR-AGT-04); redo is for people.
+        if (req.headers['x-frame-agent']) {
+          if (op === 'redo') throw new FrameError('PERMISSION_REQUIRED', 'Agents cannot redo', undefined, 'Apply the change again with apply_commands.');
+          const src = p.open.session.undoSource();
+          if (src && src !== sourceOf(req)) throw new FrameError('CONFLICT', `The latest change ("${p.open.session.undoLabel()}") was made by ${src.startsWith('agent:') ? 'another agent' : 'a person'}`, { source: src }, 'Re-read the project and apply a corrective change instead.');
+        }
         const r = p.open.session[op]();
         if (!r) throw new FrameError('CONFLICT', `Nothing to ${op}`);
         return { revision: r.revision, label: r.label };
@@ -164,6 +190,19 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       }
     });
   }
+  // Revert every change of one agent session as a single undoable step (FR-AGT-04/05). People only.
+  app.post<{ Params: { pid: string }; Body: { source: string } }>('/api/projects/:pid/revert-source', async (req, reply) => {
+    try {
+      if (req.headers['x-frame-agent']) throw new FrameError('PERMISSION_REQUIRED', 'Only a person can revert an agent session');
+      const p = hub.get(req.params.pid);
+      if (!req.body?.source?.startsWith('agent:')) throw new FrameError('USAGE', 'source must be an agent session (agent:<id>)');
+      const r = p.open.session.revertSource(req.body.source);
+      if (!r) throw new FrameError('NOT_FOUND', `No changes from ${req.body.source}`);
+      return { revision: r.revision, label: r.label };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
   app.post<{ Params: { pid: string } }>('/api/projects/:pid/save', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
@@ -296,9 +335,9 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
       const lib = library(p);
-      const limit = Math.min(500, Number(req.query.limit ?? 100));
+      const limit = req.query.limit === 'all' ? Infinity : Math.min(500, Number(req.query.limit ?? 100));
       const hits = lib.search(req.query.q ?? '', { ...(req.query.kind ? { kind: req.query.kind } : {}) }).slice(0, limit);
-      return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source, preview: previewable(m.kind), ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views })) };
+      return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source, preview: previewable(m.kind), ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views, capabilities: m.capabilities })) };
     } catch (e) {
       return sendError(reply, e);
     }
@@ -318,7 +357,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   // Thumbnails (FR-AST-07): the item on the library's preview character, rendered with the export renderer and cached.
   const libraryDefaults = (() => {
     try {
-      return (JSON.parse(fs.readFileSync(path.join(o.contentDir, 'library.json'), 'utf8')) as { defaults?: { previewCharacter?: string } }).defaults ?? {};
+      return (JSON.parse(fs.readFileSync(path.join(o.contentDir, 'library.json'), 'utf8')) as { defaults?: { previewCharacter?: string; output?: OutputSettings; frameRate?: number; styleFamily?: StyleFamily; captionStyle?: string } }).defaults ?? {};
     } catch {
       return {};
     }
@@ -379,6 +418,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const preset: OutputPreset = { ...base, ...(b.subtitles ? { subtitles: b.subtitles } : {}), ...(b.stems ? { stems: true } : {}) };
       const ext = preset.container === 'png' ? '' : preset.container === 'none' ? '.srt' : `.${preset.container}`;
       const name = scenes.length === 1 ? state.scenes[scenes[0]!]!.name : state.project.name;
+      if (b.out && req.headers['x-frame-agent'] && path.relative(p.root, path.resolve(p.root, b.out)).startsWith('..')) throw new FrameError('PERMISSION_REQUIRED', 'Agents can only render inside the project folder');
       const out = b.out ? path.resolve(p.root, b.out) : path.join(p.root, state.project.renderDir ?? 'renders', `${name.replace(/[^A-Za-z0-9_-]+/g, '-')}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}${ext}`);
       const job = jobs.render.submit('render', `Export · ${name}`, async (ctx) => {
         const report = await renderExport({
@@ -406,9 +446,9 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     if (!url) throw new FrameError('WORKER_UNAVAILABLE', 'No voice worker is configured', undefined, 'Set FRAME_WORKER_URL for the server or a worker URL in project settings.');
     return new VoiceClient({ url, ...(o.workerToken ? { token: o.workerToken } : {}) });
   };
-  const access = (p: HubProject): ProjectAccess => ({
+  const access = (p: HubProject, source = 'user'): ProjectAccess => ({
     state: () => p.open.state as never,
-    apply: (commands, label) => p.open.session.apply({ commands, source: 'user', ...(label ? { label } : {}) }),
+    apply: (commands, label) => p.open.session.apply({ commands, source, ...(label ? { label } : {}) }),
     storeMedia: (bytes, meta) => p.open.store.putMedia(bytes, meta),
     readMedia: (hash) => {
       const f = p.open.store.findMedia(hash);
@@ -441,7 +481,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const client = workerFor(p);
       const b = req.body;
       if (!b?.description || !b.sampleText) throw new FrameError('USAGE', 'description and sampleText are required');
-      const job = jobs.voice.submit('voice.design', 'Design voice', (ctx) => designCandidates(client, access(p), { description: b.description, language: b.language ?? 'en', sampleText: b.sampleText, candidates: b.candidates ?? 4, ...(b.seed !== undefined ? { seed: b.seed } : {}) }, { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
+      const job = jobs.voice.submit('voice.design', 'Design voice', (ctx) => designCandidates(client, access(p, sourceOf(req)), { description: b.description, language: b.language ?? 'en', sampleText: b.sampleText, candidates: b.candidates ?? 4, ...(b.seed !== undefined ? { seed: b.seed } : {}) }, { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
       return reply.code(202).send(publicJob(job));
     } catch (e) {
       return sendError(reply, e);
@@ -476,8 +516,27 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         if (switched.some((c) => c.params.id === a.instance && c.params.scene === a.scene)) continue;
         cmds.push({ name: 'instance.update', params: { scene: a.scene, id: a.instance, set: { character: { ...currentCharacter(p, a.scene, a.instance), voice: ref } } } });
       }
-      const r = p.open.session.apply({ commands: cmds as never, source: 'user', label: prev ? `${prev.name} version ${manifest.version}` : `Save voice ${b.name}` });
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: prev ? `${prev.name} version ${manifest.version}` : `Save voice ${b.name}` });
       return { ref, revision: r.revision, updated: cmds.length - 1 };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  // Character creation from a base character (FR-AGT-02 create_character; the Builder's save path).
+  app.post<{ Params: { pid: string }; Body: { spec: CharacterSpec; place?: { scene: string; x?: number; y?: number; view?: string; look?: string }; dryRun?: boolean } }>('/api/projects/:pid/characters', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      if (!b?.spec) throw new FrameError('USAGE', 'spec is required');
+      const lib = library(p);
+      const manifest = buildCharacter(b.spec, { manifest: (r) => lib.manifest(r) as AssetManifest | undefined }, { id: `user.${randomUUID()}`, date: new Date().toISOString().slice(0, 10), author: sourceOf(req) });
+      const ref = `${manifest.id}@${manifest.version}`;
+      const data = manifest.data as CharacterData;
+      const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest } }, { name: 'cast.add', params: { character: ref, name: manifest.name } }];
+      if (b.place) cmds.push({ name: 'instance.add', params: { scene: b.place.scene, kind: 'character', asset: ref, name: manifest.name, transform: { x: b.place.x ?? 960, y: b.place.y ?? 1000 }, character: { look: b.place.look ?? data.defaultLook, view: b.place.view ?? 'three', posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false }, ...(data.voice ? { voice: data.voice } : {}) } } });
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: `Create ${manifest.name}` }, { dryRun: b.dryRun === true });
+      return { ref, revision: r.revision, dryRun: r.dryRun, instance: b.place ? (r.commands[2]!.params as { id: string }).id : null };
     } catch (e) {
       return sendError(reply, e);
     }
@@ -490,7 +549,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const client = workerFor(p);
       const b = req.body;
       if (!b?.voice) throw new FrameError('USAGE', 'voice is required');
-      const job = jobs.voice.submit('voice.range', 'Emotional range', (ctx) => rangeCandidates(client, access(p), b.voice, { ...(b.emotions ? { emotions: b.emotions } : {}), ...(b.text ? { text: b.text } : {}) }, { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
+      const job = jobs.voice.submit('voice.range', 'Emotional range', (ctx) => rangeCandidates(client, access(p, sourceOf(req)), b.voice, { ...(b.emotions ? { emotions: b.emotions } : {}), ...(b.text ? { text: b.text } : {}) }, { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
       return reply.code(202).send(publicJob(job));
     } catch (e) {
       return sendError(reply, e);
@@ -509,7 +568,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const next = voiceWithReferences(voice, b.accept, new Date().toISOString().slice(0, 10), nextVersion(p, voice.id));
       const ref = `${next.id}@${next.version}`;
       const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest: next } }, ...(b.updateUsers ? switchUsers(p, b.voice, ref) : [])];
-      const r = p.open.session.apply({ commands: cmds as never, source: 'user', label: `${voice.name} version ${next.version}` });
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: `${voice.name} version ${next.version}` });
       return { ref, revision: r.revision, updated: cmds.length - 1 };
     } catch (e) {
       return sendError(reply, e);
@@ -522,7 +581,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const client = workerFor(p);
       const b = req.body;
       if (!b?.scene || !Array.isArray(b.lines) || !b.lines.length) throw new FrameError('USAGE', 'scene and lines[] are required');
-      const job = jobs.voice.submit('takes.generate', `Generate takes · ${b.lines.length} line(s)`, (ctx) => generateTakes(client, access(p), { scene: b.scene, lines: b.lines, takes: b.takes ?? 1, ...(b.seed !== undefined ? { seed: b.seed } : {}), ...(b.voice ? { voice: b.voice } : {}) }, { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
+      const job = jobs.voice.submit('takes.generate', `Generate takes · ${b.lines.length} line(s)`, (ctx) => generateTakes(client, access(p, sourceOf(req)), { scene: b.scene, lines: b.lines, takes: b.takes ?? 1, ...(b.seed !== undefined ? { seed: b.seed } : {}), ...(b.voice ? { voice: b.voice } : {}) }, { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
       return reply.code(202).send(publicJob(job));
     } catch (e) {
       return sendError(reply, e);
@@ -554,9 +613,9 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         const media = { ...media0, durationS: Math.round(durationS * 1000) / 1000, sampleRate: pcm.sampleRate, channels: pcm.channels };
         const ln = p.open.state.scenes[scene]!.clips.find((c) => c.id === line)!.line!;
         const alignment = { method: 'amplitude' as const, words: [], phonemes: [], confidence: 0, envelope: { windowS: 0.02, values: rmsEnvelope(pcm, 0.02) } };
-        const r = p.open.session.apply({ source: 'user', label: 'Upload take', commands: [{ name: 'take.add', params: { take: { line, lineRevision: ln.revision, source: 'uploaded', fixture: false, status: 'ready', media, durationS: media.durationS, alignment } } }] });
+        const r = p.open.session.apply({ source: sourceOf(req), label: 'Upload take', commands: [{ name: 'take.add', params: { take: { line, lineRevision: ln.revision, source: 'uploaded', fixture: false, status: 'ready', media, durationS: media.durationS, alignment } } }] });
         const takeId = (r.commands[0]!.params as { id: string }).id;
-        if (req.query.choose !== 'false') p.open.session.apply({ source: 'user', label: 'Choose uploaded take', commands: [{ name: 'line.chooseTake', params: { scene, id: line, take: takeId } }] });
+        if (req.query.choose !== 'false') p.open.session.apply({ source: sourceOf(req), label: 'Choose uploaded take', commands: [{ name: 'line.chooseTake', params: { scene, id: line, take: takeId } }] });
         ctx.progress(0.5, 'Aligning');
         let aligned = false;
         let note: string | undefined;
@@ -565,7 +624,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
           const hash = await client.uploadBlob(bytes, `take.${ext}`, MIME[ext.toLowerCase()] ?? 'application/octet-stream');
           const aj = await client.align({ audioHash: hash, transcript: ln.text.replace(/\[pause\s+\d+(?:\.\d+)?s\]/gi, ' ').replace(/\s+/g, ' ').trim(), language: 'en' });
           const al = await client.wait(aj, { signal: ctx.signal, onProgress: (j) => ctx.progress(0.5 + j.progress * 0.5, 'Aligning') });
-          p.open.session.apply({ source: 'user', label: 'Align take', commands: [{ name: 'take.update', params: { id: takeId, set: { alignment: toAlignment(al) } } }] });
+          p.open.session.apply({ source: sourceOf(req), label: 'Align take', commands: [{ name: 'take.update', params: { id: takeId, set: { alignment: toAlignment(al) } } }] });
           aligned = true;
         } catch (e) {
           // Without an aligner the amplitude fallback stays in place (marked approximate).
@@ -634,6 +693,12 @@ function switchUsers(p: HubProject, from: string, to: string) {
     for (const i of sc.instances) if (i.character?.voice === from) out.push({ name: 'instance.update', params: { scene: sc.id, id: i.id, set: { character: { ...i.character, voice: to } } } });
   }
   return out;
+}
+
+/** Change source of a request: `agent:<session>` when an agent (MCP, CLI with FRAME_AGENT_SESSION) sent it (FR-AGT-04). */
+function sourceOf(req: { headers: Record<string, string | string[] | undefined> }): string {
+  const agent = req.headers['x-frame-agent'];
+  return typeof agent === 'string' && /^[\w.:-]{1,80}$/.test(agent) ? `agent:${agent}` : 'user';
 }
 
 function currentCharacter(p: HubProject, scene: string, instance: string) {

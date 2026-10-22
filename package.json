@@ -20,7 +20,8 @@
     "studio:build": "pnpm --filter @frame/studio build",
     "test:e2e": "pnpm --filter @frame/studio exec playwright test",
     "sample": "tsx tools/demo/make-sample.ts",
-    "catalog:coverage": "tsx tools/catalog/coverage.ts"
+    "catalog:coverage": "tsx tools/catalog/coverage.ts",
+    "docs:mcp": "tsx tools/docs/mcp-reference.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
@@ -48,6 +49,7 @@
     "typescript": "5.9.3",
     "typescript-eslint": "^8.72.0",
     "vitest": "^3.2.7",
-    "yaml": "^2.9.1"
+    "yaml": "^2.9.1",
+    "@frame/mcp": "workspace:*"
   }
 }

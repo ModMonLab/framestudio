@@ -206,10 +206,10 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-CLI-05 | In progress | project/episode/scene/apply/versions/history/render/server groups | Command groups |
 | FR-CLI-06 | Done | cli.test.ts dry-run | Every mutating command accepts `--dry-run` and returns the list of res |
 | FR-CLI-07 | In progress | JSON envelope {ok,result|error} | Output of `--json` commands conforms to published schemas and is stabl — Output schemas to publish |
-| FR-AGT-01 | Not started | — | `frame mcp` starts a Model Context Protocol server exposing typed tool |
-| FR-AGT-02 | Not started | — | Minimum tools: `describe_capabilities`, `list_projects`, `open_project |
-| FR-AGT-03 | Not started | — | Resources: JSON Schemas, the Catalog (IDs, names, groups, capabilities |
-| FR-AGT-04 | In progress | session.revertSource; project.setPermissions guard | Safety: agents cannot delete projects or voice assets, clone voices, o |
+| FR-AGT-01 | Done | `frame mcp` (`@frame/mcp`, SDK 1.31.0, decision 0016): stdio; embedded loopback server or `--server`. Evidence: `packages/mcp/test/stdio.test.ts` (real CLI process) | `frame mcp` starts a Model Context Protocol server exposing typed tools over the same engine and permissions as the CLI |
+| FR-AGT-02 | Done | All 17 tools + `create_project`; JSON Schema inputs; reference `docs/reference/mcp-tools.md` (generated, checked). Evidence: `packages/mcp/test/mcp.test.ts` (in CI with the fixture worker for design_voice/generate_takes/render_video) | Minimum tools |
+| FR-AGT-03 | Done | `frame://schemas[/{type}]`, `frame://catalog` (refs, kinds, groups, capabilities), `frame://commands`, `frame://project/{id}/summary`; mcp.test.ts reads each | Resources |
+| FR-AGT-04 | Done | Engine guard on permissions; server tags every agent change `agent:<session>` (commands, characters, voices, takes); agent undo limited to its own step, no redo, no revert-source, renders only inside the project; person-only `POST /revert-source` reverts a session as one step. Evidence: mcp.test.ts | Safety and tagging |
 | FR-AGT-05 | Not started | — | Agent sessions appear in the Studio's activity log with the commands a |
 | FR-ONB-01 | Not started | — | First run: choose theme, check the voice worker connection (or skip), |
 | FR-ONB-02 | Not started | — | Contextual help: every panel has a help link |
@@ -292,7 +292,7 @@ H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output p
    acceptance report; owner runs the same with the Qwen3 engine (docs/acceptance/owner-checklist.md §1).
 3. Studio polish for UI-02: Problems panel,
    record in browser (FR-VOI-05), clip trim handles.
-4. MCP server (`frame mcp`) over the same commands (FR-AGT, M4) — CLI server mode is done.
+4. Studio activity log with agent sessions and one-click revert (FR-AGT-05) on `POST /revert-source`; AC-13 run with a real agent.
 5. Freeze the part contract (end of M1) and start the content track (M5) in parallel with M2.
 6. M2: full character builder with part editing and character versions, part editor, importers and rigging
    assistant, packages (`.frameproj`, `.framechar`, `.framevoice`), asset library screens.

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FrameError } from '@frame/schema';
 import { createServer } from '@frame/server';
+import { runStdio } from '@frame/mcp';
 import { command } from './framework.js';
 import { contentDir } from './env.js';
 
@@ -43,4 +44,28 @@ command({
     return { stopped: true, url };
   },
   human: (r) => (r.dryRun ? `Dry run: would listen on ${r.host}:${r.port}` : `Server stopped (${r.url}).`),
+});
+
+command({
+  path: ['mcp'],
+  summary: 'Start the Frame MCP server on stdio for agents (FR-AGT-01). Uses --server when given, otherwise an embedded Frame Server on a loopback port.',
+  args: [
+    { name: 'worker', description: 'Voice Worker URL for the embedded server (or FRAME_WORKER_URL)' },
+    { name: 'session', description: 'Agent session id used to tag changes (default: random; or FRAME_AGENT_SESSION)' },
+  ],
+  examples: ['frame mcp', 'frame mcp --server http://127.0.0.1:4848', 'claude mcp add frame -- frame mcp'],
+  run: async (ctx) => {
+    const session = (ctx.args.session as string | undefined) ?? ctx.io.env.FRAME_AGENT_SESSION;
+    if (session !== undefined && !/^[\w.:-]{1,80}$/.test(session)) throw new FrameError('USAGE', 'session may contain letters, digits, ".", ":", "_" and "-" (at most 80)');
+    const workerUrl = (ctx.args.worker as string | undefined) ?? ctx.io.env.FRAME_WORKER_URL;
+    const token = ctx.opts.token ?? ctx.io.env.FRAME_SERVER_TOKEN;
+    if (ctx.opts.dryRun) return { dryRun: true, server: ctx.opts.server ?? 'embedded', session: session ?? null };
+    await runStdio({
+      contentDir: contentDir(), log: ctx.log,
+      ...(ctx.opts.server ? { serverUrl: ctx.opts.server } : {}), ...(token ? { token } : {}), ...(session ? { session } : {}),
+      ...(workerUrl ? { workerUrl } : {}), ...(ctx.io.env.FRAME_WORKER_TOKEN ? { workerToken: ctx.io.env.FRAME_WORKER_TOKEN } : {}),
+    });
+    return { stopped: true };
+  },
+  human: (r) => (r.dryRun ? `Dry run: would serve MCP on stdio (server: ${r.server})` : ''),
 });

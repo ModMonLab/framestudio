@@ -33,3 +33,4 @@ export function describeCommands() {
   }));
 }
 export * from './preview.js';
+export * from './build-character.js';

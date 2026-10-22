@@ -82,7 +82,7 @@ jobs:
       - run: |
           (cd services/voice-worker && python -m frame_worker serve --engine fixture --port 8765 &) 
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:8765/v1/health && break; sleep 1; done
-      - run: pnpm vitest run tools/test/slice.test.ts
+      - run: pnpm vitest run tools/test/slice.test.ts packages/mcp/test/mcp.test.ts
         env:
           FRAME_TEST_WORKER_URL: http://127.0.0.1:8765
       # The same flow driven through the Studio UI against a real Frame Server (preview pixels = export renderer).

@@ -100,6 +100,11 @@ export class ProjectSession {
   canRedo(): boolean {
     return this.redoStack.length > 0;
   }
+  /** Source of the change the next undo would reverse (agents may only undo their own changes). */
+  undoSource(): string | undefined {
+    return this.undoStack.at(-1)?.source;
+  }
+
   undoLabel(): string | undefined {
     return this.undoStack.at(-1)?.label;
   }

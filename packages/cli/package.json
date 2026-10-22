@@ -15,6 +15,7 @@
     "@frame/io": "workspace:*",
     "@frame/assets": "workspace:*",
     "@frame/render": "workspace:*",
-    "@frame/server": "workspace:*"
+    "@frame/server": "workspace:*",
+    "@frame/mcp": "workspace:*"
   }
 }
