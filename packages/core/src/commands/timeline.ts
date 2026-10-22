@@ -1,0 +1,519 @@
+import { Type, AssetRef, Delivery, MouthBlock, Take as TakeSchema, type Clip, type Scene, type Take } from '@frame/schema';
+import type { Draft } from 'immer';
+import { defineCommand, fail } from '../command.js';
+import { clipOf, displayName, instanceOf, sceneOf, sceneOfClip, trackFor, trackOf } from '../lookup.js';
+import { secondsToTicks, snapToFrame, ticksPerFrame } from '../time.js';
+import type { ProjectState } from '../state.js';
+
+const Id = Type.String({ minLength: 1 });
+const OptId = Type.Optional(Type.String({ minLength: 1 }));
+const TicksT = Type.Integer({ minimum: 0 });
+
+const ClipFields = {
+  asset: Type.Optional(AssetRef),
+  params: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+  blendIn: Type.Optional(TicksT),
+  blendOut: Type.Optional(TicksT),
+  enabled: Type.Optional(Type.Boolean()),
+  group: Type.Optional(Type.String()),
+  media: Type.Optional(Type.String()),
+  sourceIn: Type.Optional(TicksT),
+  name: Type.Optional(Type.String()),
+};
+
+function clipKey(scene: string, id: string) {
+  return `scenes/${scene}/clips/${id}`;
+}
+
+function assertUnlocked(scene: Scene | Draft<Scene>, trackId: string) {
+  const t = trackOf(scene, trackId);
+  if (t.lock) fail('VALIDATION_FAILED', `Track ${t.name} is locked`, { track: t.id }, 'Unlock the track first.');
+}
+
+/* ------------------------------------------------------------------ clips (FR-TML-02) */
+
+defineCommand({
+  name: 'clip.add',
+  summary: 'Add a clip (action, expression, gaze, shot, camera move, effect, sound, text) to a track.',
+  params: Type.Object({ scene: Id, id: OptId, track: Id, start: TicksT, end: TicksT, ...ClipFields }, { additionalProperties: false }),
+  examples: [{ scene: 'scn_00000001', track: 'trk_00000003', start: 0, end: 48000, asset: 'act.nod@1' }],
+  prepare: (p, _s, ctx) => ({ ...p, id: p.id ?? ctx.newId('clp') }),
+  label: (p) => `Add ${p.asset ? p.asset.split('@')[0]!.split('.')[1]!.replace(/-/g, ' ') : 'clip'}`,
+  touches: (p) => [clipKey(p.scene, p.id!)],
+  apply: (d, p, ctx) => {
+    const scene = sceneOf(d, p.scene);
+    assertUnlocked(scene, p.track);
+    if (p.end <= p.start) fail('VALIDATION_FAILED', 'Clip end must be after start', { start: p.start, end: p.end });
+    if (scene.clips.some((c) => c.id === p.id)) fail('CONFLICT', `Clip ${p.id} exists`);
+    const track = trackOf(scene, p.track);
+    if (track.kind === 'dialogue') fail('VALIDATION_FAILED', 'Use line.add to create dialogue lines');
+    const clip: Clip = {
+      id: p.id as Clip['id'], track: p.track as Clip['track'], start: p.start, end: p.end, params: p.params ?? {},
+      blendIn: p.blendIn ?? 0, blendOut: p.blendOut ?? 0, enabled: p.enabled ?? true, source: ctx.source === 'user' || ctx.source === 'cli' ? 'manual' : ctx.source,
+      ...(p.asset ? { asset: p.asset } : {}), ...(p.group ? { group: p.group as Clip['group'] } : {}),
+      ...(p.media ? { media: p.media } : {}), ...(p.sourceIn !== undefined ? { sourceIn: p.sourceIn } : {}), ...(p.name ? { name: p.name } : {}),
+    };
+    scene.clips.push(clip);
+  },
+});
+
+defineCommand({
+  name: 'clip.update',
+  summary: 'Change clip parameters, asset, blends, enabled state or numeric start/end.',
+  params: Type.Object({
+    scene: Id, id: Id,
+    set: Type.Object({ start: Type.Optional(TicksT), end: Type.Optional(TicksT), track: Type.Optional(Id), ...ClipFields }, { additionalProperties: false }),
+  }, { additionalProperties: false }),
+  label: () => 'Edit clip',
+  touches: (p) => [clipKey(p.scene, p.id)],
+  apply: (d, p) => {
+    const scene = sceneOf(d, p.scene);
+    const c = clipOf(scene, p.id) as Clip;
+    assertUnlocked(scene, c.track);
+    const { params, ...rest } = p.set;
+    if (rest.track) {
+      const from = trackOf(scene, c.track);
+      const to = trackOf(scene, rest.track);
+      if (from.kind !== to.kind) fail('VALIDATION_FAILED', `Cannot move a ${from.kind} clip to a ${to.kind} track`);
+      assertUnlocked(scene, rest.track);
+    }
+    Object.assign(c, rest);
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        if (v === null) delete c.params[k];
+        else c.params[k] = v;
+      }
+    }
+    if (c.end <= c.start) fail('VALIDATION_FAILED', 'Clip end must be after start');
+  },
+});
+
+/** Moves clips by a delta; with ripple, later clips on the same tracks shift too. */
+defineCommand({
+  name: 'clip.move',
+  summary: 'Move clips by a time delta (and optionally to another track of the same kind). Ripple shifts later clips.',
+  params: Type.Object({ scene: Id, ids: Type.Array(Id, { minItems: 1 }), delta: Type.Integer(), track: Type.Optional(Id), ripple: Type.Optional(Type.Boolean()) }, { additionalProperties: false }),
+  label: (p) => (p.ids.length === 1 ? 'Move clip' : `Move ${p.ids.length} clips`),
+  touches: (p, s) => (p.ripple ? [`scenes/${p.scene}`] : p.ids.map((id) => clipKey(p.scene, id)).concat(s.scenes[p.scene] ? [] : [])),
+  apply: (d, p) => {
+    const scene = sceneOf(d, p.scene);
+    const clips = p.ids.map((id) => clipOf(scene, id) as Clip);
+    for (const c of clips) assertUnlocked(scene, c.track);
+    const minStart = Math.min(...clips.map((c) => c.start));
+    const delta = Math.max(p.delta, -minStart);
+    if (p.ripple) {
+      const tracks = new Set(clips.map((c) => c.track));
+      const moving = new Set(p.ids);
+      const earliest = Math.min(...clips.map((c) => c.start));
+      for (const c of scene.clips) if (!moving.has(c.id) && tracks.has(c.track) && c.start >= earliest) { c.start += delta; c.end += delta; }
+    }
+    for (const c of clips) {
+      c.start += delta;
+      c.end += delta;
+      if (p.track) {
+        const to = trackOf(scene, p.track);
+        if (to.kind !== trackOf(scene, c.track).kind) fail('VALIDATION_FAILED', `Cannot move a clip to a ${to.kind} track`);
+        assertUnlocked(scene, p.track);
+        c.track = p.track as Clip['track'];
+      }
+    }
+  },
+});
+
+/** Trimming media clips selects a different source interval; it never time-stretches (FR-TML-03). */
+defineCommand({
+  name: 'clip.trim',
+  summary: 'Trim a clip start or end edge to a new time. Media clips adjust their source offset instead of stretching.',
+  params: Type.Object({ scene: Id, id: Id, edge: Type.Union([Type.Literal('start'), Type.Literal('end')]), to: TicksT, ripple: Type.Optional(Type.Boolean()) }, { additionalProperties: false }),
+  label: () => 'Trim clip',
+  touches: (p) => (p.ripple ? [`scenes/${p.scene}`] : [clipKey(p.scene, p.id)]),
+  apply: (d, p, ctx) => {
+    const scene = sceneOf(d, p.scene);
+    const c = clipOf(scene, p.id) as Clip;
+    assertUnlocked(scene, c.track);
+    const minLen = ticksPerFrame(d.project.frameRate);
+    if (p.edge === 'start') {
+      const to = Math.min(p.to, c.end - minLen);
+      const isMedia = c.media !== undefined || c.line !== undefined;
+      if (isMedia) {
+        const next = (c.sourceIn ?? 0) + (to - c.start);
+        if (next < 0) fail('VALIDATION_FAILED', 'Cannot extend before the start of the media');
+        c.sourceIn = next;
+      }
+      c.start = to;
+    } else {
+      const to = Math.max(p.to, c.start + minLen);
+      const old = c.end;
+      if (c.line?.take) {
+        const take = d.takes[c.line.take];
+        const max = take?.durationS !== undefined ? c.start + secondsToTicks(take.durationS) - (c.sourceIn ?? 0) : Infinity;
+        if (to > max + 1) ctx.report({ kind: 'trim.clamped', clip: c.id, max });
+        c.end = Math.min(to, Math.max(max, c.start + minLen));
+      } else c.end = to;
+      if (p.ripple) {
+        const delta = c.end - old;
+        for (const o of scene.clips) if (o.id !== c.id && o.track === c.track && o.start >= old) { o.start += delta; o.end += delta; }
+      }
+    }
+  },
+});
+
+defineCommand({
+  name: 'clip.split',
+  summary: 'Split a clip at a time into two clips.',
+  params: Type.Object({ scene: Id, id: Id, at: TicksT, newId: OptId }, { additionalProperties: false }),
+  prepare: (p, _s, ctx) => ({ ...p, newId: p.newId ?? ctx.newId('clp') }),
+  label: () => 'Split clip',
+  touches: (p) => [clipKey(p.scene, p.id), clipKey(p.scene, p.newId!)],
+  apply: (d, p) => {
+    const scene = sceneOf(d, p.scene);
+    const c = clipOf(scene, p.id) as Clip;
+    assertUnlocked(scene, c.track);
+    if (c.line) fail('UNSUPPORTED', 'Dialogue lines cannot be split; edit the text into two lines instead');
+    if (p.at <= c.start || p.at >= c.end) fail('VALIDATION_FAILED', 'Split time must be inside the clip');
+    const right: Clip = JSON.parse(JSON.stringify(c));
+    right.id = p.newId as Clip['id'];
+    right.start = p.at;
+    if (c.media) right.sourceIn = (c.sourceIn ?? 0) + (p.at - c.start);
+    c.end = p.at;
+    scene.clips.push(right);
+  },
+});
+
+defineCommand({
+  name: 'clip.duplicate',
+  summary: 'Duplicate clips, placing copies after the originals (or at an offset).',
+  params: Type.Object({ scene: Id, ids: Type.Array(Id, { minItems: 1 }), offset: Type.Optional(Type.Integer()), newIds: Type.Optional(Type.Array(Type.String())) }, { additionalProperties: false }),
+  prepare: (p, _s, ctx) => ({ ...p, newIds: p.newIds ?? p.ids.map(() => ctx.newId('clp')) }),
+  label: (p) => (p.ids.length === 1 ? 'Duplicate clip' : `Duplicate ${p.ids.length} clips`),
+  touches: (p) => p.newIds!.map((id) => clipKey(p.scene, id)),
+  apply: (d, p) => {
+    const scene = sceneOf(d, p.scene);
+    const clips = p.ids.map((id) => clipOf(scene, id) as Clip);
+    const span = Math.max(...clips.map((c) => c.end)) - Math.min(...clips.map((c) => c.start));
+    const offset = p.offset ?? span;
+    clips.forEach((c, i) => {
+      const copy: Clip = JSON.parse(JSON.stringify(c));
+      copy.id = p.newIds![i] as Clip['id'];
+      copy.start = Math.max(0, c.start + offset);
+      copy.end = copy.start + (c.end - c.start);
+      if (copy.line) {
+        copy.line.revision = 1;
+        delete copy.line.take;
+      }
+      delete copy.group;
+      scene.clips.push(copy);
+    });
+  },
+});
+
+defineCommand({
+  name: 'clip.remove',
+  summary: 'Delete clips (undoable). Takes of deleted lines are kept until cleaned up.',
+  params: Type.Object({ scene: Id, ids: Type.Array(Id, { minItems: 1 }) }, { additionalProperties: false }),
+  label: (p) => (p.ids.length === 1 ? 'Delete clip' : `Delete ${p.ids.length} clips`),
+  touches: (p) => p.ids.map((id) => clipKey(p.scene, id)),
+  apply: (d, p) => {
+    const scene = sceneOf(d, p.scene);
+    for (const id of p.ids) assertUnlocked(scene, clipOf(scene, id).track);
+    const ids = new Set(p.ids);
+    scene.clips = scene.clips.filter((c) => !ids.has(c.id));
+  },
+});
+
+defineCommand({
+  name: 'clip.ungroup',
+  summary: 'Ungroup a recipe group so its clips are independent (FR-RCP-02).',
+  params: Type.Object({ scene: Id, group: Id }, { additionalProperties: false }),
+  label: () => 'Ungroup recipe',
+  apply: (d, p) => {
+    const scene = sceneOf(d, p.scene);
+    let n = 0;
+    for (const c of scene.clips) if (c.group === p.group) { delete c.group; n++; }
+    if (!n) fail('NOT_FOUND', `Group ${p.group} not found`);
+  },
+});
+
+/* ------------------------------------------------------------------ markers (FR-TML-04) */
+
+defineCommand({
+  name: 'marker.add',
+  summary: 'Add a named marker.',
+  params: Type.Object({ scene: Id, id: OptId, name: Type.String(), at: TicksT }, { additionalProperties: false }),
+  prepare: (p, _s, ctx) => ({ ...p, id: p.id ?? ctx.newId('mkr') }),
+  label: (p) => `Add marker ${p.name}`,
+  touches: (p) => [`scenes/${p.scene}/markers/${p.id}`],
+  apply: (d, p) => {
+    sceneOf(d, p.scene).markers.push({ id: p.id as never, name: p.name, at: p.at });
+  },
+});
+
+defineCommand({
+  name: 'marker.remove',
+  summary: 'Remove a marker.',
+  params: Type.Object({ scene: Id, id: Id }, { additionalProperties: false }),
+  label: () => 'Delete marker',
+  touches: (p) => [`scenes/${p.scene}/markers/${p.id}`],
+  apply: (d, p) => {
+    const sc = sceneOf(d, p.scene);
+    const before = sc.markers.length;
+    sc.markers = sc.markers.filter((m) => m.id !== p.id);
+    if (sc.markers.length === before) fail('NOT_FOUND', `Marker ${p.id} not found`);
+  },
+});
+
+/* ------------------------------------------------------------------ dialogue lines (FR-DLG) */
+
+defineCommand({
+  name: 'line.add',
+  summary: 'Add a dialogue line for a speaker. Without a take its length is an estimate from the text.',
+  params: Type.Object({
+    scene: Id, id: OptId, speaker: Id, text: Type.String({ minLength: 1, maxLength: 4000 }), start: Type.Optional(TicksT),
+    durationS: Type.Optional(Type.Number({ exclusiveMinimum: 0 })), delivery: Type.Optional(Delivery),
+  }, { additionalProperties: false }),
+  examples: [{ scene: 'scn_00000001', speaker: 'ins_00000002', text: 'So, did you hear the recording?' }],
+  prepare: (p, s, ctx) => {
+    const scene = sceneOf(s, p.scene);
+    const fps = s.project.frameRate;
+    const dur = snapToFrame(secondsToTicks(p.durationS ?? estimateSpeechSeconds(p.text)), fps);
+    let start = p.start;
+    if (start === undefined) {
+      const dialogueTracks = new Set(scene.tracks.filter((t) => t.kind === 'dialogue').map((t) => t.id));
+      start = Math.max(0, ...scene.clips.filter((c) => dialogueTracks.has(c.track)).map((c) => c.end));
+      if (start > 0) start += snapToFrame(secondsToTicks(0.25), fps);
+    }
+    return { ...p, id: p.id ?? ctx.newId('clp'), start, durationS: dur / 48000 };
+  },
+  label: (p, s) => `Add line for ${s.scenes[p.scene] ? displayName(s.scenes[p.scene]!, p.speaker) : 'speaker'}`,
+  touches: (p) => [clipKey(p.scene, p.id!)],
+  apply: (d, p, ctx) => {
+    const scene = sceneOf(d, p.scene);
+    const speaker = instanceOf(scene, p.speaker);
+    if (speaker.kind !== 'character') fail('VALIDATION_FAILED', `${speaker.name} is not a character`);
+    const track = trackFor(scene, speaker.id, 'dialogue');
+    if (!track) fail('NOT_FOUND', `${speaker.name} has no dialogue track`);
+    assertUnlocked(scene, track.id);
+    const start = p.start!;
+    const clip: Clip = {
+      id: p.id as Clip['id'], track: track.id, start, end: start + secondsToTicks(p.durationS!), params: {}, blendIn: 0, blendOut: 0, enabled: true,
+      source: ctx.source === 'user' || ctx.source === 'cli' ? 'manual' : ctx.source,
+      line: { speaker: speaker.id, text: p.text, revision: 1, delivery: p.delivery ?? {}, muted: false },
+    };
+    scene.clips.push(clip);
+  },
+});
+
+/** Editing text increments the revision; takes for older revisions become Outdated (FR-DLG-03). */
+defineCommand({
+  name: 'line.setText',
+  summary: 'Change a line\'s text (increments its revision; existing takes become outdated).',
+  params: Type.Object({ scene: Id, id: Id, text: Type.String({ minLength: 1, maxLength: 4000 }) }, { additionalProperties: false }),
+  label: () => 'Edit line',
+  touches: (p) => [clipKey(p.scene, p.id)],
+  apply: (d, p) => {
+    const c = clipOf(sceneOf(d, p.scene), p.id) as Clip;
+    if (!c.line) fail('VALIDATION_FAILED', 'Not a dialogue line');
+    if (c.line.text === p.text) return;
+    c.line.text = p.text;
+    c.line.revision++;
+    // A take for an older revision is never kept selected as if it matched (FR-VOI-09).
+    const take = c.line.take ? d.takes[c.line.take] : undefined;
+    if (take && !takeMatchesRevision(take as Take, c.line.revision)) delete c.line.take;
+  },
+});
+
+defineCommand({
+  name: 'line.setDelivery',
+  summary: 'Set a line\'s delivery: preset or emotion, pace and instruction.',
+  params: Type.Object({ scene: Id, id: Id, delivery: Delivery }, { additionalProperties: false }),
+  label: () => 'Change delivery',
+  touches: (p) => [clipKey(p.scene, p.id)],
+  apply: (d, p) => {
+    const c = clipOf(sceneOf(d, p.scene), p.id) as Clip;
+    if (!c.line) fail('VALIDATION_FAILED', 'Not a dialogue line');
+    c.line.delivery = p.delivery;
+  },
+});
+
+defineCommand({
+  name: 'line.setSpeaker',
+  summary: 'Reassign a line to another character (moves it to their dialogue track).',
+  params: Type.Object({ scene: Id, id: Id, speaker: Id }, { additionalProperties: false }),
+  label: () => 'Change speaker',
+  touches: (p) => [clipKey(p.scene, p.id)],
+  apply: (d, p) => {
+    const scene = sceneOf(d, p.scene);
+    const c = clipOf(scene, p.id) as Clip;
+    if (!c.line) fail('VALIDATION_FAILED', 'Not a dialogue line');
+    const sp = instanceOf(scene, p.speaker);
+    const track = trackFor(scene, sp.id, 'dialogue');
+    if (!track) fail('NOT_FOUND', `${sp.name} has no dialogue track`);
+    c.line.speaker = sp.id;
+    c.track = track.id;
+  },
+});
+
+defineCommand({
+  name: 'line.setMuted',
+  summary: 'Mark a line intentionally silent (take state Muted) or unmute it.',
+  params: Type.Object({ scene: Id, id: Id, muted: Type.Boolean() }, { additionalProperties: false }),
+  label: (p) => (p.muted ? 'Mute line' : 'Unmute line'),
+  touches: (p) => [clipKey(p.scene, p.id)],
+  apply: (d, p) => {
+    const c = clipOf(sceneOf(d, p.scene), p.id) as Clip;
+    if (!c.line) fail('VALIDATION_FAILED', 'Not a dialogue line');
+    c.line.muted = p.muted;
+  },
+});
+
+defineCommand({
+  name: 'line.setCaption',
+  summary: 'Override caption text for a line or hide its caption (FR-TXT-01).',
+  params: Type.Object({ scene: Id, id: Id, text: Type.Optional(Type.String()), hidden: Type.Optional(Type.Boolean()) }, { additionalProperties: false }),
+  label: () => 'Edit caption',
+  touches: (p) => [clipKey(p.scene, p.id)],
+  apply: (d, p) => {
+    const c = clipOf(sceneOf(d, p.scene), p.id) as Clip;
+    if (!c.line) fail('VALIDATION_FAILED', 'Not a dialogue line');
+    c.line.caption = { ...(p.text !== undefined ? { text: p.text } : {}), ...(p.hidden !== undefined ? { hidden: p.hidden } : {}) };
+  },
+});
+
+defineCommand({
+  name: 'line.setMouthOverrides',
+  summary: 'Store edited mouth-shape blocks for a line (overrides on top of the aligned mouth track; FR-LIP-04).',
+  params: Type.Object({ scene: Id, id: Id, blocks: Type.Union([Type.Array(MouthBlock), Type.Null()]) }, { additionalProperties: false }),
+  label: () => 'Edit lip sync',
+  touches: (p) => [clipKey(p.scene, p.id)],
+  apply: (d, p) => {
+    const c = clipOf(sceneOf(d, p.scene), p.id) as Clip;
+    if (!c.line) fail('VALIDATION_FAILED', 'Not a dialogue line');
+    if (p.blocks === null) delete c.line.mouthOverrides;
+    else c.line.mouthOverrides = p.blocks as never;
+  },
+});
+
+/** Choosing a take sets the clip length to the take's measured duration (FR-DLG-05/06). */
+defineCommand({
+  name: 'line.chooseTake',
+  summary: 'Choose which take a line plays. The clip length follows the take; later clips stay unless ripple is on.',
+  params: Type.Object({ scene: Id, id: Id, take: Type.Union([Id, Type.Null()]), ripple: Type.Optional(Type.Boolean()) }, { additionalProperties: false }),
+  label: () => 'Choose take',
+  touches: (p) => (p.ripple ? [`scenes/${p.scene}`] : [clipKey(p.scene, p.id)]),
+  apply: (d, p) => {
+    const scene = sceneOf(d, p.scene);
+    const c = clipOf(scene, p.id) as Clip;
+    if (!c.line) fail('VALIDATION_FAILED', 'Not a dialogue line');
+    if (p.take === null) {
+      delete c.line.take;
+      return;
+    }
+    const take = d.takes[p.take] as Take | undefined;
+    if (!take || take.line !== c.id) fail('NOT_FOUND', `Take ${p.take} does not belong to this line`);
+    if (take.status !== 'ready') fail('VALIDATION_FAILED', `Take ${take.number} is not ready (${take.status})`);
+    if (!takeMatchesRevision(take, c.line.revision)) {
+      fail('VALIDATION_FAILED', `Take ${take.number} was made for previous text`, { take: take.id, lineRevision: c.line.revision, takeRevision: take.lineRevision }, 'Generate or record a new take, or confirm a recorded take matches the new text.');
+    }
+    c.line.take = take.id;
+    c.sourceIn = 0;
+    if (take.durationS !== undefined) {
+      const old = c.end;
+      c.end = c.start + Math.max(ticksPerFrame(d.project.frameRate), snapToFrame(secondsToTicks(take.durationS), d.project.frameRate));
+      if (p.ripple) {
+        const delta = c.end - old;
+        for (const o of scene.clips) if (o.id !== c.id && o.start >= old) { o.start += delta; o.end += delta; }
+      }
+    }
+  },
+});
+
+/* ------------------------------------------------------------------ takes */
+
+const TakeInput = Type.Omit(TakeSchema, ['schemaVersion', 'id', 'number', 'createdAt']);
+
+defineCommand({
+  name: 'take.add',
+  summary: 'Register a take record for a line (created by recording, upload or a generation job).',
+  params: Type.Object({ id: OptId, take: TakeInput, number: Type.Optional(Type.Integer({ minimum: 1 })), createdAt: Type.Optional(Type.String()) }, { additionalProperties: false }),
+  prepare: (p, s, ctx) => ({
+    ...p,
+    id: p.id ?? ctx.newId('tak'),
+    number: p.number ?? 1 + Math.max(0, ...Object.values(s.takes).filter((t) => t.line === p.take.line).map((t) => t.number)),
+    createdAt: p.createdAt ?? ctx.now(),
+  }),
+  label: (p) => `Add take ${p.number}`,
+  touches: (p) => [`takes/${p.id}`],
+  apply: (d, p) => {
+    if (!sceneOfClip(d, p.take.line)) fail('NOT_FOUND', `Line ${p.take.line} not found`);
+    if (d.takes[p.id!]) fail('CONFLICT', `Take ${p.id} exists`);
+    d.takes[p.id!] = { schemaVersion: 1, id: p.id as Take['id'], number: p.number!, createdAt: p.createdAt!, ...JSON.parse(JSON.stringify(p.take)) };
+  },
+});
+
+defineCommand({
+  name: 'take.update',
+  summary: 'Update a take record (status, media, measured duration, alignment, error).',
+  params: Type.Object({ id: Id, set: Type.Partial(TakeInput) }, { additionalProperties: false }),
+  label: () => 'Update take',
+  touches: (p) => [`takes/${p.id}`],
+  apply: (d, p) => {
+    const t = d.takes[p.id];
+    if (!t) fail('NOT_FOUND', `Take ${p.id} not found`);
+    Object.assign(t, JSON.parse(JSON.stringify(p.set)));
+  },
+});
+
+/** A recorded/uploaded take can be confirmed as matching new text, explicitly (FR-DLG-03). Generated takes cannot. */
+defineCommand({
+  name: 'take.confirm',
+  summary: 'Confirm a recorded or uploaded take still matches the line\'s current text.',
+  params: Type.Object({ id: Id }, { additionalProperties: false }),
+  label: () => 'Confirm take matches text',
+  touches: (p) => [`takes/${p.id}`],
+  apply: (d, p) => {
+    const t = d.takes[p.id];
+    if (!t) fail('NOT_FOUND', `Take ${p.id} not found`);
+    if (t.source === 'generated') fail('VALIDATION_FAILED', 'Generated takes cannot be confirmed for new text', undefined, 'Generate a new take.');
+    const scene = sceneOfClip(d, t.line);
+    const c = scene?.clips.find((x) => x.id === t.line);
+    if (!c?.line) fail('NOT_FOUND', `Line ${t.line} not found`);
+    t.confirmedRevision = c.line.revision;
+  },
+});
+
+defineCommand({
+  name: 'take.remove',
+  summary: 'Delete take records that are not chosen by any line (explicit cleanup, FR-DLG-05). Media stays content-addressed.',
+  params: Type.Object({ ids: Type.Array(Id, { minItems: 1 }) }, { additionalProperties: false }),
+  label: (p) => `Clean up ${p.ids.length} take(s)`,
+  apply: (d, p) => {
+    for (const id of p.ids) {
+      const t = d.takes[id];
+      if (!t) fail('NOT_FOUND', `Take ${id} not found`);
+      const scene = sceneOfClip(d, t.line);
+      const chosen = scene?.clips.some((c) => c.line?.take === id);
+      if (chosen) fail('VALIDATION_FAILED', `Take ${t.number} is in use`, { take: id });
+      delete d.takes[id];
+    }
+  },
+});
+
+/* ------------------------------------------------------------------ helpers */
+
+export function takeMatchesRevision(take: Take, revision: number): boolean {
+  return take.lineRevision === revision || take.confirmedRevision === revision;
+}
+
+/** Placeholder duration before a take exists: ~2.6 words per second plus pause markers (FR-DLG-01, FR-DLG-08). */
+export function estimateSpeechSeconds(text: string): number {
+  let pauses = 0;
+  const clean = text.replace(/\[pause\s+(\d+(?:\.\d+)?)s\]/gi, (_m, s: string) => {
+    pauses += Number(s);
+    return ' ';
+  });
+  const ellipses = (clean.match(/…|\.\.\./g) ?? []).length * 0.4;
+  const words = clean.split(/\s+/).filter(Boolean).length;
+  return Math.max(0.8, Math.round((words / 2.6 + pauses + ellipses + 0.3) * 10) / 10);
+}
+
+export type { ProjectState };
