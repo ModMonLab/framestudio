@@ -69,7 +69,7 @@ export interface ActionData {
   /** Locomotion: the instance moves along the clip path (FR-ACT-04). */
   locomotion?: { speed: number; stride: number; lift?: number };
   /** Object interaction (FR-ACT-06): grips a prop with this hand anchor. */
-  prop?: { grip: 'L' | 'R'; returns?: boolean; states?: string[] };
+  prop?: { grip: 'L' | 'R'; returns?: boolean; states?: string[]; hold?: [number, number] };
   /** Rig variants this action supports (wheelchair seated rig…). */
   rigs?: string[];
 }

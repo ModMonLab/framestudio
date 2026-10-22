@@ -114,13 +114,18 @@ function ClipProps({ scene, clip }: { scene: Scene; clip: Clip }) {
 function ActingProps({ scene, inst }: { scene: Scene; inst: Instance }) {
   const { studio } = useCtx();
   const pid = useStudio(studio, (s) => s.pid);
-  const [open, toggle] = useSections('acting', { expression: true, gesture: true });
+  const [open, toggle] = useSections('acting', { expression: true, gesture: true, objects: true });
   const [exps, setExps] = useState<{ ref: string; name: string }[]>([]);
   const [acts, setActs] = useState<{ ref: string; name: string }[]>([]);
+  const [objects, setObjects] = useState<{ prop: string; name: string; actions: { ref: string; name: string; durationS: number }[] }[]>([]);
+  const propIds = scene.instances.filter((i) => i.kind === 'prop').map((i) => i.id).join(',');
   useEffect(() => {
     api.library('', 'exp', pid, 500).then((r) => setExps(r.results)).catch(() => undefined);
     api.library('', 'act', pid, 500).then((r) => setActs(r.results)).catch(() => undefined);
   }, [pid]);
+  useEffect(() => {
+    api.interactions(pid, scene.id).then((r) => setObjects(r.props)).catch(() => undefined);
+  }, [pid, scene.id, propIds]);
   const time = useStudio(studio, (s) => s.time);
   const add = (kind: 'face' | 'acting', ref: string, name: string) => {
     const track = trackFor(scene, inst.id, kind);
@@ -130,6 +135,14 @@ function ActingProps({ scene, inst }: { scene: Scene; inst: Instance }) {
   const activeAt = (kind: 'face' | 'acting') => {
     const track = trackFor(scene, inst.id, kind);
     return scene.clips.find((c) => c.track === track?.id && c.start <= time && time < c.end)?.asset;
+  };
+  // Using an object (FR-ACT-06, FR-PRP-02): the clip binds to the prop; its sound cues are regenerated (FR-SND-04).
+  const use = async (prop: string, a: { ref: string; name: string; durationS: number }, propName: string) => {
+    const track = trackFor(scene, inst.id, 'acting');
+    if (!track) return;
+    const end = Math.min(scene.duration, time + Math.round(a.durationS * 48000));
+    const r = await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: time, end, asset: a.ref, params: { prop }, blendIn: 2400, blendOut: 2400 } }], `${a.name} (${propName}) for ${inst.name}`);
+    if (r) await api.soundCues(pid, scene.id).catch(() => undefined);
   };
   const curExp = activeAt('face');
   const curAct = activeAt('acting');
@@ -144,6 +157,14 @@ function ActingProps({ scene, inst }: { scene: Scene; inst: Instance }) {
       </Section>
       <Section title="Gesture" summary={acts.find((a) => a.ref === curAct)?.name ?? 'None'} open={open.gesture!} onToggle={(o) => toggle('gesture', o)}>
         <div className="fr-chips">{acts.slice(0, 24).map((a) => <Chip key={a.ref} selected={a.ref === curAct} onClick={() => add('acting', a.ref, a.name)}>{a.name}</Chip>)}</div>
+      </Section>
+      <Section title="Use an object" summary={objects.length ? `${objects.length} in scene` : 'None'} open={open.objects!} onToggle={(o) => toggle('objects', o)}>
+        {!objects.length ? <p className="fr-hint">Add a prop that can be used (a mug, a phone, a door) to the scene.</p> : objects.map((o) => (
+          <div key={o.prop} className="st-field-col">
+            <span className="fr-label">{o.name}</span>
+            <div className="fr-chips" role="group" aria-label={`Use ${o.name}`}>{o.actions.map((a) => <Chip key={a.ref} onClick={() => void use(o.prop, a, o.name)}>{a.name}</Chip>)}</div>
+          </div>
+        ))}
       </Section>
     </>
   );

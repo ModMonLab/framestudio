@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { characterJointsAt, motionAt, seatCommands, createProjectState, evaluateFrame, performAt, ProjectSession, secondsToTicks, sequentialIds, trackFor, validateProject, type ProjectState } from '@frame/core';
+import { characterJointsAt, motionAt, propStateAt, scheduleSceneAudio, seatCommands, soundCueCommands, createProjectState, evaluateFrame, performAt, ProjectSession, secondsToTicks, sequentialIds, trackFor, validateProject, type ProjectState } from '@frame/core';
 import { bundledLibrary, loadStyles } from '@frame/assets/node';
+import { bundledMediaFile } from '@frame/io';
 import type { Command } from '@frame/schema';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -113,6 +114,65 @@ describe('M3 acceptance paths', () => {
       expect(inst.depthPlane).toBe('mid');
       expect(inst.order).toBeGreaterThan(sc().instances.find((i) => i.id === chair)!.order);
       apply([{ name: 'instance.remove', params: { scene, ids: [who] } }]);
+    }
+  });
+
+  it('AC-07: picks up a mug and drinks (steam on) with a sound cue at contact, opens and closes a door, uses a phone (screen on); seeking mid-action shows the right state', async () => {
+    const { session, scene, apply, sc } = project();
+    const who = apply([{ name: 'instance.add', params: { scene, kind: 'character', asset: 'chr.maya-bennett@1', name: 'Maya', transform: { x: 900, y: 1000 }, character: { look: 'on-air', view: 'three', posture: 'standing', auto: quiet } } }]).commands[0]!.params.id as string;
+    const add = (asset: string, name: string, x: number, y: number, extra: Record<string, unknown> = {}) => apply([{ name: 'instance.add', params: { scene, kind: 'prop', asset, name, transform: { x, y }, depthPlane: 'mid', ...extra } }]).commands[0]!.params.id as string;
+    add('prop.round-table@1', 'Table', 1150, 1010);
+    const mug = add('prop.mug@1', 'Mug', 1100, 805, { propState: 'steam' });
+    const door = add('prop.door@1', 'Door', 600, 1000, { propState: 'closed' });
+    const phone = add('prop.phone@1', 'Phone', 1200, 805, { propState: 'off' });
+    const acting = trackFor(sc(), who, 'acting')!.id;
+    apply([
+      { name: 'clip.add', params: { scene, track: acting, start: 0, end: s(4), asset: 'act.drink-from-mug@1', params: { prop: mug } } },
+      { name: 'clip.add', params: { scene, track: acting, start: s(5), end: s(6.6), asset: 'act.open-door@1', params: { prop: door } } },
+      { name: 'clip.add', params: { scene, track: acting, start: s(7), end: s(8.4), asset: 'act.close-door@1', params: { prop: door } } },
+      { name: 'clip.add', params: { scene, track: acting, start: s(9), end: s(14), asset: 'act.use-phone@1', params: { prop: phone } } },
+    ]);
+    const ctx = { assetExists: (r: string) => lib.has(r), manifest: (r: string) => lib.manifest(r) };
+    expect(validateProject(session.state, ctx).filter((p) => p.blocksExport).map((p) => p.message)).toEqual([]);
+    const ev = (t: number) => evaluateFrame(session.state, scene, s(t), { assets, styles, width: 1920, height: 1080 });
+    const centre = (b: { x: number; y: number; w: number; h: number }): [number, number] => [b.x + b.w / 2, b.y + b.h / 2];
+    const actionOf = (r: string) => (lib.manifest(r)?.data as { action?: never } | undefined)?.action;
+    const inst = (id: string) => sc().instances.find((i) => i.id === id)!;
+
+    // The mug sits on the table, is in the right hand mid-drink, then back on the table; steam stays on.
+    const rest = centre(ev(0.05).boxes[mug]!);
+    const mid = ev(2);
+    const wrist = characterJointsAt(session.state, scene, who, s(2), { assets, styles }).wristR!;
+    expect(Math.hypot(centre(mid.boxes[mug]!)[0] - wrist[0], centre(mid.boxes[mug]!)[1] - wrist[1])).toBeLessThan(60);
+    expect(Math.hypot(centre(mid.boxes[mug]!)[0] - rest[0], centre(mid.boxes[mug]!)[1] - rest[1])).toBeGreaterThan(60);
+    expect(centre(ev(4.2).boxes[mug]!)).toEqual(rest);
+    expect(propStateAt(sc(), inst(mug), s(2), actionOf)).toBe('steam');
+    // Door: closed, open after the open event, closed again after closing — at any seek order.
+    for (const [t, st] of [[8.6, 'closed'], [5.2, 'closed'], [6.2, 'open'], [7.2, 'open'], [8.0, 'closed']] as const) expect(propStateAt(sc(), inst(door), s(t), actionOf)).toBe(st);
+    // Phone: in hand with the screen on in the middle of use; off and back on the table afterwards.
+    expect(propStateAt(sc(), inst(phone), s(11.5), actionOf)).toBe('on');
+    expect(propStateAt(sc(), inst(phone), s(14.5), actionOf)).toBe('off');
+    const phoneRest = centre(ev(0.05).boxes[phone]!);
+    expect(Math.hypot(centre(ev(11.5).boxes[phone]!)[0] - phoneRest[0], centre(ev(11.5).boxes[phone]!)[1] - phoneRest[1])).toBeGreaterThan(60);
+    expect(centre(ev(14.5).boxes[phone]!)).toEqual(phoneRest);
+
+    // Sound cues become editable SFX clips at the events; they play bundled synthesised sounds.
+    apply(soundCueCommands(session.state, scene, assets));
+    const sfxTrack = sc().tracks.find((t) => t.kind === 'sfx' && t.owner === 'scene')!.id;
+    const cues = sc().clips.filter((c) => c.track === sfxTrack).map((c) => [c.asset, Math.round((c.start / 48000) * 100) / 100, c.source]);
+    expect(cues).toEqual([['sfx.mug-on-table@1', 3.4, 'auto'], ['sfx.door-open@1', 5.56, 'auto'], ['sfx.door-close@1', 7.77, 'auto'], ['sfx.phone-notification@1', 10.25, 'auto']]);
+    // Regenerating does not duplicate.
+    apply(soundCueCommands(session.state, scene, assets));
+    expect(sc().clips.filter((c) => c.track === sfxTrack)).toHaveLength(4);
+    const plan = scheduleSceneAudio(session.state, sc(), undefined, assets);
+    const sfx = plan.events.filter((e) => e.bus === 'sfx');
+    expect(sfx).toHaveLength(4);
+    for (const e of sfx) expect(e.source.kind === 'media' && bundledMediaFile(content, e.source.hash)).toBeTruthy();
+    if (process.env.FRAME_DEBUG_PNG) {
+      const { createNodeRenderer } = await import('../../packages/render/src/node.js');
+      const r = await createNodeRenderer({ fontsDir: path.join(content, 'fonts') });
+      const fs = await import('node:fs');
+      for (const t of [0.05, 2, 6.2, 11.5]) fs.writeFileSync(`${process.env.FRAME_DEBUG_PNG}-ac07-${t}.png`, r.png(evaluateFrame(session.state, scene, s(t), { assets, styles, width: 960, height: 540, background: '#dddddd' }).frame));
     }
   });
 });

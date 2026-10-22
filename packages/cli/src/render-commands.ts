@@ -5,7 +5,7 @@ import { evaluateFrame, parseTime, type ProjectState } from '@frame/core';
 import { bundledLibrary, libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer } from '@frame/render/node';
 import { FrameError, type AssetManifest } from '@frame/schema';
-import { renderExport, writeFileAtomic, type OutputPreset, type RenderProgress } from '@frame/io';
+import { bundledMediaFile, renderExport, writeFileAtomic, type OutputPreset, type RenderProgress } from '@frame/io';
 import { command, type CommandContext } from './framework.js';
 import { contentDir, userLibraryDir } from './env.js';
 import { findProjectDir, openProject } from './project-commands.js';
@@ -211,7 +211,7 @@ command({
         ...(family ? { family } : {}),
         ...(ctx.args.crf !== undefined ? { quality: { crf: ctx.args.crf as number } } : {}),
         out, assets, assetExists: (ref) => lib.has(ref), mediaExists: (h) => p!.store.verifyMedia(h), styles, renderer,
-        resolveAudio: (src) => (src.kind === 'media' ? p!.store.findMedia(src.hash) : undefined),
+        resolveAudio: (src) => (src.kind === 'media' ? p!.store.findMedia(src.hash) ?? bundledMediaFile(contentDir(), src.hash) : undefined),
         force: ctx.args.force === true,
         onProgress: progressLine(ctx),
         signal: ac.signal,

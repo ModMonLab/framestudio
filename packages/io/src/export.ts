@@ -115,7 +115,7 @@ function segments(o: RenderOptions): Segment[] {
 
 /** Concatenates per-scene audio plans into one timeline. */
 function audioPlans(o: RenderOptions, segs: Segment[]): AudioPlan[] {
-  return segs.map((s) => scheduleSceneAudio(o.state, o.state.scenes[s.scene]!, { from: s.from, to: s.to }));
+  return segs.map((s) => scheduleSceneAudio(o.state, o.state.scenes[s.scene]!, { from: s.from, to: s.to }, o.assets));
 }
 
 function videoArgs(p: OutputPreset, q: RenderOptions['quality'] = {}): string[] {

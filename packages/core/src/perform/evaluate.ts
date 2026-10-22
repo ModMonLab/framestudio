@@ -13,6 +13,7 @@ import { applyOverrides, mouthTrackFromAlignment, mouthTrackFromEnvelope, shapeA
 import { clipWeight, mirrorKeys, postureAt, sample, type ActionData, type ExpressionData, type Key } from './data.js';
 import { resolveCharacter, type AssetResolver } from './character.js';
 import { motionAt, type Motion } from './locomotion.js';
+import { holderAt, propStateAt, type Interaction } from './interact.js';
 import { captionItems, DEFAULT_CAPTION_STYLE, stripPauseMarkers, type CaptionStyle } from '../captions.js';
 
 
@@ -475,18 +476,6 @@ function gazeDirection(scene: Scene, inst: Instance, target: string | { x: numbe
 
 /* ------------------------------------------------------------------ props and set pieces */
 
-function propState(scene: Scene, inst: Instance, t: number): string {
-  let st = inst.propState ?? 'default';
-  for (const c of activeClips(scene, inst.id, 'acting', t)) if (typeof c.params.state === 'string') st = c.params.state;
-  // State changes persist after a state clip ends (e.g. door left open).
-  for (const c of scene.clips) {
-    if (!c.enabled || c.end > t || typeof c.params.setState !== 'string') continue;
-    const tr = scene.tracks.find((x) => x.id === c.track);
-    if (tr?.owner === inst.id) st = c.params.setState;
-  }
-  return st;
-}
-
 function drawPropArt(data: PartData, family: StyleFamily, state: string, colors: Record<string, string>, style: FamilyStyle, t: number, seed: number): Item[] {
   const fam = data.families[family] ?? data.families.flat ?? data.families.illustrated;
   const art: ViewArt | undefined = fam?.views.front;
@@ -543,7 +532,18 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
   const planeOrder = new Map(scene.stage.depthPlanes.map((p) => [p.id, p.order]));
 
   const visibleInstances = scene.instances.filter((i) => i.visible && i.kind !== 'group');
-  const sorted = [...visibleInstances].sort((a, b) => (planeOrder.get(a.depthPlane) ?? 0) - (planeOrder.get(b.depthPlane) ?? 0) || a.order - b.order || a.id.localeCompare(b.id));
+  const actionOf = (r: string) => (o.assets.manifest(r)?.data as { action?: ActionData } | undefined)?.action;
+  // Props held in a hand (FR-ACT-06) draw with their holder, just in front of it.
+  const held = new Map<string, Interaction>();
+  for (const i of visibleInstances) if (i.kind === 'prop') {
+    const h = holderAt(scene, i.id, t, actionOf);
+    if (h) held.set(i.id, h);
+  }
+  const sortKey = (i: Instance): [number, number] => {
+    const h = held.get(i.id)?.holder;
+    return h ? [planeOrder.get(h.depthPlane) ?? 0, h.order + 0.5] : [planeOrder.get(i.depthPlane) ?? 0, i.order];
+  };
+  const sorted = [...visibleInstances].sort((a, b) => sortKey(a)[0] - sortKey(b)[0] || sortKey(a)[1] - sortKey(b)[1] || a.id.localeCompare(b.id));
   const items: Item[] = [];
   const parentOffset = (inst: Instance): [number, number] => {
     let x = 0;
@@ -558,25 +558,54 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
   };
 
   const motions = motionContext(scene, t, o.assets);
+  // Characters are composed once per frame (props held in their hands need the hand position first).
+  const composedCache = new Map<string, { composed: ReturnType<typeof composeCharacter>; perf: PerfResult; missing: string[] } | null>();
+  const composeInst = (inst: Instance) => {
+    if (composedCache.has(inst.id)) return composedCache.get(inst.id)!;
+    const man = inst.asset ? o.assets.manifest(inst.asset) : undefined;
+    if (!man || !inst.character) {
+      composedCache.set(inst.id, null);
+      return null;
+    }
+    const mo = motions.motion(inst);
+    const perf = perform(state, scene, inst, t, o.assets, fps, mo, motions.posOf);
+    const { spec, missing } = resolveCharacter(man, inst.character.look, family, style, o.assets, perf.extraParts);
+    const composed = composeCharacter(spec, { view: mo.moving && mo.view ? mo.view : inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
+    const r = { composed, perf, missing };
+    composedCache.set(inst.id, r);
+    return r;
+  };
   for (const inst of sorted) {
-    const view = viewMatrix(scene, cs, o.width, o.height, designAspect, inst.parallax);
+    const view = viewMatrix(scene, cs, o.width, o.height, designAspect, held.get(inst.id)?.holder.parallax ?? inst.parallax);
     const [px, py] = parentOffset(inst);
     const mo = motions.motion(inst);
-    const tr = { ...inst.transform, x: mo.x, y: mo.y, flipX: mo.flip };
+    let tr = { ...inst.transform, x: mo.x, y: mo.y, flipX: mo.flip };
+    const hold = held.get(inst.id);
+    if (hold) {
+      // Attach the prop's grip anchor to the holder's grip (hand) anchor; it mirrors with the holder.
+      const hc = composeInst(hold.holder);
+      const hm = motions.motion(hold.holder);
+      const a = hc?.composed.anchors[`grip${hold.hand}`] ?? hc?.composed.anchors[`wrist${hold.hand}`];
+      if (a) {
+        const pm = inst.asset ? o.assets.manifest(inst.asset) : undefined;
+        const g = ((pm?.anchors as Record<string, unknown> | undefined)?.grip as [number, number] | undefined) ?? [0, 0];
+        const k = hold.holder.transform.scale;
+        const flip = hm.flip;
+        tr = { ...tr, x: hm.x + a[0] * k - g[0] * tr.scale * (flip ? -1 : 1), y: hm.y + a[1] * k - g[1] * tr.scale, flipX: flip, rotation: 0 };
+      }
+    }
     const local: Mat = mul(T(tr.x + px, tr.y + py), mul(R(tr.rotation), S(tr.scale * (tr.flipX && inst.kind !== 'character' ? -1 : 1), tr.scale)));
     const m = mul(view, local);
     let content: Item[] = [];
     if (inst.kind === 'character' && inst.asset && inst.character) {
-      const man = o.assets.manifest(inst.asset);
-      if (!man) {
+      const r = composeInst(inst);
+      if (!r) {
         issues.push(`${inst.name}: character ${inst.asset} not found`);
         continue;
       }
-      const perf = perform(state, scene, inst, t, o.assets, fps, mo, motions.posOf);
+      const { composed, perf, missing } = r;
       mouths[inst.id] = perf.mouth;
-      const { spec, missing } = resolveCharacter(man, inst.character.look, family, style, o.assets, perf.extraParts);
       for (const mref of missing) issues.push(`${inst.name}: missing asset ${mref}`);
-      const composed = composeCharacter(spec, { view: mo.moving && mo.view ? mo.view : inst.character.view, flip: tr.flipX, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
       for (const i of composed.issues) issues.push(`${inst.name}: ${i}`);
       content = [composed.item];
       const b = composed.bounds;
@@ -590,7 +619,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
         issues.push(`${inst.name}: ${inst.asset} not found`);
         continue;
       }
-      content = drawPropArt(data, family, propState(scene, inst, t), (inst.params.colors as Record<string, string> | undefined) ?? {}, style, t, hash32(inst.id));
+      content = drawPropArt(data, family, propStateAt(scene, inst, t, actionOf), (inst.params.colors as Record<string, string> | undefined) ?? {}, style, t, hash32(inst.id));
       const bb = kitPart?.bounds ?? (man!.anchors as { bounds?: [number, number, number, number] }).bounds ?? [-100, -200, 200, 200];
       boxes[inst.id] = screenBox(m, bb[0], bb[1], bb[2], bb[3]);
     } else if (inst.kind === 'image' && inst.asset) {

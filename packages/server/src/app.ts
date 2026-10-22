@@ -8,13 +8,13 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { actionFitsProp, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -363,7 +363,8 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   app.get<{ Params: { pid: string; hash: string } }>('/api/projects/:pid/media/:hash', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
-      const f = p.open.store.findMedia(req.params.hash);
+      // Project media, or bundled content media (library sounds) by the same content address.
+      const f = p.open.store.findMedia(req.params.hash) ?? bundledMediaFile(o.contentDir, req.params.hash);
       if (!f) throw new FrameError('NOT_FOUND', `Media ${req.params.hash} not found`);
       const ext = path.extname(f).slice(1);
       return reply.header('content-type', MIME[ext] ?? 'application/octet-stream').header('cache-control', 'private, max-age=31536000, immutable').send(fs.createReadStream(f));
@@ -501,6 +502,39 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (!cmds.length) return { revision: p.open.session.revision, added: 0, removed: 0 };
       const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: 'Automatic performance' }, { dryRun: !!req.body?.dryRun });
       return { revision: r.revision, added: cmds.filter((c) => c.name === 'clip.add').length, removed: cmds.filter((c) => c.name === 'clip.remove').reduce((n, c) => n + (c.params.ids as string[]).length, 0) };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- interactions and sound cues (FR-PRP-02, FR-SND-04) */
+  // Props in the scene a character can use, with the library actions that fit each one.
+  app.get<{ Params: { pid: string; sid: string } }>('/api/projects/:pid/scenes/:sid/interactions', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const scene = p.open.state.scenes[req.params.sid];
+      if (!scene) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      const lib = library(p);
+      const acts = lib.byKind('act').map((e) => ({ ref: `${e.manifest.id}@${e.manifest.version}`, name: e.manifest.name, action: (e.manifest.data as { action?: ActionData }).action })).filter((a) => a.action);
+      const props = scene.instances.filter((i) => i.kind === 'prop' && i.asset).map((i) => {
+        const m = lib.manifest(i.asset!);
+        const fit = m ? acts.filter((a) => actionFitsProp(a.action!, m as never)) : [];
+        return { prop: i.id, name: i.name, actions: fit.map((a) => ({ ref: a.ref, name: a.name, durationS: a.action!.duration })) };
+      }).filter((x) => x.actions.length);
+      return { props };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Regenerates sound cues (action and prop-state events) as editable `auto` SFX clips.
+  app.post<{ Params: { pid: string; sid: string } }>('/api/projects/:pid/scenes/:sid/sound-cues', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!p.open.state.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      const cmds = soundCueCommands(p.open.state, req.params.sid, library(p));
+      if (!cmds.length) return { revision: p.open.session.revision, cues: 0 };
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: 'Sound cues' });
+      return { revision: r.revision, cues: cmds.filter((c) => c.name === 'clip.add').length };
     } catch (e) {
       return sendError(reply, e);
     }
@@ -756,7 +790,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
           ...(base.aspect ? { aspect: base.aspect } : {}),
           burnInCaptions: b.captions ?? (state.project.captions.enabled && state.project.captions.burnIn),
           out, assets: { manifest: (r) => lib.manifest(r) }, assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), styles, renderer: await getRenderer(),
-          resolveAudio: (src) => (src.kind === 'media' ? p.open.store.findMedia(src.hash) : undefined),
+          resolveAudio: (src) => (src.kind === 'media' ? p.open.store.findMedia(src.hash) ?? bundledMediaFile(o.contentDir, src.hash) : undefined),
           signal: ctx.signal,
           onProgress: (pr) => ctx.progress(pr.phase === 'Rendering' && pr.frames ? (pr.frame ?? 0) / pr.frames * 0.9 : pr.phase === 'Completed' ? 1 : ctx.signal.aborted ? 0 : 0.95, pr.phase === 'Rendering' ? `Rendering frame ${pr.frame} of ${pr.frames} · ${(pr.fps ?? 0).toFixed(0)} fps` : pr.phase),
         });

@@ -3,6 +3,7 @@ import { formatTimecode, ticksToSeconds } from '@frame/core';
 import { command } from './framework.js';
 import { mutate, readProject } from './project-commands.js';
 import { autoPerformanceForLibrary } from '@frame/io';
+import { soundCueCommands } from '@frame/core';
 import { libraryFor } from '@frame/assets/node';
 import { contentDir, userLibraryDir } from './env.js';
 
@@ -163,6 +164,21 @@ command({
     const cmds = autoPerformanceForLibrary(state, sceneId, lib, { ...(ctx.args.character ? { instances: [String(ctx.args.character)] } : {}), ...(kinds?.length ? { kinds } : {}) });
     if (!cmds.length) throw new FrameError('USAGE', 'Nothing to generate: no characters with lines or automatic behaviour in this scene', undefined, 'Pass --kinds talking,listening to generate regardless of the characters\' settings.');
     return out(await mutate(ctx, cmds, 'Automatic performance'));
+  },
+  human,
+});
+
+command({
+  path: ['scene', 'sound-cues'], summary: 'Add sound cues for action and prop-state events as editable auto SFX clips (FR-SND-04). Baked cues are kept.', mutating: true,
+  args: [{ name: 'scene', description: 'Scene id', positional: true, required: true }],
+  run: async (ctx) => {
+    const { state } = await readProject(ctx);
+    const sceneId = String(ctx.args.scene);
+    if (!state.scenes[sceneId]) throw new FrameError('NOT_FOUND', `Scene ${sceneId} not found`);
+    const lib = libraryFor({ contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), projectAssets: state.assets });
+    const cmds = soundCueCommands(state, sceneId, lib);
+    if (!cmds.length) throw new FrameError('USAGE', 'No actions or prop states with sounds in this scene');
+    return out(await mutate(ctx, cmds, 'Sound cues'));
   },
   human,
 });

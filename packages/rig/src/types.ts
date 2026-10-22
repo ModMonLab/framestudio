@@ -138,6 +138,8 @@ export interface PartData {
   hides?: string[];
   /** Pattern support (Catalog B6). */
   patternable?: boolean;
+  /** Props: sound cues (FR-SND-04) by action event name (`contact`) or state (`state:open`) → sound asset ref. */
+  sounds?: Record<string, string>;
 }
 
 export const MOUTH_SHAPES = ['X', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;

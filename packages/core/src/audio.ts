@@ -52,8 +52,11 @@ const BUS: Partial<Record<Track['kind'], Bus>> = { dialogue: 'dialogue', music: 
 
 const num = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 
-/** Builds the audio plan for a scene, optionally for the range [from, to) in ticks. */
-export function scheduleSceneAudio(state: ProjectState, scene: Scene, range?: { from: number; to: number }): AudioPlan {
+/** Sound data of a library sound asset (Catalog N): its media and whether it loops. */
+export interface SoundData { media: { hash: string; ext: string; durationS?: number }; loop?: boolean }
+
+/** Builds the audio plan for a scene, optionally for the range [from, to) in ticks. `assets` resolves library sounds. */
+export function scheduleSceneAudio(state: ProjectState, scene: Scene, range?: { from: number; to: number }, assets?: { manifest(ref: string): { data?: unknown } | undefined }): AudioPlan {
   const from = range?.from ?? 0;
   const to = Math.min(range?.to ?? scene.duration, scene.duration);
   const sec = (t: number) => t / TICKS_PER_SECOND;
@@ -85,7 +88,12 @@ export function scheduleSceneAudio(state: ProjectState, scene: Scene, range?: { 
     } else if (c.media) {
       source = { kind: 'media', hash: c.media };
     } else if (c.asset) {
-      source = { kind: 'asset', ref: c.asset };
+      // Library sounds play their content-addressed media (bundled content or the project store).
+      const snd = (assets?.manifest(c.asset)?.data as { sound?: SoundData } | undefined)?.sound;
+      if (snd) {
+        source = { kind: 'media', hash: snd.media.hash, ext: snd.media.ext };
+        if (snd.media.durationS && !snd.loop) srcDur = snd.media.durationS;
+      } else source = { kind: 'asset', ref: c.asset };
     } else continue;
     const clipStart = Math.max(c.start, from);
     const clipEnd = Math.min(c.end, to);

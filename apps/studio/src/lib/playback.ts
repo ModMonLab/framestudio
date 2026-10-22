@@ -67,7 +67,7 @@ export async function playPlan(pid: string, plan: AudioPlan, t0: number): Promis
 }
 
 export function usePlayback() {
-  const { studio } = useCtx();
+  const { studio, assets } = useCtx();
   const playing = useStudio(studio, (s) => s.playing);
   useEffect(() => {
     if (!playing) return;
@@ -79,7 +79,7 @@ export function usePlayback() {
     let raf = 0;
     let stop: (() => void) | undefined;
     let cancelled = false;
-    const plan = scheduleSceneAudio(s.project!, scene);
+    const plan = scheduleSceneAudio(s.project!, scene, undefined, { manifest: (r) => assets.manifest(r) });
     void playPlan(s.pid, plan, start / TICKS_PER_SECOND).then((fn) => (cancelled ? fn() : (stop = fn)));
     const tick = () => {
       const t = start + Math.round(((performance.now() - t0) / 1000) * TICKS_PER_SECOND);

@@ -19,6 +19,8 @@ import { CAST, castData } from './cast-specs.js';
 import { PROPS, propPart, kitPartsData } from './parts/props.js';
 import { CAPTION_STYLES } from './text-specs.js';
 import { OUTPUT_PRESETS } from './output-specs.js';
+import { renderSound, SR } from './sounds.js';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -40,6 +42,7 @@ interface Built {
   anchors?: Record<string, unknown>;
   tags?: string[];
   dependencies?: string[];
+  provenance?: AssetManifest['provenance'];
 }
 
 function partBuilt(p: PartData, extra: Partial<Built> = {}): Built {
@@ -50,6 +53,7 @@ function partBuilt(p: PartData, extra: Partial<Built> = {}): Built {
 }
 
 const slug = (id: string) => id.split('.')[1]!;
+const hashSeed = (id: string) => [...id].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261);
 const slider = (param: string, endLabels?: [string, string], target: 'morph' | 'body' = 'morph') => ({ control: { type: 'slider', param, target, range: [0, 100], default: 50, ...(endLabels ? { endLabels } : {}) } });
 
 /* ------------------------------------------------------------------ list builders */
@@ -167,6 +171,23 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
       return p ? { data: propPart(p), families: ['flat', 'illustrated'], views: ['front'], viewExemptions: { three: 'Props are drawn from the camera.', side: 'Props are drawn from the camera.', back: 'Props are drawn from the camera.' }, anchors: { ...(p.anchors ?? {}), bounds: p.bounds }, capabilities: p.capabilities ?? [], ...(p.states ? { parameters: [{ key: 'state', type: 'enum' as const, default: p.states[0], options: p.states, label: 'State' }] } : {}) } : undefined;
     }
     case 'kit': return s === 'podcast-studio' ? { data: { kit: { parts: kitPartsData(), marks: [{ name: 'Seat A', x: 640, y: 960, facing: 'right' }, { name: 'Seat B', x: 1280, y: 960, facing: 'left' }, { name: 'Seat C', x: 420, y: 980, facing: 'right' }, { name: 'Seat D', x: 1500, y: 980, facing: 'left' }], ambience: 'amb.studio-room-tone@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.desk-microphone@1', 'prop.on-air-sign@1', 'prop.floor-lamp@1', 'prop.potted-plant@1', 'prop.mug@1'] } }, families: ['flat', 'illustrated'], views: ['front'] } : undefined;
+    case 'sfx': {
+      // Synthesised foley (tools/content/sounds.ts); media is content-addressed under content/media.
+      const snd = (() => { try { return renderSound(s, hashSeed(item.id)); } catch { return undefined; } })();
+      if (!snd) return undefined;
+      const hash = `sha256-${createHash('sha256').update(snd.wav).digest('hex')}`;
+      const file = path.join(repo, 'content/media', `${hash}.wav`);
+      if (!fs.existsSync(file)) {
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, snd.wav);
+        written++;
+      }
+      return {
+        data: { sound: { media: { hash, mime: 'audio/wav', ext: 'wav', bytes: snd.wav.length, durationS: snd.seconds, sampleRate: SR, channels: 1 }, peakDbfs: -3, loop: false } },
+        tags: ['sound'],
+        provenance: { method: 'authored', author: 'Frame content pipeline (procedural synthesis in tools/content/sounds.ts)', date: DATE, notes: 'Synthesised from noise, resonators and envelopes; no recordings or third-party samples. Placeholder foley awaiting listening review (CAT-06/CAT-08).' },
+      };
+    }
     case 'txt': return CAPTION_STYLES[s] ? { data: { caption: CAPTION_STYLES[s] }, families: ['flat', 'illustrated'], tags: ['caption'] } : undefined;
     case 'out': return OUTPUT_PRESETS[s] ? { data: { output: OUTPUT_PRESETS[s] }, tags: ['export'] } : undefined;
     default: return undefined;
@@ -197,7 +218,7 @@ function manifest(list: CatalogList, item: CatalogItem, b: Built): AssetManifest
     layering: {},
     previews: {},
     license: LICENSE,
-    provenance: PROVENANCE,
+    provenance: b.provenance ?? PROVENANCE,
     review: { status: 'pending' },
     data: b.data,
   } as AssetManifest;

@@ -141,6 +141,37 @@ test('dropping a character on a chair seats it on the seat anchor, in front of t
   await expect(page.getByRole('button', { name: /^Undo Seat Maya Bennett on Spare chair/ }).first()).toBeVisible();
 });
 
+test('a character uses an object from the Acting tab; the sound cue lands on the Sound track and plays bundled media (FR-ACT-06, FR-PRP-02, FR-SND-04)', async ({ page }) => {
+  await openProject(page, sample(true));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  await page.getByRole('treeitem', { name: /Maya Bennett/ }).first().click();
+  await page.getByRole('tab', { name: 'Acting' }).click();
+  await page.getByRole('group', { name: 'Use Mug' }).getByRole('button', { name: 'Drink from mug' }).click();
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  await expect.poll(async () => {
+    const st = await state();
+    const sid = st.episodes[st.project.episodes[0]].scenes[0];
+    return st.scenes[sid].clips.filter((c: { asset?: string }) => c.asset === 'sfx.mug-on-table@1').length;
+  }).toBe(1);
+  const st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const drink = st.scenes[sid].clips.find((c: { asset?: string }) => c.asset === 'act.drink-from-mug@1');
+  const mug = st.scenes[sid].instances.find((i: { name: string }) => i.name === 'Mug');
+  expect(drink.params.prop).toBe(mug.id);
+  await expect(page.getByRole('button', { name: /Sound FX: contact \(cue\)/ })).toBeVisible();
+  // The cue's media is bundled content, served through the project media route for playback.
+  const man = await (await page.request.get(`/api/library/manifest?ref=${encodeURIComponent('sfx.mug-on-table@1')}`)).json();
+  const hash = (man.manifest ?? man).data.sound.media.hash;
+  const media = await page.request.get(`/api/projects/${pid}/media/${hash}`);
+  expect(media.status()).toBe(200);
+  expect(media.headers()['content-type']).toContain('audio/wav');
+  // Mid-drink the preview still matches the export renderer (the mug is in her hand).
+  await page.locator('body').click({ position: { x: 5, y: 895 } });
+  for (let i = 0; i < 2; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 96000);
+});
+
 test('agent changes are tagged and a person reverts the agent session from Activity (FR-AGT-04/05, AC-13)', async ({ page }) => {
   await openProject(page, sample(false));
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);

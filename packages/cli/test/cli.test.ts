@@ -134,5 +134,16 @@ describe('frame CLI (FR-CLI-01..07)', () => {
     await frame(['scene', 'auto-performance', scene, '--json'], cwd);
     const again = (await frame(['scene', 'show', scene, '--json'], cwd)).json.result.clips.filter((c: any) => c.source === 'auto');
     expect(again.length).toBe(autoClips.length);
+    // Using a door makes a sound cue on the Sound track.
+    const door = [{ name: 'instance.add', params: { scene, id: 'ins_door0001', kind: 'prop', asset: 'prop.door@1', name: 'Door', transform: { x: 300, y: 1000 }, propState: 'closed' } }];
+    fs.writeFileSync(file, JSON.stringify(door));
+    await frame(['apply', file, '--json'], cwd);
+    const acting = show.tracks.find((t: any) => t.owner === 'ins_ada00001' && t.kind === 'acting').id;
+    fs.writeFileSync(file, JSON.stringify([{ name: 'clip.add', params: { scene, track: acting, start: 96000, end: 172800, asset: 'act.open-door@1', params: { prop: 'ins_door0001' } } }]));
+    await frame(['apply', file, '--json'], cwd);
+    const sc = await frame(['scene', 'sound-cues', scene, '--json'], cwd);
+    expect(sc.code, sc.out + sc.err).toBe(0);
+    const cues = (await frame(['scene', 'show', scene, '--json'], cwd)).json.result.clips.filter((c: any) => c.asset === 'sfx.door-open@1');
+    expect(cues).toHaveLength(1);
   });
 });

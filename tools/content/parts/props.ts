@@ -71,6 +71,8 @@ export interface PropSpec {
   draw: Draw;
   colors: Record<string, string>;
   states?: string[];
+  /** Sound cues by event name or `state:<name>` (FR-SND-04). */
+  sounds?: Record<string, string>;
   /** [x, y, w, h] in stage units for selection/hit testing. */
   bounds: [number, number, number, number];
   anchors?: Record<string, [number, number]>;
@@ -85,7 +87,7 @@ export function propPart(spec: PropSpec): PartData {
     spec.draw(d);
     families[fam] = { views: { front: d.build() }, exempt: { three: 'Props are drawn from the camera; they do not turn with character views.', side: 'Props are drawn from the camera.', back: 'Props are drawn from the camera.' } };
   }
-  return { slot: 'prop', families, colors: spec.colors, ...(spec.states ? { options: { state: spec.states } } : {}) };
+  return { slot: 'prop', families, colors: spec.colors, ...(spec.states ? { options: { state: spec.states } } : {}), ...(spec.sounds ? { sounds: spec.sounds } : {}) };
 }
 
 /* ------------------------------------------------------------------ podcast kit props (H1) */
@@ -155,13 +157,36 @@ export const PROPS: Record<string, PropSpec> = {
     },
   },
   mug: {
-    colors: { mug: '#F2ECE2', coffee: '#5A3B2B', steam: '#FFFFFF' }, states: ['full', 'empty', 'steam'], bounds: [-35, -60, 80, 60], anchors: { grip: [34, -30], rim: [0, -56] }, capabilities: ['grip', 'drink'],
+    colors: { mug: '#F2ECE2', coffee: '#5A3B2B', steam: '#FFFFFF' }, states: ['full', 'empty', 'steam'], bounds: [-35, -60, 80, 60], anchors: { grip: [34, -30], rim: [0, -56] }, capabilities: ['grip', 'drink'], sounds: { contact: 'sfx.mug-on-table@1' },
     draw: (d) => {
       d.stroke([[22, -45], [40, -42], [40, -18], [22, -16]], 'mug', 7, { smooth: true });
       d.rect(-26, -56, 52, 56, 'mug', { r: 8, id: 'body' });
       d.ellipse(0, -55, 25, 6, 'coffee', { when: { state: ['full', 'steam'] }, flat: true });
       d.shade([[8, -56], [26, -56], [26, 0], [8, 0]], 'body');
       for (const [x, ph] of [[-8, 0], [8, 0.5]] as const) d.stroke([[x, -66], [x + 6, -86, { 'anim.sin': [4 * (ph ? -1 : 1), 0] }], [x - 2, -108, { 'anim.sin': [-6, 0] }]], 'steam', 4, { when: { state: 'steam' }, smooth: true, opacity: 0.6 });
+    },
+  },
+  phone: {
+    colors: { case: '#24242A', screen: '#1B2230', lit: '#9FD3FF', ring: '#FFFFFF' }, states: ['off', 'on', 'ringing'], bounds: [-20, -64, 40, 64], anchors: { grip: [0, -30] }, capabilities: ['grip', 'use'],
+    draw: (d) => {
+      d.rect(-17, -64, 34, 64, 'case', { r: 6, id: 'body' });
+      d.rect(-13, -58, 26, 52, 'screen', { r: 3, flat: true, when: { state: 'off' } });
+      d.rect(-13, -58, 26, 52, 'lit', { r: 3, flat: true, when: { state: ['on', 'ringing'] } });
+      for (const k of [1, 2] as const) d.stroke([[20 + k * 6, -52], [24 + k * 8, -40], [20 + k * 6, -28]], 'ring', 2.5, { when: { state: 'ringing' }, smooth: true, opacity: 0.85 });
+    },
+  },
+  door: {
+    colors: { frame: '#6B4B34', panel: '#B98A5E', gap: '#2E2621', knob: '#D9B25F' }, states: ['closed', 'open'], bounds: [-120, -460, 240, 460], anchors: { handle: [80, -220] }, capabilities: ['open', 'close'], depth: 'back', sounds: { 'state:open': 'sfx.door-open@1', 'state:closed': 'sfx.door-close@1' },
+    draw: (d) => {
+      d.rect(-120, -460, 240, 460, 'frame', { flat: true });
+      d.rect(-104, -446, 208, 446, 'gap', { flat: true, when: { state: 'open' } });
+      d.rect(-104, -446, 208, 446, 'panel', { r: 2, id: 'panel', when: { state: 'closed' } });
+      d.rect(-84, -420, 168, 160, 'panel', { r: 4, when: { state: 'closed' } });
+      d.rect(-84, -230, 168, 200, 'panel', { r: 4, when: { state: 'closed' } });
+      d.ellipse(80, -220, 9, 9, 'knob', { when: { state: 'closed' } });
+      // Open: the panel swung toward the camera, seen edge-on as a narrow slab on the hinge side.
+      d.poly([[-104, -446], [-60, -470], [-60, 20], [-104, 0]], 'panel', { when: { state: 'open' } });
+      d.ellipse(-70, -230, 7, 9, 'knob', { when: { state: 'open' } });
     },
   },
   'podcast-headphones': {
