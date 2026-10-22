@@ -394,7 +394,8 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
 
   // Per-side face parameters.
   const f = st.face;
-  const gx = Math.max(-1, Math.min(1, st.gaze[0]));
+  // Gaze is given in screen space; face art is drawn facing right, so flip for left-facing characters.
+  const gx = Math.max(-1, Math.min(1, st.gaze[0])) * (st.flip ? -1 : 1);
   const gy = Math.max(-1, Math.min(1, st.gaze[1] + f.lookDown * 0.6));
   const sideParams = (side: 'L' | 'R'): Params => ({
     ...spec.params,
@@ -450,7 +451,8 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
     const state: Record<string, string> = { mouth: mouthLetter, view: st.view, ...(spec.options ?? {}), ...(part.options ?? {}) };
     for (const [k, v] of Object.entries(st.overlays)) if (v > 0) state[`overlay.${k}`] = 'on';
     for (const layer of art.layers) {
-      if (!whenOk(layer.when, state)) continue;
+      // Layers instanced per side (hands, feet) evaluate their condition with that side's state.
+      if (!layer.sides && !whenOk(layer.when, state)) continue;
       if (layer.limb) {
         drawLimb(layer, layer.limb, part, state);
         continue;
@@ -465,6 +467,7 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
         const pair = sp.startsWith('hand') ? 'arm' : sp.startsWith('foot') ? 'leg' : undefined;
         const slot = resolveSlot(layer.slot, side, pair);
         const sideState = side ? { ...state, hand: side === 'L' ? st.pose.handL : st.pose.handR, side } : state;
+        if (!whenOk(layer.when, sideState)) continue;
         drawShapes(layer, art, part, map, params, sideState, slot, side === 'R' ? 'R' : 'L');
       }
     }
@@ -530,7 +533,8 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
       };
       const ts = [L.from, ...chain.pts.slice(1, -1).map((_, i) => (i + 1) / segs).filter((t) => t > L.from && t < L.to), L.to];
       const widths = ts.map((t, i) => wAt(t) * L.width + (i === ts.length - 1 ? (L.flare ?? 0) * d.armW : 0));
-      const dPath = limbPath(pts, widths);
+      // Open ends of garments (sleeve hems, trouser cuffs) are cut straight; ends at the joint root stay round.
+      const dPath = limbPath(pts, widths, { end: L.to < 0.999 || L.cap === 'butt' ? 'butt' : 'round', start: L.from > 0.001 ? 'butt' : 'round' });
       const items: Item[] = [{ k: 'path', d: dPath, fill: { color: resolveColor(L.fill, palette) } }];
       if (L.shade) {
         // Illustrated: a soft shade band along one edge (light from upper left).

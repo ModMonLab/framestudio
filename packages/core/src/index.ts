@@ -13,6 +13,10 @@ export * from './lookup.js';
 export * from './validate.js';
 export { takeMatchesRevision, estimateSpeechSeconds } from './commands/timeline.js';
 export { sceneIdMap, remapScene } from './commands/structure.js';
+export * from './perform/lipsync.js';
+export * from './perform/data.js';
+export * from './perform/character.js';
+export * from './perform/evaluate.js';
 
 /** Machine-readable command reference (`frame describe`, MCP resources; FR-CLI-03, FR-AGT-03). */
 export function describeCommands() {

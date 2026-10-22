@@ -134,7 +134,7 @@ export function resolveFill(f: FillDef, palette: Palette, at: (name: string) => 
 }
 
 /** Path for a tapered limb through 2–3 joints with round ends (clean bends without tearing). */
-export function limbPath(pts: Pt[], widths: number[]): string {
+export function limbPath(pts: Pt[], widths: number[], caps: { start?: 'round' | 'butt'; end?: 'round' | 'butt' } = {}): string {
   // Build offset polylines on both sides, joining with round caps via arcs.
   const n = pts.length;
   const left: Pt[] = [];
@@ -161,14 +161,14 @@ export function limbPath(pts: Pt[], widths: number[]): string {
       s.push(`Q ${fmt(left[i]!)} ${fmt(mid)}`);
     } else s.push(`L ${fmt(left[i]!)}`);
   }
-  s.push(`A ${r2(wEnd)} ${r2(wEnd)} 0 0 0 ${fmt(right[n - 1]!)}`);
+  s.push(caps.end === 'butt' ? `L ${fmt(right[n - 1]!)}` : `A ${r2(wEnd)} ${r2(wEnd)} 0 0 0 ${fmt(right[n - 1]!)}`);
   for (let i = n - 2; i >= 0; i--) {
     if (i > 0) {
       const mid: Pt = [(right[i]![0] + right[i - 1]![0]) / 2, (right[i]![1] + right[i - 1]![1]) / 2];
       s.push(`Q ${fmt(right[i]!)} ${fmt(mid)}`);
     } else s.push(`L ${fmt(right[i]!)}`);
   }
-  s.push(`A ${r2(wStart)} ${r2(wStart)} 0 0 0 ${fmt(left[0]!)} Z`);
+  s.push(caps.start === 'butt' ? 'Z' : `A ${r2(wStart)} ${r2(wStart)} 0 0 0 ${fmt(left[0]!)} Z`);
   return s.join(' ');
 }
 

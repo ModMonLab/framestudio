@@ -15,13 +15,18 @@
     "frame": "tsx packages/cli/src/bin.ts",
     "catalog:doc": "tsx tools/catalog/generate-doc.ts",
     "tokens:gen": "tsx packages/design-tokens/src/generate.ts",
-    "test:visual": "pnpm --filter @frame/gallery exec playwright test"
+    "test:visual": "pnpm --filter @frame/gallery exec playwright test",
+    "content:build": "tsx tools/content/build.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
     "@eslint/js": "^10.0.1",
     "@frame/assets": "workspace:*",
+    "@frame/core": "workspace:*",
     "@frame/design-tokens": "workspace:*",
+    "@frame/render": "workspace:*",
+    "@frame/rig": "workspace:*",
+    "@frame/schema": "workspace:*",
     "@playwright/test": "1.56.1",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",

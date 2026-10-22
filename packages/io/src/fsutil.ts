@@ -20,6 +20,11 @@ export function sortKeys(v: unknown): unknown {
   return v;
 }
 
+/** Compact deterministic JSON (sorted keys, no indentation) for large bundled content files. */
+export function stableCompact(value: unknown): string {
+  return JSON.stringify(sortKeys(value)) + '\n';
+}
+
 /** Writes a file atomically: temp file in the same folder, fsync, rename (FR-DAT-08). */
 export function writeFileAtomic(file: string, data: string | Uint8Array): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });

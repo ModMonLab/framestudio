@@ -155,6 +155,8 @@ export type Joints3 = Record<Joint, Vec3>;
  */
 export function solvePose(dims: BodyDims, pose: Pose): Joints3 {
   const legLen = dims.thigh + dims.shin;
+  // Default leg targets (rest) are replaced by posture-specific ones; explicit leg keys from actions win.
+  const isRest = (t: LimbTarget) => t === REST_POSE.legL || t === REST_POSE.legR || (t.t[0] === REST_POSE.legL.t[0] && t.t[1] === REST_POSE.legL.t[1] && t.t[2] === REST_POSE.legL.t[2] && !t.pole);
   const ankleH = dims.footLen * 0.18;
   let pelvisY = legLen + ankleH;
   let legL = pose.legL;
@@ -165,16 +167,16 @@ export function solvePose(dims: BodyDims, pose: Pose): Joints3 {
     pelvisY = dims.shin + ankleH + dims.legW * 0.4;
     pelvisZ = -dims.thigh * 0.1;
     const t = (side: number): LimbTarget => ({ t: [side * 0.08, -dims.shin / legLen, (dims.thigh * 0.95) / legLen], pole: [0, 0.3, 1] });
-    if (pose.legL === REST_POSE.legL) legL = t(1);
-    if (pose.legR === REST_POSE.legR) legR = t(1);
+    if (isRest(pose.legL)) legL = t(1);
+    if (isRest(pose.legR)) legR = t(1);
   } else if (pose.posture === 'crouched') {
     pelvisY = legLen * 0.55 + ankleH;
-    if (pose.legL === REST_POSE.legL) legL = { t: [0.1, -0.55, 0.25], pole: [0.2, 0, 1] };
-    if (pose.legR === REST_POSE.legR) legR = { t: [0.1, -0.55, 0.25], pole: [0.2, 0, 1] };
+    if (isRest(pose.legL)) legL = { t: [0.1, -0.55, 0.25], pole: [0.2, 0, 1] };
+    if (isRest(pose.legR)) legR = { t: [0.1, -0.55, 0.25], pole: [0.2, 0, 1] };
   } else if (pose.posture === 'kneeling') {
     pelvisY = dims.thigh + dims.legW * 0.4;
-    if (pose.legL === REST_POSE.legL) legL = { t: [0.05, -dims.thigh / legLen, -0.62], pole: [0, 0, 1] };
-    if (pose.legR === REST_POSE.legR) legR = { t: [0.05, -dims.thigh / legLen, -0.62], pole: [0, 0, 1] };
+    if (isRest(pose.legL)) legL = { t: [0.05, -dims.thigh / legLen, -0.62], pole: [0, 0, 1] };
+    if (isRest(pose.legR)) legR = { t: [0.05, -dims.thigh / legLen, -0.62], pole: [0, 0, 1] };
   } else if (pose.posture === 'lying') {
     pelvisY = dims.legW * 0.6;
   }

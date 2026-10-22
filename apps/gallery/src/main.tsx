@@ -66,7 +66,7 @@ function Buttons() {
 }
 
 function Fields() {
-  const [text, setText] = useState('Maya Bennett');
+  const [text, setText] = useState('Ada Fields');
   const [q, setQ] = useState('glasses');
   const [x, setX] = useState(612);
   const [notes, setNotes] = useState('Cold open: Maya realises the recording never started.');
@@ -176,10 +176,10 @@ const treeNodes: TreeNode[] = [
   { id: 'ep', label: 'The Backup Recording', icon: <Film size={15} />, meta: 'Episode 01' },
   { id: 's1', parent: 'ep', label: 'Scene 1 · Cold open', icon: <Film size={15} />, meta: '0:30', renamable: true },
   { id: 'cast', parent: 's1', label: 'Cast', icon: <Folder size={15} />, meta: '2' },
-  { id: 'maya', parent: 'cast', label: 'Maya Bennett', icon: <User size={15} />, meta: 'Seated', changed: true, actions: <><IconButton size="xs" label="Hide Maya Bennett" icon={<Eye size={13} />} /><IconButton size="xs" label="Lock Maya Bennett" icon={<Lock size={13} />} /></> },
+  { id: 'maya', parent: 'cast', label: 'Ada Fields', icon: <User size={15} />, meta: 'Seated', changed: true, actions: <><IconButton size="xs" label="Hide Ada Fields" icon={<Eye size={13} />} /><IconButton size="xs" label="Lock Ada Fields" icon={<Lock size={13} />} /></> },
   { id: 'maya-look', parent: 'maya', label: 'Look · On-air', emphasis: 'detail' },
   { id: 'maya-voice', parent: 'maya', label: 'Voice · Warm host v2', icon: <Mic size={14} />, emphasis: 'detail' },
-  { id: 'leo', parent: 'cast', label: 'Leo Park', icon: <User size={15} />, meta: 'Seated' },
+  { id: 'leo', parent: 'cast', label: 'Kit Moreno', icon: <User size={15} />, meta: 'Seated' },
   { id: 'set', parent: 's1', label: 'Set · Podcast studio', icon: <Folder size={15} />, meta: 'Kit' },
   { id: 'table', parent: 'set', label: 'Round table', icon: <Box size={15} />, meta: 'Fore' },
   { id: 'mug', parent: 'set', label: 'Mug', icon: <Box size={15} />, meta: 'Fore' },
@@ -247,7 +247,7 @@ function Feedback() {
     <>
       <Card title="Jobs · progress" width={320}>
         <JobRow name="Export · 1080p MP4" state="Rendering frame 412 of 720 · 31 fps" progress={412 / 720} elapsedS={14} remainingS={10} onCancel={() => {}} />
-        <JobRow name="Generate takes · Maya" state="Generating take 2 of 3…" onCancel={() => {}} />
+        <JobRow name="Generate takes · Ada" state="Generating take 2 of 3…" onCancel={() => {}} />
         <JobRow name="Align take 3" state="Failed: the voice worker stopped" progress={0.4} failed action={<Button variant="ghost">Retry</Button>} />
         <Progress value={1} label="Done" />
       </Card>
@@ -302,7 +302,7 @@ function Shell() {
         <Rail value={rail} onChange={setRail} items={[{ id: 'layers', label: 'Layers', icon: <Layers size={18} /> }, { id: 'assets', label: 'Assets', icon: <LayoutGrid size={18} /> }, { id: 'cast', label: 'Cast', icon: <Users size={18} /> }, { id: 'text', label: 'Text', icon: <Type size={18} /> }, { id: 'effects', label: 'Effects', icon: <Sparkles size={18} /> }, { id: 'audio', label: 'Audio', icon: <Music size={18} /> }, { id: 'templates', label: 'Templates', icon: <ImageIcon size={18} /> }]} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--color-canvas)', position: 'relative' }}>
           <Toolbar label="Selection">
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#c8653f' }} />Maya Bennett</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#c8653f' }} />Ada Fields</span>
             <ToolbarSeparator />
             <Button variant="ghost"><span className="fr-faint">Expression</span> <b>Embarrassed</b></Button>
             <Button variant="ghost"><span className="fr-faint">Gesture</span> <b>Talking</b></Button>

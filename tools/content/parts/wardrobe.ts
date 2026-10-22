@@ -33,6 +33,8 @@ export interface TopSpec {
   apron?: boolean;
   hiVis?: boolean;
   skirt?: number;
+  /** Full outfits with trouser legs (jumpsuit, suit, scrubs). */
+  legs?: number;
   wrap?: boolean;
   belt?: boolean;
   options?: Record<string, string[]>;
@@ -145,6 +147,10 @@ function topArt(t: TopSpec, fam: StyleFamily, view: View) {
   if (t.hood) {
     const hu = view === 'back' ? 0 : view === 'side' ? -0.4 : view === 'three' ? -0.2 : 0;
     a.layer(view === 'back' ? 'collar' : 'collar', 'torso', [{ path: a.smooth([[hu - 0.55, -0.25], [hu + 0.55, -0.25], [hu + 0.62, 0.02], [hu, 0.12], [hu - 0.62, 0.02]], true, 0.7), fill: `${col}.shade`, ...line }], { when: { hood: 'down' } });
+  }
+  if (t.legs) {
+    a.limb('legwear.*', { limb: 'legs', from: 0, to: t.legs, width: 1.2, fill: col, ...(ill ? { shade: `${col}.shade` } : {}), outline: `${col}.line`, cap: 'butt' });
+    a.layer('bottom', 'pelvis', [{ path: a.smooth([[-1.06, -0.15], [1.06, -0.15], [1.08, 0.5], [0.8, 1.05], [-0.8, 1.05], [-1.08, 0.5]], true, 0.6), fill, ...line }]);
   }
   if (t.skirt) {
     // Dress skirt hangs from the hips and follows the thighs (seated drapes over the legs).

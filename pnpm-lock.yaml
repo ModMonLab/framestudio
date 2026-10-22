@@ -17,9 +17,21 @@ importers:
       '@frame/assets':
         specifier: workspace:*
         version: link:packages/assets
+      '@frame/core':
+        specifier: workspace:*
+        version: link:packages/core
       '@frame/design-tokens':
         specifier: workspace:*
         version: link:packages/design-tokens
+      '@frame/render':
+        specifier: workspace:*
+        version: link:packages/render
+      '@frame/rig':
+        specifier: workspace:*
+        version: link:packages/rig
+      '@frame/schema':
+        specifier: workspace:*
+        version: link:packages/schema
       '@playwright/test':
         specifier: 1.56.1
         version: 1.56.1
@@ -90,6 +102,12 @@ importers:
 
   packages/assets:
     dependencies:
+      '@frame/rig':
+        specifier: workspace:*
+        version: link:../rig
+      '@frame/schema':
+        specifier: workspace:*
+        version: link:../schema
       yaml:
         specifier: ^2.8.1
         version: 2.9.1
@@ -111,6 +129,12 @@ importers:
 
   packages/core:
     dependencies:
+      '@frame/render':
+        specifier: workspace:*
+        version: link:../render
+      '@frame/rig':
+        specifier: workspace:*
+        version: link:../rig
       '@frame/schema':
         specifier: workspace:*
         version: link:../schema

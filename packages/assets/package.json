@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./catalog": "./src/catalog.ts" },
-  "dependencies": { "yaml": "^2.8.1" }
+  "exports": { ".": "./src/index.ts", "./catalog": "./src/catalog.ts", "./node": "./src/node.ts" },
+  "dependencies": { "@frame/schema": "workspace:*", "@frame/rig": "workspace:*", "yaml": "^2.8.1" }
 }
