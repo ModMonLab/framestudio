@@ -290,6 +290,8 @@ export async function renderExport(o: RenderOptions): Promise<RenderReport> {
       const dir = path.resolve(o.out);
       fs.mkdirSync(dir, { recursive: true });
       for (let i = 0; i < frameTimes.length; i++) {
+        // Yield to the event loop so the server stays responsive and can cancel (NFR-01).
+        if (i % 4 === 0) await new Promise((r) => setImmediate(r));
         checkCancel();
         const f = path.join(dir, `frame-${String(i + 1).padStart(6, '0')}.png`);
         fs.writeFileSync(f, blur ? encodePng(pixelsAt(i), o.width, o.height) : o.renderer.png(frameAt(i)));
@@ -327,6 +329,7 @@ export async function renderExport(o: RenderOptions): Promise<RenderReport> {
       o.signal?.addEventListener('abort', onAbort);
       try {
         for (let i = 0; i < frameTimes.length; i++) {
+          if (i % 4 === 0) await new Promise((r) => setImmediate(r));
           if (o.signal?.aborted) break;
           const rgba = pixelsAt(i);
           if (!child.stdin.write(rgba)) await Promise.race([new Promise<void>((res) => child.stdin.once('drain', res)), exited]);

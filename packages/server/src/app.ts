@@ -116,7 +116,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       }
     },
   });
-  const jobs = { render: new JobQueue(1), voice: new JobQueue(1) };
+  const jobs = { render: new JobQueue(1), voice: new JobQueue(1), work: new JobQueue(1) };
   const styles = loadStyles(o.contentDir);
   let renderer: Promise<NodeRenderer> | undefined;
   // Imported images resolve from the media store of whichever open project holds them (content-addressed).
@@ -948,12 +948,23 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
-  app.post<{ Params: { pid: string }; Querystring: { onConflict?: string; expect?: string; dryRun?: string }; Body: Buffer }>('/api/projects/:pid/packages/import', async (req, reply) => {
+  app.post<{ Params: { pid: string }; Querystring: { onConflict?: string; expect?: string; dryRun?: string; job?: string }; Body: Buffer }>('/api/projects/:pid/packages/import', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
       if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the package bytes as application/zip');
       const expect = (req.query.expect ? req.query.expect.split(',') : ['framechar', 'frameasset', 'framevoice']) as PackageFormat[];
-      const r = importAssetsIntoProject(p.open, library(p), new Uint8Array(req.body), { expect, onConflict: req.query.onConflict === 'new-id' ? 'new-id' : 'refuse', dryRun: req.query.dryRun === 'true', source: sourceOf(req) });
+      const bytes = new Uint8Array(req.body);
+      const run = () => importAssetsIntoProject(p.open, library(p), bytes, { expect, onConflict: req.query.onConflict === 'new-id' ? 'new-id' : 'refuse', dryRun: req.query.dryRun === 'true', source: sourceOf(req) });
+      // `?job=true` runs the import as a job (FR-ARC-05) for large packages; the result is the import report.
+      if (req.query.job === 'true') {
+        const job = jobs.work.submit('import', `Import package (${(bytes.byteLength / 1024 / 1024).toFixed(1)} MB)`, async (ctx) => {
+          ctx.progress(0.1, 'Reading the package');
+          const r = run();
+          return { ...r.report, revision: r.revision };
+        }, p.id);
+        return reply.code(202).send(publicJob(job));
+      }
+      const r = run();
       return { ...r.report, revision: r.revision };
     } catch (e) {
       return sendError(reply, e);
@@ -1160,6 +1171,63 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
+  // Library thumbnail: memory and disk cache keyed by content (FR-AST-07).
+  const thumbnail = async (lib: ReturnType<typeof library>, ref: string, m: AssetManifest, family: StyleFamily, w: number, h: number) => {
+    const pc = libraryDefaults.previewCharacter;
+    const pcm = pc ? lib.manifest(pc) : undefined;
+    const key = sha256(`${THUMB_VERSION}|${manifestHash(m)}|${pcm ? manifestHash(pcm) : ''}|${family}|${w}x${h}`);
+    const file = thumbDir ? path.join(thumbDir, `${key}.png`) : undefined;
+    let png = thumbs.get(key) ?? (file && fs.existsSync(file) ? fs.readFileSync(file) : undefined);
+    if (!png) {
+      const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm } : undefined, (r) => lib.manifest(r));
+      if (!setup) throw new FrameError('NOT_FOUND', `${ref} has no visual preview`);
+      const renderer = await getRenderer();
+      const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));
+      png = Buffer.from(renderer.png(ev.frame));
+      if (file) {
+        try {
+          writeFileAtomic(file, png);
+        } catch {
+          // The cache is derived data; failing to keep it never fails the request.
+        }
+      }
+    }
+    return { key, png };
+  };
+  // Thumbnailing as a job (FR-ARC-05): pre-builds the cache for a kind (or the whole library) with progress and cancel.
+  app.post<{ Body: { kind?: string; family?: StyleFamily; size?: number; project?: string } }>('/api/library/thumbnails/build', async (req, reply) => {
+    try {
+      const b = req.body ?? {};
+      const p = b.project ? hub.get(b.project) : undefined;
+      const lib = library(p);
+      const family: StyleFamily = b.family === 'illustrated' ? 'illustrated' : 'flat';
+      const size = Math.max(16, Math.min(512, b.size ?? 96));
+      const refs = lib.search('', { ...(b.kind ? { kind: b.kind } : {}), limit: 5000 }).filter((x) => previewable(x.manifest.kind)).map((x) => x.ref);
+      const job = jobs.work.submit('thumbnails', `Thumbnails · ${b.kind ?? 'library'} (${refs.length})`, async (ctx) => {
+        let made = 0;
+        const failed: string[] = [];
+        for (const [i, ref] of refs.entries()) {
+          // Yield so the server keeps answering (and can cancel) while thumbnails render.
+          await new Promise((r) => setImmediate(r));
+          if (ctx.signal.aborted) throw new FrameError('CANCELLED', 'Thumbnail build cancelled');
+          const m = lib.manifest(ref);
+          try {
+            if (m) {
+              await thumbnail(lib, ref, m, family, size, size);
+              made++;
+            }
+          } catch {
+            failed.push(ref);
+          }
+          ctx.progress((i + 1) / refs.length, `${i + 1} of ${refs.length}`);
+        }
+        return { made, failed };
+      }, p?.id);
+      return reply.code(202).send(publicJob(job));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
   app.get<{ Querystring: { ref: string; family?: string; w?: string; h?: string; project?: string } }>('/api/library/thumbnail', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
@@ -1170,28 +1238,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const family = req.query.family === 'illustrated' ? 'illustrated' : 'flat';
       const w = Math.max(16, Math.min(512, Number(req.query.w ?? 96)));
       const h = Math.max(16, Math.min(512, Number(req.query.h ?? w)));
-      // Keyed by content, so a changed asset or preview character renders again (FR-AST-07); kept on disk across runs.
-      const pc0 = libraryDefaults.previewCharacter;
-      const pcm0 = pc0 ? lib.manifest(pc0) : undefined;
-      const key = sha256(`${THUMB_VERSION}|${manifestHash(m)}|${pcm0 ? manifestHash(pcm0) : ''}|${family}|${w}x${h}`);
-      const file = thumbDir ? path.join(thumbDir, `${key}.png`) : undefined;
-      let png = thumbs.get(key) ?? (file && fs.existsSync(file) ? fs.readFileSync(file) : undefined);
-      if (!png) {
-        const pc = libraryDefaults.previewCharacter;
-        const pcm = pc ? lib.manifest(pc) : undefined;
-        const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm } : undefined, (r) => lib.manifest(r));
-        if (!setup) throw new FrameError('NOT_FOUND', `${ref} has no visual preview`);
-        const renderer = await getRenderer();
-        const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));
-        png = Buffer.from(renderer.png(ev.frame));
-        if (file) {
-          try {
-            writeFileAtomic(file, png);
-          } catch {
-            // The cache is derived data; failing to keep it never fails the request.
-          }
-        }
-      }
+      const { key, png } = await thumbnail(lib, ref, m, family, w, h);
       if (thumbs.size > 2000) thumbs.clear();
       thumbs.set(key, png);
       return reply.header('content-type', 'image/png').header('cache-control', 'public, max-age=86400').send(png);
@@ -1201,13 +1248,13 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   });
 
   /* ---------------------------------------------------------------- jobs (FR-ARC-05) */
-  const allJobs = (project?: string) => [...jobs.render.list(project), ...jobs.voice.list(project)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const allJobs = (project?: string) => [...jobs.render.list(project), ...jobs.voice.list(project), ...jobs.work.list(project)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   app.get<{ Querystring: { project?: string } }>('/api/jobs', async (req) => ({ jobs: allJobs(req.query.project).map(publicJob) }));
   app.get<{ Params: { id: string } }>('/api/jobs/:id', async (req, reply) => {
-    const j = jobs.render.get(req.params.id) ?? jobs.voice.get(req.params.id);
+    const j = jobs.render.get(req.params.id) ?? jobs.voice.get(req.params.id) ?? jobs.work.get(req.params.id);
     return j ? { ...publicJob(j), logs: j.logs } : sendError(reply, new FrameError('NOT_FOUND', `Job ${req.params.id} not found`));
   });
-  app.delete<{ Params: { id: string } }>('/api/jobs/:id', async (req) => ({ cancelled: jobs.render.cancel(req.params.id) || jobs.voice.cancel(req.params.id) }));
+  app.delete<{ Params: { id: string } }>('/api/jobs/:id', async (req) => ({ cancelled: jobs.render.cancel(req.params.id) || jobs.voice.cancel(req.params.id) || jobs.work.cancel(req.params.id) }));
 
   /* ---------------------------------------------------------------- render (FR-RND) */
   type RenderBody = {

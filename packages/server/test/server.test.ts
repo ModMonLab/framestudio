@@ -145,6 +145,52 @@ describe('Frame Server (FR-ARC-01..05)', () => {
     expect((await api('GET', `/api/jobs?project=${pid}`)).json.jobs[0].id).toBe(job.json.id);
   }, 90_000);
 
+  it('exports with custom fps and motion blur, queues a batch over aspect ratios and retries a failed export (FR-RND-04/07/09/10)', async () => {
+    const pid = (await api('POST', '/api/projects/open', { path: project() })).json.id;
+    const st = (await api('GET', `/api/projects/${pid}/state`)).json;
+    const scene = Object.keys(st.state.scenes)[0]!;
+    await api('POST', `/api/projects/${pid}/commands`, { commands: [{ name: 'scene.setDuration', params: { id: scene, durationS: 0.5 } }, { name: 'instance.add', params: { scene, kind: 'prop', asset: 'prop.mug@1', name: 'Mug', transform: { x: 300, y: 800 } } }] });
+    const wait = async (id: string) => {
+      let j: any;
+      await expect.poll(async () => (j = (await api('GET', `/api/jobs/${id}`)).json).state, { timeout: 60_000, interval: 200 }).toMatch(/succeeded|failed|cancelled/);
+      return j;
+    };
+    // A batch of three: 30 fps with motion blur, then two other ratios framed per ratio.
+    const batch = await api('POST', `/api/projects/${pid}/renders/batch`, { items: [
+      { scene, width: 320, height: 180, fps: 30, motionBlur: { samples: 4, shutter: 0.5 }, quality: { crf: 30 }, loudness: null },
+      { scene, width: 180, height: 320, aspect: '9:16' },
+      { scene, width: 240, height: 240, aspect: '1:1' },
+    ] });
+    expect(batch.status).toBe(202);
+    const done = [];
+    for (const j of batch.json.jobs) done.push(await wait(j.id));
+    expect(done.map((j) => j.state)).toEqual(['succeeded', 'succeeded', 'succeeded']);
+    expect(done[0].result.frames).toBe(15);
+    expect(done[0].result.settings).toMatchObject({ fps: 30, motionBlur: { samples: 4, shutter: 0.5 }, quality: { crf: 30 } });
+    expect(done.map((j) => `${j.result.settings.width}x${j.result.settings.height}`)).toEqual(['320x180', '180x320', '240x240']);
+    // A failing export (a missing scene after the job was queued is not possible, so use an invalid odd size) can be retried.
+    const bad = await api('POST', `/api/projects/${pid}/renders`, { scene, width: 321, height: 181 });
+    const failed = await wait(bad.json.id);
+    expect(failed.state).toBe('failed');
+    const again = await api('POST', `/api/jobs/${bad.json.id}/retry`);
+    expect(again.status).toBe(202);
+    expect((await wait(again.json.id)).state).toBe('failed');
+    expect((await api('POST', `/api/jobs/${done[0].id}/retry`)).status).toBe(409);
+    expect((await api('POST', `/api/projects/${pid}/renders`, { scene, motionBlur: { samples: 99, shutter: 1 } })).status).toBe(400);
+  }, 180_000);
+
+  it('runs thumbnailing as a cancellable job with progress (FR-ARC-05)', async () => {
+    const job = await api('POST', '/api/library/thumbnails/build', { kind: 'pattern', size: 48 });
+    expect(job.status).toBe(202);
+    let j: any;
+    await expect.poll(async () => (j = (await api('GET', `/api/jobs/${job.json.id}`)).json).state, { timeout: 90_000, interval: 300 }).toBe('succeeded');
+    expect(j.result.made).toBeGreaterThanOrEqual(13);
+    expect(j.progress).toBe(1);
+    const big = await api('POST', '/api/library/thumbnails/build', { size: 64 });
+    await api('DELETE', `/api/jobs/${big.json.id}`);
+    await expect.poll(async () => (await api('GET', `/api/jobs/${big.json.id}`)).json.state, { timeout: 30_000, interval: 200 }).toBe('cancelled');
+  }, 150_000);
+
   it('reports worker status honestly when none is configured or reachable (FR-VOI-12)', async () => {
     expect((await api('GET', '/api/worker/status')).json.state).toBe('misconfigured');
     const s2 = await createServer({ contentDir: path.join(repo, 'content'), workerUrl: 'http://127.0.0.1:9' });

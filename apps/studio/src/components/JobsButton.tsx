@@ -36,7 +36,8 @@ export function JobsButton() {
               elapsedS={secs(j.startedAt, j.finishedAt)}
               remainingS={remaining}
               {...(running ? { onCancel: () => void api.cancelJob(j.id) } : {})}
-              action={j.state === 'succeeded' && j.kind === 'render' && j.result?.output ? <Button variant="ghost" onClick={() => { setPlayError(false); setPlayer(j); }}>Play</Button> : undefined}
+              action={j.state === 'succeeded' && j.kind === 'render' && j.result?.output ? <Button variant="ghost" onClick={() => { setPlayError(false); setPlayer(j); }}>Play</Button>
+                : (j.state === 'failed' || j.state === 'cancelled') && j.kind === 'render' ? <Button variant="ghost" onClick={() => void api.retryJob(j.id).catch(() => undefined)}>Retry</Button> : undefined}
             />
           );
         })}

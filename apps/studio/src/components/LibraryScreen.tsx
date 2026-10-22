@@ -118,6 +118,7 @@ export function LibraryScreen() {
             <span className="fr-label">Source</span>
             <Select label="Source" value={source} onChange={setSource} options={[{ value: '', label: 'All sources' }, { value: 'bundled', label: 'Bundled with Frame' }, { value: 'user', label: 'My library' }, { value: 'project', label: 'This project' }]} />
             <Button icon={<Star size={14} />} aria-pressed={favOnly} onClick={() => setFavOnly(!favOnly)}>{favOnly ? 'Showing favourites' : 'Favourites only'}</Button>
+            <Button onClick={() => void api.buildThumbnails({ ...(category && shown[0] ? { kind: shown[0].kind } : {}), project: pid }).then(() => toasts.show({ tone: 'info', message: 'Preparing thumbnails in the background. Follow it in Jobs.' })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Prepare thumbnails</Button>
           </div>
         </Panel>
         <div className="st-center-col">

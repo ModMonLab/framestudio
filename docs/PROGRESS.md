@@ -24,7 +24,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-ARC-02 | Done | packages/core/test/session.test.ts | Every edit is a command with a name, parameters, inverse, and the proj — Commands serialisable, inverse patches, revision |
 | FR-ARC-03 | Done | server.test.ts “publishes deltas over WebSocket that rebuild the same state” | The server publishes project changes over WebSocket — Entity deltas (core/sync.ts); Studio mirror applies them |
 | FR-ARC-04 | Done | session.test.ts; server.test.ts REVISION_CONFLICT 409; cli exit 3 | Optimistic concurrency: a command carries the base revision |
-| FR-ARC-05 | In progress | packages/server/src/jobs.ts; server.test.ts export job | Long work (render, import, generation, alignment, thumbnailing) runs a — Render and voice jobs with progress/cancel; import/thumbnail jobs later |
+| FR-ARC-05 | Done | packages/server/src/jobs.ts: render, voice, thumbnails (POST /api/library/thumbnails/build, cancellable) and package import (`?job=true`) jobs with state, progress, logs and cancel; server.test.ts | Long work (render, import, generation, alignment, thumbnailing) runs a — Render and voice jobs with progress/cancel; import/thumbnail jobs later |
 | FR-ARC-06 | Done | tools/test/architecture.test.ts | The engine knows no bundled names: no runtime branch may depend on a s |
 | FR-DAT-01 | Done | packages/schema/src/common.ts; core ids.ts | IDs: assets use catalog-style dotted IDs (`hair |
 | FR-DAT-02 | In progress | AssetRef schema | Asset versions are integers — Library immutability enforced with asset library (M2) |
@@ -116,16 +116,16 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-ENV-01 | Done | 16 kits (I1) with layered parts and palettes; 32 ready-made sets (I2: kit pieces, props, marks, cameras, palette, time of day) applied in one undo step; Scene ▸ Save set… saves your own (user asset); sets.test.ts (all 32 place, validate, render, save back); e2e | Location kits (Catalog I1) provide layered parts with palettes |
 | FR-ENV-02 | Done | Kit palettes (original, warm, cool, muted, pastel, bold) keyed by colour slot; time-of-day presets (content library.json) shift colours and set the lighting atmosphere; Properties ▸ kit section; sets.test.ts; e2e | Kit palettes recolour all kit parts consistently |
 | FR-STG-01 | Done | scene stage schema (ground lines, marks, depth planes); stage.addMark; tools/test/m3-acceptance.test.ts AC-08 mark | Stage |
-| FR-STG-02 | In progress | evaluate.ts (draw order by plane/order; parallax per instance through the lens) | Depth vs parallax — No dedicated test yet |
-| FR-STG-03 | In progress | Canvas drag to move (one undo step), numeric transform in Properties | Placement — Smart guides, snapping, align/distribute pending |
+| FR-STG-02 | Done | evaluate.ts draw order by plane/order, parallax per instance through the lens; sets.test.ts “depth vs parallax” | Depth vs parallax — No dedicated test yet |
+| FR-STG-03 | Done | Canvas drag with handles and smart guides/snapping (objects, stage centre, ground lines, marks; Alt skips), numeric transform, align/distribute toolbar, group/ungroup, lock, hide; core layout.ts + layout.test.ts | Placement — Smart guides, snapping, align/distribute pending |
 | FR-STG-04 | Done | tools/test/m3-acceptance.test.ts seating test (hips on the seat anchor for each character); Studio e2e “dropping a character on a chair…” | Seating |
 | FR-STG-05 | Done | Studio e2e “workspace opens a project…” (Layers → timeline/toolbar selection) | Selection sync |
-| FR-CAM-01 | In progress | camera.add/update/remove; camera-framing.ts presets from subjects; CLI camera frame; Assets panel framings | Cameras — Manual framing by dragging the frame on the stage pending |
+| FR-CAM-01 | Done | camera.add/update/remove; framing presets from subjects; CLI camera frame; stage overview with the shot camera frame dragged to move and resized from the corner (EvalOptions.overview); e2e “the camera frame is dragged…” | Cameras — Manual framing by dragging the frame on the stage pending |
 | FR-CAM-02 | Done | cameraAt (shot track → camera, default camera fallback); SHOT_OVERLAP blocks export (session.test.ts) | Shots |
 | FR-CAM-03 | Done | cameraAt moves with easing/intensity; `follow` moves keep the framing on the walking subject (m3-acceptance “FR-CHR-04/FR-CAM-03”) | Moves — 18 moves authored including cam.follow-subject |
 | FR-CAM-04 | Done | 6 shot recipes authored (cam.*); recipe engine frames shots from subjects | Shot recipes |
 | FR-CAM-05 | Done | io/auto-coverage.ts; CLI test; tools/test/m3-acceptance.test.ts AC-06 path; Studio e2e | Auto-coverage |
-| FR-CAM-06 | In progress | ratioOverrides and headroom rule in viewMatrix; portrait frames evaluated in the AC-06 path | Aspect ratios — Safe-area previews and per-ratio framing UI pending |
+| FR-CAM-06 | Done | ratioOverrides and headroom rule in viewMatrix; canvas previews every project ratio with action/title safe areas and the app-UI zone on vertical; dragging the frame on another ratio edits its override; e2e | Aspect ratios — Safe-area previews and per-ratio framing UI pending |
 | FR-CAM-07 | Done | validate.ts (channels from manifests, speakers, shots, past end); Studio timeline hatching (e2e “auto performance…”) | Conflict rules |
 | FR-FX-01 | Done | core/perform/fx.ts; tools/test/m3-effects.test.ts; Studio e2e “atmosphere, effects and a shot transition…” | Apply Catalog K1 effects as clips attached to screen, stage point, obj — 24 K1 effects as clips attached to the screen, a stage point or an object; silhouette and freeze |
 | FR-FX-02 | Done | tools/test/m3-effects.test.ts; Studio e2e | Atmosphere (Catalog J1) as scene layers with intensity, colour and tim — 42 J1 atmospheres (weather, light, grades) with intensity, colour, timing; seeded particles |
@@ -141,11 +141,11 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-TML-08 | In progress | Zoom to fit, zoom to selection, zoom slider, overview strip on scenes over 90 s | Zoom and navigation — Pinch zoom pending |
 | FR-TML-09 | Done | EpisodeView.tsx: scene cards with thumbnails, reorder, transition into each scene; Studio e2e “…episode view…” (axe) | Episode view |
 | FR-SND-01 | Done | Assets panel adds music/ambience (looping to scene end), SFX and cues; content-audio.test.ts; templates place music and ambience | Add music, ambience and SFX from Catalog N or imports — 12 music beds, 12 cues, 20 ambience loops, 20 SFX (see CAT-08) |
-| FR-SND-02 | In progress | audio-captions.test.ts fades/pan; io/audio.ts limit(); export.test.ts peak ≤ −1 dBFS | Gain (dB), pan, fade in/out with curve, mute/solo per clip and track — Gain/pan/fades/mute/solo/limiter done; clip gain UI pending |
-| FR-SND-03 | In progress | audio-captions.test.ts ducking + duckCurve | Ducking — Automatic ducking with attack/release; curve display on timeline pending |
+| FR-SND-02 | Done | audio-captions.test.ts fades/pan; io/audio.ts limit(); export.test.ts peak ≤ −1 dBFS; Properties ▸ Sound per clip (gain, pan, fades, curve, mute, duck) and track M/S/gain | Gain (dB), pan, fade in/out with curve, mute/solo per clip and track — Gain/pan/fades/mute/solo/limiter done; clip gain UI pending |
+| FR-SND-03 | Done | audio-captions.test.ts ducking + duckCurve; ducking curve drawn on music/ambience lanes from the mix plan; depth/attack/release in the scene Mix section | Ducking — Automatic ducking with attack/release; curve display on timeline pending |
 | FR-SND-04 | Done | tools/test/m3-acceptance.test.ts AC-07 (cues at events, prop-state sounds, regeneration keeps baked cues); CLI scene sound-cues; Studio e2e | Sound cues |
-| FR-SND-05 | In progress | export.test.ts BS.1770 reference (±0.1 LU) and −14 LUFS normalisation | Meters — Loudness + normalisation in export report; live meters pending |
-| FR-SND-06 | Not started | — | Room tone and silence |
+| FR-SND-05 | Done | Level meter (peaks, 1.5 s hold, clip warning) on the preview master bus; export loudness readout and normalisation (preset, −14, −16, −23, off); export.test.ts BS.1770 reference | Meters — Loudness + normalisation in export report; live meters pending |
+| FR-SND-06 | Done | scene.audio.roomTone: the scene ambience fills gaps between lines at −18 dB without ducking; audio-captions.test.ts “room tone…”; Mix toggle | Room tone and silence |
 | FR-TXT-01 | In progress | core/captions.ts; scene-render.test.ts caption goldens; audio-captions.test.ts | Captions are generated from dialogue text and word timings (aligned ta — Captions from text + word timings, styles from txt.* assets, stacked speakers, safe areas; per-line style override pending |
 | FR-TXT-02 | Done | audio-captions.test.ts karaoke/pop; golden captions-bold-karaoke-captions | Word-highlight ("karaoke") and animated-word caption styles use word t — Karaoke and animated-word styles follow word timings |
 | FR-TXT-03 | Done | core/perform/text.ts bubbleItems; tools/test/m3-text.test.ts (tracks a walking character); Studio e2e “a speech bubble…” | Speech and thought bubbles attach to a character's mouth/head anchor w — Round, square, shout, whisper, thought and narration; tail to the mouth |
@@ -192,13 +192,13 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-RND-01 | Done | export.test.ts video frame vs CLI still; slice.test.ts server vs CLI byte-identical; studio e2e preview vs server pixel-identical | One renderer |
 | FR-RND-02 | Done | scene-render.test.ts determinism; seeded idle/blinks | Determinism |
 | FR-RND-03 | In progress | Studio CanvasView (half resolution while playing, “Preview quality” shown) | Preview — Interactive-rate numbers need AC-14 |
-| FR-RND-04 | In progress | out.* presets; renderExport options; Studio Export dialog | Export settings — Custom size/bitrate UI pending |
+| FR-RND-04 | Done | out.* presets; Export dialog: range (scene, episode, loop, markers, selection), captions, subtitles, stems, custom size, frame rate, quality, loudness, other ratios; server.test.ts “exports with custom fps…” | Export settings — Custom size/bitrate UI pending |
 | FR-RND-05 | Done | server render jobs snapshot state at submit; CLI snapshot | Snapshot |
 | FR-RND-06 | Done | export.test.ts (MP4, SRT/VTT, stems, report json+txt) | Outputs |
-| FR-RND-07 | In progress | server jobs + Studio Jobs popover with in-app player | Lifecycle — Retry button pending |
+| FR-RND-07 | Done | server jobs with phases; Jobs popover with in-app player and Retry for failed/cancelled exports (POST /api/jobs/:id/retry); server.test.ts | Lifecycle — Retry button pending |
 | FR-RND-08 | Done | export.test.ts blocked on missing media; Studio export dialog lists blocking problems | Validation before export |
-| FR-RND-09 | Not started | — | Quality |
-| FR-RND-10 | Not started | — | Batch |
+| FR-RND-09 | Done | CanvasKit vector rendering at output resolution (sRGB); deterministic motion blur (sub-frame averaging, RenderOptions.motionBlur); server.test.ts | Quality |
+| FR-RND-10 | Done | POST /renders/batch (queued one after another) and “Also export in” other ratios in the Export dialog; `frame render` without the Studio; server.test.ts | Batch |
 | FR-CLI-01 | In progress | cli tests (local); packages/server/test/cli-server-mode.test.ts (server mode) | A `frame` command provides every Studio capability that does not requi — Local and server mode share the engine; versions/script are local-only with a hint; MCP and remaining groups pending |
 | FR-CLI-02 | Done | framework.ts; cli-server-mode.test.ts (--server/--token, FRAME_AGENT_SESSION attribution) | Global options: `--project <path>`, `--json` (structured output on std |
 | FR-CLI-03 | Done | cli.test.ts describe/schema/help | Discoverability: `frame help`, `frame <cmd> --help`, `frame schema <ty |
