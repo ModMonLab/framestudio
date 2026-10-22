@@ -239,6 +239,20 @@ export class ProjectSession {
     this._state = { ...this._state, locks };
   }
 
+  /** Replaces the state as one undoable step (restoring a saved version, FR-PER-03). Locks are kept as derived data. */
+  restore(state: ProjectState, label: string, source = 'user'): ApplyResult {
+    const next = { ...state, locks: this._state.locks };
+    const [, patches, inverse] = produceWithPatches(this._state, () => next);
+    this._state = next;
+    this._revision++;
+    const changed = changedKeys(patches);
+    const step: HistoryStep = { revision: this._revision, label, source, commands: [], patches, inverse, touched: changed.length ? changed : ['*'], at: this.now(), kind: 'do' };
+    this.log.push(step);
+    this.undoStack.push(step);
+    this.redoStack = [];
+    return this.emit({ revision: this._revision, baseRevision: this._revision - 1, rebased: false, dryRun: false, label, commands: [], changed, state: next, reports: [] });
+  }
+
   /** Replace the state wholesale (external change reload, FR-PER-05). Clears undo history for safety. */
   replaceState(state: ProjectState, label = 'Reload from disk'): ApplyResult {
     const [, patches] = produceWithPatches(this._state, () => state);

@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { buildCharacter, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { assetUsages, compareStates, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import {
@@ -613,6 +613,73 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (b.place) cmds.push({ name: 'instance.add', params: { scene: b.place.scene, kind: 'character', asset: ref, name: manifest.name, transform: { x: b.place.x ?? 960, y: b.place.y ?? 1000 }, character: { look: b.place.look ?? data.defaultLook, view: b.place.view ?? 'three', posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false }, ...(data.voice ? { voice: data.voice } : {}) } } });
       const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: `Create ${manifest.name}` }, { dryRun: b.dryRun === true });
       return { ref, revision: r.revision, dryRun: r.dryRun, instance: b.place ? (r.commands[2]!.params as { id: string }).id : null };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  // Character versions (FR-CHR-10, FR-BLD-06): save the builder's changes as version n+1 (or as a new character) and,
+  // when asked, switch one instance, a scene or the whole project to it in the same undoable step.
+  app.post<{ Params: { pid: string }; Body: { from: string; spec?: Omit<CharacterSpec, 'from' | 'name'> & { name?: string }; asNew?: boolean; update?: { scope: 'instance' | 'scene' | 'project'; scene?: string; instance?: string }; dryRun?: boolean } }>('/api/projects/:pid/characters/versions', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      const lib = library(p);
+      const { manifest, commands: cmds, label, isNew } = characterVersionCommands(p.open.state, b, {
+        manifest: (r) => lib.manifest(r) as AssetManifest | undefined, versions: (id) => lib.versions(id).map((m) => m.version),
+      }, { newId: () => `user.${randomUUID()}`, date: new Date().toISOString().slice(0, 10), author: sourceOf(req) });
+      const ref = `${manifest.id}@${manifest.version}`;
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label }, { dryRun: b.dryRun === true });
+      return { ref, version: manifest.version, isNew, revision: r.revision, dryRun: r.dryRun, reports: r.reports };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Project versions (FR-PER-03): named snapshots; list, save, compare with the current state, restore (undoable).
+  app.get<{ Params: { pid: string } }>('/api/projects/:pid/versions', async (req, reply) => {
+    try {
+      return { versions: hub.get(req.params.pid).open.store.listVersions() };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string }; Body: { name: string } }>('/api/projects/:pid/versions', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const name = String(req.body?.name ?? '').trim();
+      if (!name) throw new FrameError('USAGE', 'name is required');
+      p.open.flush();
+      return p.open.store.saveVersion(p.open.state, p.open.session.revision, name, randomId('snap'));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.get<{ Params: { pid: string; vid: string } }>('/api/projects/:pid/versions/:vid/compare', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      return compareStates(p.open.store.loadVersion(req.params.vid), p.open.state);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; vid: string } }>('/api/projects/:pid/versions/:vid/restore', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const snap = p.open.store.loadVersion(req.params.vid);
+      const name = p.open.store.listVersions().find((v) => v.id === req.params.vid)?.name ?? req.params.vid;
+      // Applied as one undoable step (unlike an external reload, history is kept).
+      const r = p.open.session.restore(snap, `Restore version "${name}"`, sourceOf(req));
+      return { revision: r.revision, label: r.label };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Where an asset is used, across every open project (FR-AST-05).
+  app.get<{ Querystring: { id: string } }>('/api/library/usages', async (req, reply) => {
+    try {
+      const id = String(req.query.id ?? '').replace(/@\d+$/, '');
+      if (!id) throw new FrameError('USAGE', 'id is required');
+      return { id, projects: hub.list().map((p) => ({ project: p.id, name: p.open.state.project.name, usages: assetUsages(p.open.state, id) })).filter((x) => x.usages.length) };
     } catch (e) {
       return sendError(reply, e);
     }

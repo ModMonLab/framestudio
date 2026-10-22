@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { buildCharacter, type CharacterSpec } from '@frame/core';
+import { assetUsages, buildCharacter, characterVersionCommands, type CharacterSpec } from '@frame/core';
 import { parseRef, type Library } from '@frame/assets';
 import { rigCheck, type PartData } from '@frame/rig';
 import { AssetManifest, FrameError, issues, type PackageFormat } from '@frame/schema';
@@ -126,6 +126,76 @@ command({
     return { ref, name: manifest.name, dryRun: r.dryRun, revision: r.revision };
   },
   human: (r) => `${r.dryRun ? 'Dry run: would create' : 'Created'} ${r.name} (${r.ref})`,
+});
+
+command({
+  path: ['char', 'version', 'save'],
+  summary: 'Save changes to a character as a new immutable version (or --as-new character); optionally switch an instance, a scene or the project to it (FR-CHR-10).',
+  mutating: true,
+  args: [
+    { name: 'ref', description: 'Character version being changed (id@version)', positional: true, required: true },
+    { name: 'spec', description: 'JSON changes: name, role, parts, colors, looks, controls, details, body, voice, performance, changes', type: 'json' },
+    { name: 'as-new', description: 'Save as a new character', type: 'boolean' },
+    { name: 'update', description: 'Switch usages: instance, scene or project (default: none — usages keep their version)' },
+    { name: 'scene', description: 'Scene for --update instance|scene' },
+    { name: 'instance', description: 'Instance for --update instance' },
+  ],
+  run: async (ctx) => {
+    const lib = projectLibrary(ctx, optionalProject(ctx));
+    const p = optionalProject(ctx);
+    if (!p) throw new FrameError('NOT_FOUND', 'No Frame project here');
+    const scope = ctx.args.update as 'instance' | 'scene' | 'project' | undefined;
+    if (scope && !['instance', 'scene', 'project'].includes(scope)) throw new FrameError('USAGE', '--update must be instance, scene or project');
+    const author = ctx.io.env.FRAME_AGENT_SESSION ? `agent:${ctx.io.env.FRAME_AGENT_SESSION}` : 'cli';
+    const v = characterVersionCommands(p.state, {
+      from: withVersion(lib, String(ctx.args.ref)),
+      ...(ctx.args.spec ? { spec: ctx.args.spec as never } : {}),
+      asNew: ctx.args['as-new'] === true,
+      ...(scope ? { update: { scope, ...(ctx.args.scene ? { scene: String(ctx.args.scene) } : {}), ...(ctx.args.instance ? { instance: String(ctx.args.instance) } : {}) } } : {}),
+    }, { manifest: (r) => lib.manifest(r), versions: (id) => lib.versions(id).map((m) => m.version) }, { newId: () => `user.${randomUUID()}`, date: new Date().toISOString().slice(0, 10), author });
+    const r = await mutate(ctx, v.commands as never, v.label);
+    return { ref: `${v.manifest.id}@${v.manifest.version}`, isNew: v.isNew, dryRun: r.dryRun, revision: r.revision, label: r.label };
+  },
+  human: (r) => `${r.dryRun ? 'Dry run: ' : ''}${r.label} → ${r.ref}`,
+});
+
+command({
+  path: ['assets', 'usages'],
+  summary: 'Where each version of an asset is used in the project: instances, clips, voices, cast (FR-AST-05).',
+  args: [{ name: 'id', description: 'Asset id (any version)', positional: true, required: true }],
+  run: (ctx) => {
+    const p = openProject(ctx);
+    const id = String(ctx.args.id).replace(/@\d+$/, '');
+    return { id, usages: assetUsages(p.state, id) };
+  },
+  human: (r) => r.usages.map((u: any) => `${u.ref.padEnd(44)} ${u.kind.padEnd(10)} ${u.sceneName ? `${u.sceneName} / ` : ''}${u.name}`).join('\n') || 'Not used in this project.',
+});
+
+command({
+  path: ['assets', 'update-usages'],
+  summary: 'Switch usages of an asset version to another version: --scope instance|scene|project (explicit and undoable, FR-AST-05).',
+  mutating: true,
+  args: [
+    { name: 'from', description: 'Current id@version', positional: true, required: true },
+    { name: 'to', description: 'Target id@version', positional: true, required: true },
+    { name: 'scope', description: 'instance, scene or project', required: true },
+    { name: 'scene', description: 'Scene id (instance and scene scopes)' },
+    { name: 'instance', description: 'Instance id (instance scope)' },
+  ],
+  run: async (ctx) => {
+    const lib = projectLibrary(ctx, optionalProject(ctx));
+    const to = String(ctx.args.to);
+    const m = lib.manifest(to);
+    if (!m) throw new FrameError('NOT_FOUND', `${to} is not in the library`);
+    const d = m.data as { looks?: { id: string }[]; defaultLook?: string } | undefined;
+    const r = await mutate(ctx, [{ name: 'asset.updateUsages', params: {
+      from: String(ctx.args.from), to, scope: String(ctx.args.scope),
+      ...(ctx.args.scene ? { scene: String(ctx.args.scene) } : {}), ...(ctx.args.instance ? { instance: String(ctx.args.instance) } : {}),
+      ...(d?.looks ? { looks: d.looks.map((l) => l.id), ...(d.defaultLook ? { fallbackLook: d.defaultLook } : {}) } : {}),
+    } }]);
+    return { dryRun: r.dryRun, revision: r.revision, label: r.label, updated: (r.reports[0] as { updated?: unknown[] } | undefined)?.updated ?? [] };
+  },
+  human: (r) => `${r.dryRun ? 'Dry run: ' : ''}${r.label} (${r.updated.length} usage(s))`,
 });
 
 /* ------------------------------------------------------------------ asset packages */
