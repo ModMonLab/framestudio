@@ -21,14 +21,14 @@ export interface PreviewSetup {
   state: ProjectState;
   scene: string;
   t: number;
-  framing: 'full' | 'face' | 'scene';
+  framing: 'full' | 'face' | 'upper' | 'scene';
   /** Instance to frame (character or prop). */
   subject?: string;
 }
 
 /** Kinds that have a visual preview; others (output presets, controls without art) return undefined. */
 export function previewable(kind: string): boolean {
-  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'exp' || kind === 'act' || kind === 'prop' || kind === 'kit' || kind === 'txt';
+  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'prop' || kind === 'kit' || kind === 'txt';
 }
 
 const PREVIEW_USER_ID = 'user.00000000-0000-4000-8000-0000000000ff';
@@ -60,11 +60,15 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
   if (!previewCharacter) return undefined;
   const base = previewCharacter.manifest.data as CharacterData;
   let charRef = previewCharacter.ref;
-  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin') {
+  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin' || m.kind === 'body') {
     // A project-local copy of the preview character wearing the item.
     const data: CharacterData = JSON.parse(JSON.stringify(base));
     if (m.kind in PART_KEYS) data.parts[PART_KEYS[m.kind]!] = ref;
     else if (m.kind === 'skin') data.colors.skin = (m.data as { skinTone?: { base: string } }).skinTone?.base ?? data.colors.skin!;
+    else if (m.kind === 'body') {
+      data.bodyBase = ref;
+      data.body = {};
+    }
     else {
       const look = data.looks.find((l) => l.id === data.defaultLook) ?? data.looks[0]!;
       const replaced = m.kind === 'dress' ? new Set(['top', 'bottom', 'dress']) : new Set([m.kind]);
@@ -83,6 +87,24 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
     apply([{ name: 'clip.add', params: { scene, track: track.id, start: 0, end: 48000 * 4, asset: ref, blendIn: 0, blendOut: 0 } }]);
     // Expressions read best once settled; actions at their midpoint.
     t = m.kind === 'exp' ? 48000 : 48000 * 1.2;
+  }
+  if (m.kind === 'hand') {
+    // A held pose: the right hand raised in front of the chest showing the hand shape.
+    const pose = (m.data as { handPose?: string }).handPose ?? 'relaxed';
+    const act = { ...m, id: PREVIEW_USER_ID.replace(/ff$/, 'fd'), version: 1, kind: 'act', name: 'Hand preview', data: { action: { channels: ['armR', 'handR'], duration: 2, hand: 'R', loop: false, postures: ['standing'], keys: { armR: [{ t: 0, v: [0.32, -0.25, 0.9] }], handR: [{ t: 0, v: pose }] } } } } as AssetManifest;
+    apply([{ name: 'asset.addLocal', params: { manifest: act } }]);
+    const track = trackFor(s.state.scenes[scene]!, inst, 'acting')!;
+    apply([{ name: 'clip.add', params: { scene, track: track.id, start: 0, end: 48000 * 2, asset: `${act.id}@1`, blendIn: 0, blendOut: 0 } }]);
+    return { state: s.state, scene, t: 48000, framing: 'upper', subject: inst };
+  }
+  if (m.kind === 'mouthshape') {
+    // A line whose alignment holds one phoneme of this shape (preview only; no audio exists).
+    const ph = (m.data as { phonemes?: string[] }).phonemes ?? [];
+    const line = apply([{ name: 'line.add', params: { scene, speaker: inst, text: 'Preview', start: 0, durationS: 2 } }]).commands[0]!.params.id as string;
+    const alignment = { method: 'fixture' as const, confidence: 1, words: [], phonemes: ph.length ? [{ p: ph[0]!, start: 0.2, end: 1.8 }] : [] };
+    const take = apply([{ name: 'take.add', params: { take: { line, lineRevision: 1, source: 'recorded', fixture: true, status: 'ready', durationS: 2, alignment } } }]).commands[0]!.params.id as string;
+    apply([{ name: 'line.chooseTake', params: { scene, id: line, take } }]);
+    return { state: s.state, scene, t: 48000, framing: 'face', subject: inst };
   }
   if (m.kind === 'txt') {
     // Caption styles: an enlarged local copy of the style over an empty stage so the thumbnail is legible.
@@ -121,13 +143,13 @@ export function previewFrame(
   const w = b.w * k;
   const cx = (b.x + b.w / 2) * k;
   // Face framing shows the head (top ~22 % of a standing character); full framing shows everything with margin.
-  const span = framing === 'face' ? h * 0.24 : h;
+  const span = framing === 'face' ? h * 0.24 : framing === 'upper' ? h * 0.55 : h;
   const pad = framing === 'face' ? 1.25 : 1.1;
   // Cameras frame by width at the project's design aspect and keep that height at other aspects (viewMatrix), so
   // the visible height is camW / designAspect and the visible width is that height × the output aspect.
   const design = state.project.output.width / state.project.output.height;
   const aspect = o.width / o.height;
-  const needW = (framing === 'face' ? Math.min(w, span * 1.2) : w) * pad;
+  const needW = (framing === 'full' ? w : Math.min(w, span * 1.2)) * pad;
   const camW = Math.max(span * pad, needW / aspect) * design;
   const cam = { ...sc0.cameras[0]!, center: { x: cx, y: top + span / 2 - (framing === 'face' ? span * 0.02 : 0) }, width: camW };
   const next: ProjectState = { ...state, scenes: { ...state.scenes, [scene]: { ...sc0, cameras: [cam] } } };

@@ -41,7 +41,11 @@ export interface CoverageReport {
   rows: CoverageRow[];
 }
 
-export function coverage(cat: Catalog, manifestOf: (id: string) => Manifest | undefined, rigCheck?: (m: Manifest) => boolean | undefined, now = new Date().toISOString()): CoverageReport {
+/**
+ * `previewCheck` renders the item's preview in both families and reports success; without it, previews count only
+ * when the manifest lists stored preview files.
+ */
+export function coverage(cat: Catalog, manifestOf: (id: string) => Manifest | undefined, rigCheck?: (m: Manifest) => boolean | undefined, now = new Date().toISOString(), previewCheck?: (m: Manifest) => boolean | undefined): CoverageReport {
   const rows: CoverageRow[] = [];
   const lists: CoverageReport['lists'] = [];
   for (const list of cat.lists) {
@@ -62,7 +66,8 @@ export function coverage(cat: Catalog, manifestOf: (id: string) => Manifest | un
         const rig = RIG_KINDS.has(kind) ? rigCheck?.(m) : true;
         row.validator = !schemaOk ? 'invalid' : rig === undefined ? 'not run' : rig ? 'ok' : 'invalid';
         const previews = m.previews as { flat?: unknown; illustrated?: unknown } | undefined;
-        row.previews = !FAMILY_KINDS.has(kind) ? 'n/a' : previews?.flat && previews.illustrated ? 'ok' : 'missing';
+        const rendered = previewCheck?.(m);
+        row.previews = !FAMILY_KINDS.has(kind) ? 'n/a' : rendered === true || (rendered === undefined && previews?.flat && previews.illustrated) ? 'ok' : rendered === false ? 'invalid' : 'missing';
         row.review = m.review?.status === 'approved' ? 'ok' : 'pending';
         row.licence = m.license.redistributable && m.license.commercialUse && m.provenance?.author ? 'ok' : 'invalid';
         row.green = [row.families, row.views, row.validator, row.previews, row.review, row.licence].every((c) => c === 'ok' || c === 'n/a');

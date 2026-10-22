@@ -52,6 +52,19 @@ describe('scene evaluation and rendering (FR-RND-01/02, M1 slice)', () => {
     expect(Buffer.from(r.rgba(fa.frame)).equals(Buffer.from(r.rgba(fb.frame)))).toBe(true);
   });
 
+  it('re-aligning a take updates lip sync (mouth tracks are cached per alignment, not per take id)', () => {
+    const { session, scene, lines } = buildSampleScene('flat');
+    const take = session.state.scenes[scene]!.clips.find((c) => c.id === lines[0])!.line!.take!;
+    const at = () => JSON.stringify(evaluateFrame(session.state, scene, secondsToTicks(1.3), { assets, styles, width: 320, height: 180 }).frame);
+    const before = at();
+    const al = session.state.takes[take]!.alignment!;
+    session.apply({ commands: [{ name: 'take.update', params: { id: take, set: { alignment: { ...al, phonemes: al.phonemes.map((p) => ({ ...p, p: 'AA' })) } } } }] });
+    const wide = at();
+    expect(wide).not.toBe(before);
+    session.apply({ commands: [{ name: 'take.update', params: { id: take, set: { alignment: JSON.parse(JSON.stringify(al)) } } }] });
+    expect(at()).toBe(before);
+  });
+
   it('lip sync moves the speaker mouth only while a ready take plays', () => {
     const { session, scene } = buildSampleScene('flat');
     const at = (s: number) => evaluateFrame(session.state, scene, secondsToTicks(s), { assets, styles, width: 320, height: 180 });

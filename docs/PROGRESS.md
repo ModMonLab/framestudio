@@ -222,7 +222,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | CAT-01 | In progress | docs/catalog/coverage.md | Completeness — 446 / 1254 items have manifests |
 | CAT-02 | In progress | coverage.md families/views columns | Families and views — Authored items carry both families and four views or exemptions; per-list status in the report |
 | CAT-03 | In progress | rig check in coverage report (all authored character parts pass the static check) | Rig contract — Action compatibility matrix not generated |
-| CAT-04 | In progress | coverage.md | Manifests and previews — Manifests valid; rendered previews (both families) not generated yet |
+| CAT-04 | In progress | coverage report renders every previewable item in both families (pnpm catalog:coverage) | Manifests and previews — 426 of 446 manifests have rendered previews; hand poses need a close-up hand preview; body bases differ too subtly (art) |
 | CAT-05 | In progress | coverage.md licence column | Licensing and provenance — Every bundled manifest records licence LicenseRef-Frame-Bundled and provenance |
 | CAT-06 | Not verified | — | Quality bar — Human visual review (owner); all items review: pending |
 | CAT-07 | In progress | catalog/*.yaml; packages/assets/test/catalog.test.ts | Content pipeline — Content pipeline pending |
@@ -281,8 +281,8 @@ The Notes column starts with the requirement's short title from the SRS.
 
 ## Catalog coverage
 Report: [docs/catalog/coverage.md](catalog/coverage.md) (`pnpm catalog:coverage`). **Green: 0 / 1254 (0 %)**;
-manifests present for 446 / 1254 (35.6 %). Nothing is green yet because previews are not rendered and no item has passed human visual
-review (CAT-06); all authored character parts pass the static rig check (FR-AST-08). Lists with authored content:
+manifests present for 446 / 1254 (35.6 %). Nothing is green yet because no item has passed human visual review (CAT-06). All authored character parts pass
+the static rig check (FR-AST-08); 426 of 446 manifests render previews in both families (hand poses pending). Lists with authored content:
 A1–A19 face/body parts and controls, B1–B5 wardrobe (part), E1 expressions (83), F1 actions (19 of 118), D1 cast (14),
 H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output presets (12).
 

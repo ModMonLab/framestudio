@@ -227,7 +227,8 @@ function mixFace(a: FaceState, b: FaceState, w: number): FaceState {
   return out;
 }
 
-const mouthCache = new Map<string, ReturnType<typeof mouthTrackFromAlignment>>();
+/** Mouth tracks per alignment object (state is immutable: a re-aligned take gets a new alignment object). */
+const mouthCache = new WeakMap<object, Map<string, ReturnType<typeof mouthTrackFromAlignment>>>();
 
 function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, assets: AssetResolver, fps: number): PerfResult {
   const ch = inst.character!;
@@ -311,15 +312,16 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     const take = c.line.take ? state.takes[c.line.take] : undefined;
     if (!take || lineTakeState(state, c) !== 'Ready' || !take.alignment) continue;
     speaking = true;
-    const key = `${take.id}:${fps}:${JSON.stringify(c.line.mouthOverrides ?? [])}`;
-    let track = mouthCache.get(key);
+    const key = `${fps}:${JSON.stringify(c.line.mouthOverrides ?? [])}`;
+    let byKey = mouthCache.get(take.alignment);
+    if (!byKey) mouthCache.set(take.alignment, (byKey = new Map()));
+    let track = byKey.get(key);
     if (!track) {
       // Amplitude fallback when no aligner was available (FR-LIP-02): approximate shapes from the RMS envelope.
       const env = take.alignment.envelope;
       track = take.alignment.method === 'amplitude' && env ? mouthTrackFromEnvelope(env.values, env.windowS, { fps }) : mouthTrackFromAlignment(take.alignment, { fps });
       track = { ...track, blocks: applyOverrides(track.blocks, c.line.mouthOverrides as MouthBlock[] | undefined) };
-      if (mouthCache.size > 500) mouthCache.clear();
-      mouthCache.set(key, track);
+      byKey.set(key, track);
     }
     mouth = shapeAt(track.blocks, sec(t - c.start + (c.sourceIn ?? 0))) as MouthLetter;
   }
