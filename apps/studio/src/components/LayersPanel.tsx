@@ -4,12 +4,14 @@ import { Box, Camera, Clapperboard, Film, Plus, User } from 'lucide-react';
 import { IconButton, Panel, SearchField, Tree, type TreeNode } from '@frame/ui';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
+import { instanceMenu, useContextMenu } from './ContextMenu.js';
 
 export function LayersPanel() {
   const { studio, assets } = useCtx();
   const project = useStudio(studio, (s) => s.project)!;
   const sceneId = useStudio(studio, (s) => s.scene);
   const selection = useStudio(studio, (s) => s.selection);
+  const openMenu = useContextMenu();
   const [q, setQ] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(['ep:' + project.project.episodes[0], 'grp:cast', 'grp:set', 'grp:cameras', ...(sceneId ? [`scn:${sceneId}`] : [])]));
 
@@ -87,6 +89,10 @@ export function LayersPanel() {
         }}
         query={q}
         emptyText="No matches"
+        onContextMenu={(id, at) => {
+          const [kind, rawId] = id.split(':');
+          if (kind === 'ins' && id.split(':').length === 2) openMenu({ ...at, items: instanceMenu(studio, rawId!), label: 'Object actions' });
+        }}
       />
     </Panel>
   );

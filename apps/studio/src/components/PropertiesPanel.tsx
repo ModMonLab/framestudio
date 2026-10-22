@@ -1,6 +1,6 @@
 /** Properties panel (Design System §7.1): Properties / Acting / Audio tabs with collapsible sections. */
 import { useEffect, useRef, useState } from 'react';
-import { Pause, Play, Plus, Sparkles, UserCog } from 'lucide-react';
+import { Pause, Play, Plus, Sparkles, Upload, UserCog } from 'lucide-react';
 import { lineTakeState, trackFor, type ProjectState } from '@frame/core';
 import type { Clip, Instance, Scene, Take } from '@frame/schema';
 import { Button, Chip, EmptyState, IconButton, NumberField, Panel, Section, Select, SliderRow, StatusBadge, Tabs, TextArea, ToggleRow, useSectionState, type EditPhase } from '@frame/ui';
@@ -191,6 +191,15 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const workerOk = worker?.state === 'connected' || worker?.state === 'busy';
   const engine = worker?.capabilities?.engines[0];
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const upload = async (f: File) => {
+    if (!line) return;
+    try {
+      await api.uploadTake(pid, scene.id, line.id, f);
+    } catch (e) {
+      studio.set({ lastError: { message: (e as Error).message } });
+    }
+  };
   const generate = async () => {
     if (!line) return;
     try {
@@ -232,6 +241,8 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
               <Button variant="primary" loading={generating} disabled={!workerOk || !voiceRef || line.line.muted} disabledReason={!voiceRef ? `Design a voice for ${inst.name} first` : !workerOk ? worker?.hint ?? worker?.message ?? 'The voice worker is not connected' : 'This line is muted'} onClick={() => void generate()}>Generate takes</Button>
             </div>
             {worker?.fixture && <p className="fr-hint">The connected worker produces fixture audio — not real speech.</p>}
+            <input ref={fileRef} type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,.aac,.webm,audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f); }} />
+            <Button icon={<Upload size={14} />} disabled={line.line.muted} disabledReason="This line is muted" onClick={() => fileRef.current?.click()}>Upload take…</Button>
           </>
         ) : <p className="fr-hint">{inst.name} has no lines in this scene.</p>}
         <TextArea label="New line" value={newLine} onChange={setNewLine} rows={2} placeholder={`New line for ${inst.name}`} />

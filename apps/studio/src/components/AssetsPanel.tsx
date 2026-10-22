@@ -3,10 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { AssetRow, Button, EmptyState, Panel, SearchField, Section, useToasts } from '@frame/ui';
 import { trackFor } from '@frame/core';
 import { api } from '../lib/api.js';
-import { useStudio } from '../lib/store.js';
+import { useStudio, type Studio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
 
-interface Hit {
+export const DRAG_TYPE = 'application/x-frame-asset';
+
+export interface Hit {
   ref: string;
   kind: string;
   name: string;
@@ -71,37 +73,8 @@ export function AssetsPanel({ filter }: { filter: string }) {
   };
 
   const apply = async (h: Hit) => {
-    if (!scene) return;
-    const at = studio.state.time;
-    const cx = project.project.output.width / 2;
-    switch (h.kind) {
-      case 'chr': {
-        const m = (await api.manifest(h.ref, pid)) as { data: { defaultLook: string } };
-        await studio.exec([{ name: 'instance.add', params: { scene: scene.id, kind: 'character', asset: h.ref, name: h.name, transform: { x: cx, y: project.project.output.height * 0.92 }, character: { look: m.data.defaultLook, view: 'three', posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false } } } }]);
-        break;
-      }
-      case 'prop':
-        await studio.exec([{ name: 'instance.add', params: { scene: scene.id, kind: 'prop', asset: h.ref, name: h.name, transform: { x: cx, y: project.project.output.height * 0.8 } } }]);
-        break;
-      case 'kit': {
-        const m = (await api.manifest(h.ref, pid)) as { data: { kit: { parts: Record<string, { plane?: string; at?: [number, number] }> } } };
-        const parts = Object.entries(m.data.kit.parts);
-        await studio.exec(parts.map(([part, p]) => ({ name: 'instance.add', params: { scene: scene.id, kind: 'set-piece', asset: h.ref, name: part[0]!.toUpperCase() + part.slice(1), transform: { x: p.at?.[0] ?? cx, y: p.at?.[1] ?? project.project.output.height }, depthPlane: p.plane ?? 'back', params: { part } } })), `Add ${h.name}`);
-        break;
-      }
-      case 'exp':
-      case 'act': {
-        const track = trackFor(scene, selChar!.id, h.kind === 'exp' ? 'face' : 'acting');
-        if (!track) return;
-        const len = Math.round(48000 * 2);
-        await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + len), asset: h.ref, blendIn: 4800, blendOut: 4800 } }]);
-        break;
-      }
-      case 'txt':
-        await studio.exec([{ name: 'project.setSettings', params: { captions: { ...project.project.captions, style: h.ref } } }], `Caption style ${h.name}`);
-        toasts.show({ tone: 'success', message: `Captions now use ${h.name}.` });
-        break;
-    }
+    const msg = await placeAsset(studio, h, { character: selChar?.id });
+    if (msg) toasts.show({ tone: 'success', message: msg });
   };
 
   const pickedHit = all?.find((h) => h.ref === picked);
@@ -121,7 +94,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
               onClick={() => setPicked(h.ref)}
               onDoubleClick={() => void apply(h)}
               draggable={!reason(h)}
-              onDragStart={(e) => e.dataTransfer.setData('application/x-frame-asset', h.ref)}
+              onDragStart={(e) => { e.dataTransfer.setData(DRAG_TYPE, JSON.stringify(h)); e.dataTransfer.effectAllowed = 'copy'; }}
             />
           ))}
           {hits.length > 60 && <p className="fr-faint" style={{ padding: '4px 12px' }}>{hits.length - 60} more · refine the search to see them</p>}
@@ -136,4 +109,46 @@ export function AssetsPanel({ filter }: { filter: string }) {
       )}
     </Panel>
   );
+}
+
+/**
+ * Places or applies a library item (shared by the panel, canvas drops and timeline drops, Design System §8).
+ * Returns a confirmation message for non-visual changes.
+ */
+export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; position?: { x: number; y: number }; character?: string } = {}): Promise<string | undefined> {
+  const s = studio.state;
+  const project = s.project!;
+  const scene = s.scene ? project.scenes[s.scene] : undefined;
+  if (!scene) return undefined;
+  const at = o.at ?? s.time;
+  const pos = o.position;
+  const cx = project.project.output.width / 2;
+  switch (h.kind) {
+    case 'chr': {
+      const m = (await api.manifest(h.ref, s.pid)) as { data: { defaultLook: string } };
+      await studio.exec([{ name: 'instance.add', params: { scene: scene.id, kind: 'character', asset: h.ref, name: h.name, transform: { x: pos?.x ?? cx, y: pos?.y ?? project.project.output.height * 0.92 }, character: { look: m.data.defaultLook, view: 'three', posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false } } } }], `Add ${h.name}`);
+      return undefined;
+    }
+    case 'prop':
+      await studio.exec([{ name: 'instance.add', params: { scene: scene.id, kind: 'prop', asset: h.ref, name: h.name, transform: { x: pos?.x ?? cx, y: pos?.y ?? project.project.output.height * 0.8 } } }], `Add ${h.name}`);
+      return undefined;
+    case 'kit': {
+      const m = (await api.manifest(h.ref, s.pid)) as { data: { kit: { parts: Record<string, { plane?: string; at?: [number, number] }> } } };
+      const parts = Object.entries(m.data.kit.parts);
+      await studio.exec(parts.map(([part, p]) => ({ name: 'instance.add', params: { scene: scene.id, kind: 'set-piece', asset: h.ref, name: part[0]!.toUpperCase() + part.slice(1), transform: { x: p.at?.[0] ?? cx, y: p.at?.[1] ?? project.project.output.height }, depthPlane: p.plane ?? 'back', params: { part } } })), `Add ${h.name}`);
+      return undefined;
+    }
+    case 'exp':
+    case 'act': {
+      if (!o.character) return undefined;
+      const track = trackFor(scene, o.character, h.kind === 'exp' ? 'face' : 'acting');
+      if (!track) return undefined;
+      await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + 96000), asset: h.ref, blendIn: 4800, blendOut: 4800 } }], `${h.name}`);
+      return undefined;
+    }
+    case 'txt':
+      await studio.exec([{ name: 'project.setSettings', params: { captions: { ...project.project.captions, style: h.ref } } }], `Caption style ${h.name}`);
+      return `Captions now use ${h.name}.`;
+  }
+  return undefined;
 }

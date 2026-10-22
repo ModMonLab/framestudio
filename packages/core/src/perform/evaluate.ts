@@ -9,7 +9,7 @@ import type { ProjectState } from '../state.js';
 import { hash32, prng } from '../ids.js';
 import { TICKS_PER_SECOND } from '../time.js';
 import { lineTakeState } from '../validate.js';
-import { applyOverrides, mouthTrackFromAlignment, shapeAt } from './lipsync.js';
+import { applyOverrides, mouthTrackFromAlignment, mouthTrackFromEnvelope, shapeAt } from './lipsync.js';
 import { clipWeight, mirrorKeys, sample, type ActionData, type ExpressionData, type Key } from './data.js';
 import { resolveCharacter, type AssetResolver } from './character.js';
 import { captionItems, DEFAULT_CAPTION_STYLE, stripPauseMarkers, type CaptionStyle } from '../captions.js';
@@ -314,7 +314,9 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     const key = `${take.id}:${fps}:${JSON.stringify(c.line.mouthOverrides ?? [])}`;
     let track = mouthCache.get(key);
     if (!track) {
-      track = mouthTrackFromAlignment(take.alignment, { fps });
+      // Amplitude fallback when no aligner was available (FR-LIP-02): approximate shapes from the RMS envelope.
+      const env = take.alignment.envelope;
+      track = take.alignment.method === 'amplitude' && env ? mouthTrackFromEnvelope(env.values, env.windowS, { fps }) : mouthTrackFromAlignment(take.alignment, { fps });
       track = { ...track, blocks: applyOverrides(track.blocks, c.line.mouthOverrides as MouthBlock[] | undefined) };
       if (mouthCache.size > 500) mouthCache.clear();
       mouthCache.set(key, track);

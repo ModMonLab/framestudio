@@ -131,6 +131,38 @@ describe('Frame Server (FR-ARC-01..05)', () => {
     await s2.close();
   });
 
+  it('uploads a take: decodes, measures, lip-syncs from the amplitude envelope without a worker (FR-VOI-06, FR-LIP-02)', async () => {
+    const pid = (await api('POST', '/api/projects/open', { path: project() })).json.id;
+    const st = (await api('GET', `/api/projects/${pid}/state`)).json;
+    const scene = Object.keys(st.state.scenes)[0]!;
+    const who = (await api('POST', `/api/projects/${pid}/commands`, { commands: [{ name: 'instance.add', params: { scene, kind: 'character', asset: 'chr.maya-bennett@1', name: 'Host', character: { look: 'on-air', view: 'front', posture: 'standing', auto: { idle: false, listening: false, blinks: false, talkingGestures: false } } } }] })).json.commands[0].params.id;
+    const line = (await api('POST', `/api/projects/${pid}/commands`, { commands: [{ name: 'line.add', params: { scene, speaker: who, text: 'Testing the upload path.', start: 0 } }] })).json.commands[0].params.id;
+    // 1 s of a 220 Hz tone with a silent half: PCM16 mono WAV.
+    const { encodeWav } = await import('@frame/io');
+    const sr = 16000;
+    const pcm = new Float32Array(sr).map((_x, i) => (i < sr / 2 ? 0.4 * Math.sin((2 * Math.PI * 220 * i) / sr) : 0));
+    const wav = encodeWav({ sampleRate: sr, channels: 1, data: [pcm] });
+    const up = await fetch(`${base}/api/projects/${pid}/takes/upload?scene=${scene}&line=${line}&ext=wav`, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: wav as BodyInit });
+    expect(up.status).toBe(202);
+    const jobId = ((await up.json()) as any).id;
+    let j: any;
+    await expect.poll(async () => (j = (await api('GET', `/api/jobs/${jobId}`)).json).state, { timeout: 20_000 }).toBe('succeeded');
+    expect(j.result).toMatchObject({ aligned: false, durationS: 1 });
+    expect(j.result.note).toMatch(/audio level/);
+    const after = (await api('GET', `/api/projects/${pid}/state`)).json.state;
+    const take = after.takes[j.result.take];
+    expect(take).toMatchObject({ source: 'uploaded', status: 'ready', fixture: false });
+    expect(take.alignment.method).toBe('amplitude');
+    expect(take.alignment.envelope.values.slice(0, 20).every((v: number) => v > 0.2)).toBe(true);
+    expect(take.alignment.envelope.values.slice(30).every((v: number) => v === 0)).toBe(true);
+    expect(after.scenes[scene].clips.find((c: any) => c.id === line).line.take).toBe(j.result.take);
+    // Not audio → a coded failure, nothing chosen.
+    const bad = await fetch(`${base}/api/projects/${pid}/takes/upload?scene=${scene}&line=${line}&ext=wav`, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array([1, 2, 3, 4, 5]) });
+    const badJob = ((await bad.json()) as any).id;
+    await expect.poll(async () => (j = (await api('GET', `/api/jobs/${badJob}`)).json).state, { timeout: 20_000 }).toBe('failed');
+    expect(j.error.code).toBe('VALIDATION_FAILED');
+  });
+
   it('detects edits made on disk and reloads them (FR-PER-05)', async () => {
     const dir = project();
     const pid = (await api('POST', '/api/projects/open', { path: dir })).json.id;

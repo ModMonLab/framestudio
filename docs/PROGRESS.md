@@ -50,7 +50,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-PER-03 | In progress | store.test.ts versions; `frame versions` | Versions (snapshots) — Compare summary pending |
 | FR-PER-04 | Done | store.test.ts recovery; crash.test.ts | Crash recovery |
 | FR-PER-05 | In progress | server.test.ts “detects edits made on disk and reloads”; hub.checkExternal | External changes — Merge UI when local changes are pending: event sent, dialog pending |
-| FR-PER-06 | In progress | packages/core/src/validate.ts | Validation — Problems panel UI pending |
+| FR-PER-06 | In progress | core validate.ts; Studio Problems badge + list with “Go to” (selects and seeks) | Validation — One-click fixes pending |
 | FR-PER-07 | Not started | — | Clipboard |
 | FR-AST-01 | Not started | — | Library sources |
 | FR-AST-02 | Not started | — | Manifests |
@@ -168,7 +168,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-VOI-03 | In progress | Worker /v1/voices/range + tests (fixture) | Emotional range bank — Range bank UI pending; real-engine quality needs AC-03 panel |
 | FR-VOI-04 | Not started | — | Clone a voice |
 | FR-VOI-05 | Not started | — | Record in browser |
-| FR-VOI-06 | Not started | — | Upload |
+| FR-VOI-06 | In progress | server.test.ts upload (decode, measure, amplitude envelope, coded failure); slice.test.ts upload aligned by the worker; Studio “Upload take…” | Upload — Optional loudness normalisation on upload pending |
 | FR-VOI-07 | In progress | slice.test.ts; studio e2e “Generate takes” | Generate takes — Generation, takes list, choose; seed policy UI pending |
 | FR-VOI-08 | In progress | voice-client workflow sends only reported controls; Studio delivery shows only worker emotions and states unsupported pace/instruction | Honest capabilities — Delivery presets (Q2) pending |
 | FR-VOI-09 | Done | session.test.ts outdated takes; workflow.ts never auto-selects stale; Studio “Previous text” badge | Stale results |
@@ -184,7 +184,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-VWK-07 | In progress | `frame-voice-worker doctor` | Installation — Needs a run on the reference machine |
 | FR-VWK-08 | Done | `fetch-models` refuses without --accept-licences; LICENSES.md | Licences |
 | FR-LIP-01 | In progress | lipsync.ts mapping; slice.test.ts (alignment → >3 mouth shapes) | Pipeline — WhisperX path not verified without GPU |
-| FR-LIP-02 | In progress | amplitudeTrack in lipsync.ts | Fallback — Hook into upload flow pending |
+| FR-LIP-02 | Done | alignment.envelope + evaluate amplitude fallback; server.test.ts upload without worker | Fallback |
 | FR-LIP-03 | Not started | — | Composition |
 | FR-LIP-04 | Not started | — | Editing |
 | FR-LIP-05 | Not started | — | Views |
@@ -229,11 +229,11 @@ The Notes column starts with the requirement's short title from the SRS.
 | CAT-08 | Not started | — | Sound assets |
 | CAT-09 | Not started | — | Starter voices |
 | CAT-10 | Not started | — | Coverage report |
-| UI-01 | In progress | apps/studio (workspace shell, rail, panels, canvas, timeline, properties); studio e2e | The Studio implements the shell, modes, rail, panels, canvas, timeline — Panel resizing pending |
+| UI-01 | In progress | apps/studio (shell, rail, resizable panels, canvas, timeline, properties); studio e2e | The Studio implements the shell, modes, rail, panels, canvas, timeline — Panel collapse shortcuts exist (\\ and View menu); 125 % zoom check pending |
 | UI-02 | In progress | apps/studio Workspace + Builder | The Studio workspace and Character builder match the reference screens — Visual comparison with mockups pending owner sign-off |
 | UI-03 | Not started | — | Every screen listed in 02 §7 |
 | UI-04 | In progress | packages/ui tree/sections/lists/search | Organisation patterns: trees, collapsible sections, lists and search b |
-| UI-05 | In progress | shared selection, undo labels, autosave badge, keyboard shortcuts, drag on canvas/timeline | Selection, undo, autosave, keyboard, drag-and-drop and context-menu ru — Context menus, library drag-and-drop to canvas pending |
+| UI-05 | In progress | shared selection, undo labels, autosave badge, keyboard shortcuts, drag on canvas/timeline, context menus (canvas, layers, clips), library drag-and-drop to canvas and Face/Acting lanes | Selection, undo, autosave, keyboard, drag-and-drop and context-menu ru — Tree drag-and-drop reparenting pending |
 | UI-06 | In progress | disabledReason on buttons/menus/selects | Every visible control works or states its prerequisite |
 | UI-07 | In progress | apps/gallery/e2e (40 screenshots) | Visual regression tests cover every component state and both reference — Reference screens pending |
 | NFR-01 | Not started | — | Responsiveness |
@@ -250,7 +250,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | NFR-12 | In progress | gallery axe checks (WCAG 2.2 AA), decision 0007 | Accessibility |
 | NFR-13 | In progress | architecture.test.ts | Maintainability |
 | NFR-14 | Not started | — | Compatibility |
-| NFR-15 | In progress | CI matrix ubuntu/macos/windows | Portability — Windows fixes (paths, LF, crash-test rounds) pushed; awaiting green run |
+| NFR-15 | In progress | CI run 12: typecheck, lint and tests green on ubuntu, macOS and Windows | Portability — Voice Worker on the reference GPU (WSL2/Docker) not verified |
 | NFR-16 | In progress | packages/ui/src/i18n.ts | Internationalisation-ready |
 | NFR-17 | Not started | — | Licensing |
 | NFR-18 | In progress | fixture labels in worker, voice assets, takes, reports, Studio | Transparency — AI-generated provenance on real takes pending |
@@ -287,10 +287,10 @@ B1–B5 wardrobe (part), E1 expressions (83), F actions (19 of the list), C1 cas
 O1 caption styles (6), R1 output presets (12). CAT-10 coverage report not generated yet → 0 % green by its definition.
 
 ## Next actions (ordered)
-1. Confirm CI green on all jobs (Windows crash-test edit count, pinned font rasterisation for visual goldens, Studio e2e).
+1. CI is green on all jobs (run 12). Keep it green.
 2. M1 exit sign-off: run `apps/studio/e2e` + `tools/test/slice.test.ts` in CI (fixture worker) and record in the
    acceptance report; owner runs the same with the Qwen3 engine (docs/acceptance/owner-checklist.md §1).
-3. Studio polish for UI-02: panel resizing, context menus, library drag-and-drop to canvas/timeline, Problems panel,
+3. Studio polish for UI-02: Problems panel,
    voice range bank screen (FR-VOI-03), take upload/record (FR-VOI-05/06), clip trim handles.
 4. MCP server (`frame mcp`) over the same commands (FR-AGT, M4) — CLI server mode is done.
 5. Freeze the part contract (end of M1) and start the content track (M5) in parallel with M2.
@@ -328,7 +328,7 @@ O1 caption styles (6), R1 output presets (12). CAT-10 coverage report not genera
   long full-HD exports fail.
 
 **In progress**
-- M1 sign-off: needs a green CI run of all jobs and the real-engine run on the reference GPU (owner checklist §1).
+- M1 sign-off: CI run 12 is green on every job (incl. the Studio e2e slice); the real-engine run on the reference GPU remains (owner checklist §1).
 - Studio polish for UI-02 (panel resizing, context menus, drag-and-drop from the library, Problems panel, range bank,
   record/upload takes).
 

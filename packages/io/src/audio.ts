@@ -333,3 +333,22 @@ export function master(a: PcmAudio, opts: { targetLufs?: number; ceilingDb?: num
   const after = measureLoudness(a);
   return { loudness: { before: before.integrated, after: after.integrated, ...(opts.targetLufs !== undefined ? { target: opts.targetLufs } : {}), samplePeakDb: after.samplePeakDb }, limiterReductionDb: red, clipped };
 }
+
+/** RMS envelope (mono mix) in windows of `windowS` seconds, for the amplitude lip-sync fallback (FR-LIP-02). */
+export function rmsEnvelope(a: PcmAudio, windowS = 0.02): number[] {
+  const n = a.data[0]?.length ?? 0;
+  const w = Math.max(1, Math.round(windowS * a.sampleRate));
+  const out: number[] = [];
+  for (let s = 0; s < n; s += w) {
+    let sum = 0;
+    const e = Math.min(n, s + w);
+    for (let i = s; i < e; i++) {
+      let v = 0;
+      for (const ch of a.data) v += ch[i]!;
+      v /= a.channels;
+      sum += v * v;
+    }
+    out.push(Math.round(Math.sqrt(sum / (e - s)) * 1e5) / 1e5);
+  }
+  return out;
+}

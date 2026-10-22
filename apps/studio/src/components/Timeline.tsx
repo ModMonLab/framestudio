@@ -6,6 +6,8 @@ import type { Clip, Scene, Track } from '@frame/schema';
 import { IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow } from '@frame/ui';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
+import { clipMenu, useContextMenu } from './ContextMenu.js';
+import { DRAG_TYPE, placeAsset, type Hit } from './AssetsPanel.js';
 
 const HEADER = 200;
 type Filter = 'all' | 'picture' | 'audio';
@@ -95,7 +97,25 @@ export function Timeline() {
                 {!isCollapsed && g.tracks.map((t) => (
                   <div key={t.id} className="st-tl-row">
                     <TrackHeader scene={scene} track={t} />
-                    <div className="st-tl-lane" style={{ width }} onPointerDown={(e) => { if (e.target === e.currentTarget) { seekFromEvent(e); studio.set({ selection: [] }); } }}>
+                    <div
+                      className="st-tl-lane"
+                      style={{ width }}
+                      onPointerDown={(e) => { if (e.target === e.currentTarget) { seekFromEvent(e); studio.set({ selection: [] }); } }}
+                      onDragOver={(e) => { if (e.dataTransfer.types.includes(DRAG_TYPE) && (t.kind === 'face' || t.kind === 'acting')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }}
+                      onDrop={(e) => {
+                        const raw = e.dataTransfer.getData(DRAG_TYPE);
+                        if (!raw) return;
+                        e.preventDefault();
+                        const h = JSON.parse(raw) as Hit;
+                        if ((t.kind === 'face' && h.kind !== 'exp') || (t.kind === 'acting' && h.kind !== 'act')) {
+                          studio.set({ lastError: { message: t.kind === 'face' ? 'Only expressions go on the Face lane.' : 'Only actions go on the Acting lane.' } });
+                          return;
+                        }
+                        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        const at = Math.max(0, Math.round(((e.clientX - r.left) / pxPerSec) * fps) * (48000 / fps));
+                        void placeAsset(studio, h, { at, character: t.owner });
+                      }}
+                    >
                       {t.kind === 'lipsync' ? <LipLane project={project} scene={scene} owner={t.owner} x={x} /> : scene.clips.filter((c) => c.track === t.id).map((c) => <ClipChip key={c.id} project={project} scene={scene} clip={c} track={t} x={x} pxPerSec={pxPerSec} selected={selIds.has(c.id)} />)}
                     </div>
                   </div>
@@ -146,6 +166,7 @@ function clipLabel(project: ProjectState, scene: Scene, c: Clip, track: Track): 
 
 function ClipChip({ project, scene, clip, track, x, pxPerSec, selected }: { project: ProjectState; scene: Scene; clip: Clip; track: Track; x: (t: number) => number; pxPerSec: number; selected: boolean }) {
   const { studio } = useCtx();
+  const openMenu = useContextMenu();
   const [drag, setDrag] = useState<{ x0: number; dx: number } | null>(null);
   const fps = project.project.frameRate;
   const state = clip.line ? lineTakeState(project, clip) : undefined;
@@ -176,6 +197,12 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected }: { proj
       }}
       onPointerMove={(e) => drag && setDrag({ ...drag, dx: e.clientX - drag.x0 })}
       onPointerUp={commitMove}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        if (!studio.state.selection.some((x) => x.id === clip.id)) studio.set({ selection: [{ kind: 'clip', id: clip.id }] });
+        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        openMenu({ x: e.clientX || r.left, y: e.clientY || r.bottom, items: clipMenu(studio, clip.id), label: 'Clip actions' });
+      }}
     >
       {generating ? 'Generating · ' : ''}{label}
     </button>

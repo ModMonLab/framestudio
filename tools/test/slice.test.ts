@@ -95,6 +95,17 @@ describe.skipIf(!WORKER)('M1 vertical slice with the Voice Worker (AC-01 path, F
       expect(code, err).toBe(0);
       expect(Buffer.from(srvPng).equals(fs.readFileSync(out)), `frame at ${t}s differs between server and CLI`).toBe(true);
     }
+    // An uploaded take is aligned by the worker (FR-VOI-06, FR-LIP-01): reuse the first take's audio as a "recording".
+    const st2 = (await api('GET', `/api/projects/${pid}/state`)).json.state;
+    const firstLine = st2.scenes[scene].clips.find((c: any) => c.id === lines[0]);
+    const media = st2.takes[firstLine.line.take].media;
+    const wav = new Uint8Array(await (await fetch(`${base}/api/projects/${pid}/media/${media.hash}`)).arrayBuffer());
+    const up = await fetch(`${base}/api/projects/${pid}/takes/upload?scene=${scene}&line=${lines[0]}&ext=wav`, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: wav as BodyInit });
+    const uj = await waitJob(((await up.json()) as any).id);
+    expect(uj.state, JSON.stringify(uj.error)).toBe('succeeded');
+    expect(uj.result.aligned).toBe(true);
+    const st3 = (await api('GET', `/api/projects/${pid}/state`)).json.state;
+    expect(st3.takes[uj.result.take].alignment.method).not.toBe('amplitude');
     // The project on disk validates on its own.
     expect(validateProject(ProjectStore.prototype.load.call(new ProjectStore(dir)).state).filter((p) => p.blocksExport && p.code.startsWith('TAKE'))).toEqual([]);
   }, 180_000);

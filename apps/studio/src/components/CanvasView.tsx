@@ -6,6 +6,8 @@ import { FloatingControl, IconButton, Segmented } from '@frame/ui';
 import { blit, getRenderer, getStyles } from '../lib/preview.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
+import { instanceMenu, useContextMenu } from './ContextMenu.js';
+import { DRAG_TYPE, placeAsset, type Hit } from './AssetsPanel.js';
 import type { Renderer } from '@frame/render';
 import type { FamilyStyle } from '@frame/rig';
 
@@ -13,6 +15,7 @@ const ZOOMS = [0.25, 0.5, 0.75, 1, 1.5, 2];
 
 export function CanvasView() {
   const { studio, assets } = useCtx();
+  const openMenu = useContextMenu();
   const project = useStudio(studio, (s) => s.project)!;
   const sceneId = useStudio(studio, (s) => s.scene);
   const time = useStudio(studio, (s) => s.time);
@@ -118,10 +121,41 @@ export function CanvasView() {
     void studio.exec(cmds, ids.length === 1 ? `Move ${scene.instances.find((i) => i.id === ids[0])?.name ?? 'object'}` : `Move ${ids.length} objects`);
   };
 
+  const onContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const id = hit(e.clientX - r.left, e.clientY - r.top) ?? studio.state.selection.find((s) => s.kind === 'instance')?.id;
+    if (!id) return;
+    if (!studio.state.selection.some((s) => s.id === id)) studio.set({ selection: [{ kind: 'instance', id }] });
+    openMenu({ x: e.clientX, y: e.clientY, items: instanceMenu(studio, id), label: 'Object actions' });
+  };
+  // Library drops (Design System §8): characters/props land where dropped; expressions and actions apply to the
+  // character under the pointer at the playhead.
+  const onDrop = (e: React.DragEvent) => {
+    const raw = e.dataTransfer.getData(DRAG_TYPE);
+    if (!raw || !ev || !sceneId) return;
+    e.preventDefault();
+    const h = JSON.parse(raw) as Hit;
+    const stage = (e.currentTarget as HTMLElement).querySelector('.st-stage')!.getBoundingClientRect();
+    const px = (e.clientX - stage.left) / k;
+    const py = (e.clientY - stage.top) / k;
+    // Invert the camera's stage → screen matrix (scale + translation; rotation inverted generally).
+    const [a, b, c, d, tx, ty] = ev.view;
+    const det = a * d - b * c;
+    const x = (d * (px - tx) - c * (py - ty)) / det;
+    const y = (-b * (px - tx) + a * (py - ty)) / det;
+    const target = hit(e.clientX - stage.left, e.clientY - stage.top);
+    const targetIsChar = target && project.scenes[sceneId]!.instances.find((i) => i.id === target)?.kind === 'character';
+    if ((h.kind === 'exp' || h.kind === 'act') && !targetIsChar) {
+      studio.set({ lastError: { message: `Drop ${h.name} onto a character.` } });
+      return;
+    }
+    void placeAsset(studio, h, { position: { x: Math.round(x), y: Math.round(y) }, ...(targetIsChar ? { character: target } : {}) });
+  };
   const selIds = new Set(selection.filter((s) => s.kind === 'instance').map((s) => s.id));
   return (
-    <div className="st-canvas" ref={wrap} onDragOver={(e) => e.preventDefault()}>
-      <div className="st-stage" style={{ width: cssW, height: cssH }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} role="img" aria-label={`Stage preview${ev ? `, camera ${ev.camera.name}` : ''}`}>
+    <div className="st-canvas" ref={wrap} onDragOver={(e) => { if (e.dataTransfer.types.includes(DRAG_TYPE)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }} onDrop={onDrop}>
+      <div className="st-stage" style={{ width: cssW, height: cssH }} onContextMenu={onContextMenu} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} role="img" aria-label={`Stage preview${ev ? `, camera ${ev.camera.name}` : ''}`}>
         <canvas ref={canvas} style={{ width: cssW, height: cssH, display: 'block' }} data-testid="stage-canvas" />
         {ev && <span className="st-shot">{ev.camera.name}</span>}
         {playing && quality < 1 && <span className="st-quality">Preview quality</span>}

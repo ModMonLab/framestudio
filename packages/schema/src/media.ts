@@ -24,6 +24,10 @@ export const Alignment = Type.Object(
     method: Type.Union([Type.Literal('forced'), Type.Literal('transcribed+forced'), Type.Literal('amplitude'), Type.Literal('fixture')]),
     confidence: Type.Number({ minimum: 0, maximum: 1 }),
     aligner: Type.Optional(Type.String()),
+    envelope: Type.Optional(Type.Object(
+      { windowS: Type.Number({ exclusiveMinimum: 0 }), values: Type.Array(Type.Number({ minimum: 0 })) },
+      { additionalProperties: false, description: 'RMS envelope for the amplitude lip-sync fallback (FR-LIP-02, method "amplitude").' },
+    )),
   },
   { additionalProperties: false, description: 'Times in seconds relative to the take start (SRS §3.5).' },
 );

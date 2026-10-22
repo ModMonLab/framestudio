@@ -12,9 +12,12 @@ import { Timeline } from './Timeline.js';
 import { ExportDialog } from './ExportDialog.js';
 import { JobsButton } from './JobsButton.js';
 import { WorkerBadge } from './WorkerBadge.js';
+import { ProblemsButton } from './ProblemsButton.js';
 import { VoiceDesigner } from './VoiceDesigner.js';
 import { Builder } from './Builder.js';
 import { usePlayback } from '../lib/playback.js';
+import { ResizeHandle, usePanelSize } from './Resize.js';
+import { ContextMenuHost } from './ContextMenu.js';
 
 interface Ctx {
   studio: Studio;
@@ -65,7 +68,7 @@ export function Workspace({ pid, builder }: { pid: string; builder?: { scene: st
   const ctx: Ctx = { studio, assets, openExport: () => setExportOpen(true), openVoiceDesigner: (i) => setVoiceFor(i) };
   return (
     <StudioCtx.Provider value={ctx}>
-      {builder ? <Builder scene={builder.scene} instance={builder.instance} /> : <Shell />}
+      <ContextMenuHost>{builder ? <Builder scene={builder.scene} instance={builder.instance} /> : <Shell />}</ContextMenuHost>
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <VoiceDesigner open={voiceFor !== null} instance={voiceFor ?? undefined} onClose={() => setVoiceFor(null)} />
     </StudioCtx.Provider>
@@ -77,11 +80,14 @@ function Shell() {
   const [rail, setRail] = useState('layers');
   const [panels, setPanels] = useState({ left: true, right: true, timeline: true });
   const mode = useStudio(studio, (s) => s.mode);
+  const [leftW, setLeftW] = usePanelSize('left', 272, 220, 420);
+  const [rightW, setRightW] = usePanelSize('right', 300, 260, 440);
+  const [tlH, setTlH] = usePanelSize('timeline', 332, 160, 600);
   usePlayback();
   useShortcuts(setPanels);
 
   return (
-    <div className="fr-root st-app st-shell">
+    <div className="fr-root st-app st-shell" style={{ '--st-left': `${leftW}px`, '--st-right': `${rightW}px`, '--st-timeline': `${tlH}px` } as React.CSSProperties}>
       <TopBar onTogglePanel={(k) => setPanels((p) => ({ ...p, [k]: !p[k] }))} panels={panels} />
       <div className="st-main">
         <Rail value={rail} onChange={(v) => { setRail(v); setPanels((p) => ({ ...p, left: true })); }} items={[
@@ -94,12 +100,15 @@ function Shell() {
           { id: 'templates', label: 'Templates', icon: <ImageIcon size={18} /> },
         ]} />
         {panels.left && (rail === 'layers' ? <LayersPanel /> : <AssetsPanel filter={rail} />)}
+        {panels.left && <ResizeHandle label="Resize left panel" value={leftW} min={220} max={420} defaultValue={272} onChange={setLeftW} dir={1} />}
         <div className="st-center-col">
           <ContextToolbar />
           <CanvasView />
         </div>
+        {panels.right && <ResizeHandle label="Resize properties panel" value={rightW} min={260} max={440} defaultValue={300} onChange={setRightW} dir={-1} />}
         {panels.right && <PropertiesPanel mode={mode} />}
       </div>
+      {panels.timeline && <ResizeHandle label="Resize timeline" value={tlH} min={160} max={600} defaultValue={332} onChange={setTlH} dir={-1} orientation="horizontal" />}
       {panels.timeline && <Timeline />}
       <span className="fr-sr" aria-live="polite">{mode} mode</span>
     </div>
@@ -165,6 +174,7 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
       </>}
       center={<Tabs label="Workspace mode" value={mode} onChange={(m: Mode) => studio.set({ mode: m })} tabs={[{ value: 'stage', label: 'Stage', shortcut: '1' }, { value: 'direct', label: 'Direct', shortcut: '2' }, { value: 'edit', label: 'Edit', shortcut: '3' }]} />}
       right={<>
+        <ProblemsButton />
         <WorkerBadge />
         <JobsButton />
         <IconButton label={resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} icon={resolved === 'dark' ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')} />

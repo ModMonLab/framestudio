@@ -39,6 +39,8 @@ export interface TreeProps {
   onDrop?: (dragId: string, targetId: string, pos: DropPosition) => void;
   /** Persist expansion (Design System §5.1). */
   emptyText?: string;
+  /** Context menu for a row (pointer or Shift+F10 / Menu key on the focused row). */
+  onContextMenu?: (id: string, at: { x: number; y: number }) => void;
 }
 
 function highlight(label: string, q: string): ReactNode {
@@ -55,7 +57,7 @@ function highlight(label: string, q: string): ReactNode {
 }
 
 /** WAI-ARIA tree with search-with-ancestors, type-ahead, F2 rename and drag-and-drop (Design System §5.1). */
-export function Tree({ nodes, label, expanded, onExpandedChange, selected, onSelect, onActivate, onRename, query = '', canDrop, onDrop, emptyText }: TreeProps) {
+export function Tree({ nodes, label, expanded, onExpandedChange, selected, onSelect, onActivate, onRename, query = '', canDrop, onDrop, emptyText, onContextMenu }: TreeProps) {
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
   const children = useMemo(() => {
     const m = new Map<string | undefined, TreeNode[]>();
@@ -195,6 +197,13 @@ export function Tree({ nodes, label, expanded, onExpandedChange, selected, onSel
               className={`fr-row ${dropCls}`}
               draggable={!!n.draggable && !!onDrop && renaming !== n.id}
               onClick={(e) => { setFocus(n.id); onSelect?.(n.id, { shift: e.shiftKey, meta: e.metaKey || e.ctrlKey }); }}
+              onContextMenu={onContextMenu ? (e) => {
+                e.preventDefault();
+                setFocus(n.id);
+                if (!sel) onSelect?.(n.id, { shift: false, meta: false });
+                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                onContextMenu(n.id, e.clientX || e.clientY ? { x: e.clientX, y: e.clientY } : { x: r.left + 24, y: r.bottom });
+              } : undefined}
               onDoubleClick={() => {
                 if (n.renamable && onRename) { setRenaming(n.id); setDraft(n.label); }
                 else onActivate?.(n.id);

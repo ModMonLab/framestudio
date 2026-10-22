@@ -11,9 +11,9 @@ import fastifyStatic from '@fastify/static';
 import { describeCommands, evaluateFrame, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
-import { renderExport, type OutputPreset } from '@frame/io';
+import { decodeAudioFile, renderExport, rmsEnvelope, type OutputPreset } from '@frame/io';
 import { exitCodeFor, FrameError, type CommandBatch, type ErrorCode } from '@frame/schema';
-import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, sourceLabel, type ProjectAccess } from '@frame/voice-client';
+import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, sourceLabel, toAlignment, type ProjectAccess } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
 
@@ -441,6 +441,56 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const b = req.body;
       if (!b?.scene || !Array.isArray(b.lines) || !b.lines.length) throw new FrameError('USAGE', 'scene and lines[] are required');
       const job = jobs.voice.submit('takes.generate', `Generate takes · ${b.lines.length} line(s)`, (ctx) => generateTakes(client, access(p), { scene: b.scene, lines: b.lines, takes: b.takes ?? 1, ...(b.seed !== undefined ? { seed: b.seed } : {}), ...(b.voice ? { voice: b.voice } : {}) }, { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
+      return reply.code(202).send(publicJob(job));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  // Upload a take for a line (FR-VOI-06): store, decode and measure, lip sync from the amplitude envelope at once
+  // (FR-LIP-02), then forced alignment when a worker is reachable (FR-LIP-01).
+  app.post<{ Params: { pid: string }; Querystring: { scene: string; line: string; ext: string; choose?: string }; Body: Buffer }>('/api/projects/:pid/takes/upload', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const { scene, line, ext } = req.query;
+      if (!/^(wav|mp3|flac|ogg|m4a|aac|webm)$/.test(String(ext ?? '').toLowerCase())) throw new FrameError('USAGE', 'ext must be wav, mp3, flac, ogg, m4a, aac or webm');
+      const clip = p.open.state.scenes[scene]?.clips.find((c) => c.id === line);
+      if (!clip?.line) throw new FrameError('NOT_FOUND', `Line ${line} not found in scene ${scene}`);
+      if (!Buffer.isBuffer(req.body) || !req.body.length) throw new FrameError('USAGE', 'Send the audio file as the request body');
+      const bytes = new Uint8Array(req.body);
+      const job = jobs.voice.submit('takes.upload', 'Upload take', async (ctx) => {
+        ctx.progress(0.1, 'Decoding');
+        const media0 = p.open.store.putMedia(bytes, { ext: ext.toLowerCase(), mime: MIME[ext.toLowerCase()] ?? 'application/octet-stream' });
+        let pcm;
+        try {
+          pcm = decodeAudioFile(p.open.store.findMedia(media0.hash)!);
+        } catch (e) {
+          throw new FrameError('VALIDATION_FAILED', `This file could not be decoded as audio: ${(e as Error).message}`);
+        }
+        const durationS = (pcm.data[0]?.length ?? 0) / pcm.sampleRate;
+        if (durationS < 0.1) throw new FrameError('VALIDATION_FAILED', 'The audio is shorter than 0.1 s');
+        const media = { ...media0, durationS: Math.round(durationS * 1000) / 1000, sampleRate: pcm.sampleRate, channels: pcm.channels };
+        const ln = p.open.state.scenes[scene]!.clips.find((c) => c.id === line)!.line!;
+        const alignment = { method: 'amplitude' as const, words: [], phonemes: [], confidence: 0, envelope: { windowS: 0.02, values: rmsEnvelope(pcm, 0.02) } };
+        const r = p.open.session.apply({ source: 'user', label: 'Upload take', commands: [{ name: 'take.add', params: { take: { line, lineRevision: ln.revision, source: 'uploaded', fixture: false, status: 'ready', media, durationS: media.durationS, alignment } } }] });
+        const takeId = (r.commands[0]!.params as { id: string }).id;
+        if (req.query.choose !== 'false') p.open.session.apply({ source: 'user', label: 'Choose uploaded take', commands: [{ name: 'line.chooseTake', params: { scene, id: line, take: takeId } }] });
+        ctx.progress(0.5, 'Aligning');
+        let aligned = false;
+        let note: string | undefined;
+        try {
+          const client = workerFor(p);
+          const hash = await client.uploadBlob(bytes, `take.${ext}`, MIME[ext.toLowerCase()] ?? 'application/octet-stream');
+          const aj = await client.align({ audioHash: hash, transcript: ln.text.replace(/\[pause\s+\d+(?:\.\d+)?s\]/gi, ' ').replace(/\s+/g, ' ').trim(), language: 'en' });
+          const al = await client.wait(aj, { signal: ctx.signal, onProgress: (j) => ctx.progress(0.5 + j.progress * 0.5, 'Aligning') });
+          p.open.session.apply({ source: 'user', label: 'Align take', commands: [{ name: 'take.update', params: { id: takeId, set: { alignment: toAlignment(al) } } }] });
+          aligned = true;
+        } catch (e) {
+          // Without an aligner the amplitude fallback stays in place (marked approximate).
+          note = `Lip sync uses the audio level until the take is aligned: ${(e as Error).message}`;
+        }
+        return { take: takeId, durationS: media.durationS, aligned, ...(note ? { note } : {}) };
+      }, p.id);
       return reply.code(202).send(publicJob(job));
     } catch (e) {
       return sendError(reply, e);
