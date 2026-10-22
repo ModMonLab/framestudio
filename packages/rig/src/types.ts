@@ -146,6 +146,33 @@ export interface PartData {
   variant?: RigVariant;
 }
 
+/**
+ * A fabric pattern (Catalog B6, FR-WRD-02): one repeating tile of paths in tile units, coloured by slots p1…p3.
+ * Drawn over a patternable garment's fills, clipped to them.
+ */
+export interface PatternData {
+  tile: [number, number];
+  /** Absolute M/L/C/Q/Z commands only, in tile units (every number pair is a point). */
+  layers: { color: 'p1' | 'p2' | 'p3'; d: string; opacity?: number }[];
+  /** Tile rows offset by half a tile (bricks, dots). */
+  stagger?: boolean;
+  defaults: { scale: number; rotation: number; colors: Record<'p1' | 'p2' | 'p3', string> };
+  /** Blend over the garment colour (`multiply` keeps shading; textures use it). */
+  blend?: 'normal' | 'multiply';
+  /** Custom print: the tile is an imported image chosen per garment (`PatternUse.image`). */
+  image?: boolean;
+}
+
+/** A pattern applied to one garment in a look: scale (1 = default), rotation (degrees) and colours. */
+export interface PatternUse {
+  data: PatternData;
+  scale?: number;
+  rotation?: number;
+  colors?: Partial<Record<'p1' | 'p2' | 'p3', string>>;
+  /** Image source (project media hash) for a custom print. */
+  image?: string;
+}
+
 /** Data-driven rig variant (FR-CHR-11): the engine reads these fields, never an option's name. */
 export interface RigVariant {
   /** Posture the character keeps (a wheelchair user is seated; posture-changing actions do not stand them up). */

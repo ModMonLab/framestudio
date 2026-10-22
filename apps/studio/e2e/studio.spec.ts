@@ -975,3 +975,38 @@ test('command palette, settings and help (FR-ONB-02, FR-ONB-03, FR-SET-01)', asy
   await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeVisible();
   await page.request.post('/api/settings', { data: { autosaveMs: 400 } });
 });
+
+test('a ready-made set, kit palette and time of day; a costume change and an accessory taken off (FR-ENV-01/02, FR-WRD-03/04)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  let st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  const search = page.getByRole('searchbox', { name: /^Search/ }).or(page.getByRole('textbox', { name: /^Search/ })).first();
+  await search.fill('Sofa chat');
+  await page.getByRole('button', { name: /^Sofa chat/ }).first().click();
+  await page.getByRole('button', { name: 'Add to scene' }).click();
+  await expect.poll(async () => (await state()).scenes[sid].stage.marks.map((m: { name: string }) => m.name)).toEqual(expect.arrayContaining(['Sofa left', 'Sofa right']));
+  // Palette and time of day from a kit piece's properties.
+  st = await state();
+  const sofa = st.scenes[sid].instances.find((i: { params: { part?: string } }) => i.params.part === 'sofa');
+  await page.getByRole('button', { name: 'Layers', exact: true }).click();
+  await page.getByRole('treeitem', { name: new RegExp(sofa.name) }).first().click();
+  await page.getByRole('tab', { name: 'Properties', exact: true }).click();
+  await page.getByRole('group', { name: 'Kit palette' }).getByRole('button', { name: /Pastel/ }).click();
+  await page.getByRole('group', { name: 'Time of day' }).getByRole('button', { name: 'Night' }).click();
+  await expect.poll(async () => (await state()).scenes[sid].clips.some((c: { asset?: string }) => c.asset === 'atmo.night@1')).toBe(true);
+  st = await state();
+  expect(st.scenes[sid].instances.filter((i: { asset?: string }) => i.asset === sofa.asset).every((i: { params: { palette?: string; timeOfDay?: string } }) => i.params.palette === 'pastel' && i.params.timeOfDay === 'night')).toBe(true);
+  // Wardrobe: change Maya's look at the playhead.
+  await page.getByRole('treeitem', { name: /Maya Bennett/ }).first().click();
+  await page.getByRole('tab', { name: 'Acting' }).click();
+  const wardrobe = page.getByRole('button', { name: /^Wardrobe/ });
+  if ((await wardrobe.getAttribute('aria-expanded')) === 'false') await wardrobe.click();
+  await page.getByRole('button', { name: /^Change look to/ }).click();
+  await page.getByRole('option').first().click();
+  await page.getByRole('button', { name: 'Change look', exact: true }).click();
+  await expect.poll(async () => (await state()).scenes[sid].clips.some((c: { params: { look?: string } }) => typeof c.params.look === 'string')).toBe(true);
+  await new AxeBuilder({ page }).include('aside[aria-label="Properties"]').analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
+});

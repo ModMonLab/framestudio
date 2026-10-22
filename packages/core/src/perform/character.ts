@@ -1,6 +1,6 @@
 /** Resolves a character asset + look + family into a composer spec (FR-CHR-01, FR-CHR-09, FR-WRD-01). */
 import type { AssetManifest, StyleFamily } from '@frame/schema';
-import { DEFAULT_BODY, type BodyParams, type CharacterSpec, type FamilyStyle, type ResolvedPart, type PartData, type RigVariant } from '@frame/rig';
+import { DEFAULT_BODY, type BodyParams, type CharacterSpec, type FamilyStyle, type ResolvedPart, type PartData, type PatternData, type PatternUse, type RigVariant } from '@frame/rig';
 
 export interface AssetResolver {
   manifest(ref: string): AssetManifest | undefined;
@@ -16,8 +16,8 @@ export interface LookData {
   colors: Record<string, string>;
   /** Per-garment option states, keyed by garment ref. */
   options?: Record<string, Record<string, string>>;
-  /** Pattern per slot (Catalog B6). */
-  patterns?: Record<string, { pattern: string; scale?: number; colors?: string[] }>;
+  /** Pattern per garment ref or colour slot (Catalog B6, FR-WRD-02): scale 1 = default, rotation in degrees, colours p1…p3. */
+  patterns?: Record<string, { pattern: string; scale?: number; rotation?: number; colors?: string[]; image?: string }>;
 }
 
 export interface CharacterData {
@@ -51,7 +51,7 @@ export interface ResolveResult {
 }
 
 /** Assembles the composer spec. Missing parts are reported, never invented. */
-export function resolveCharacter(m: AssetManifest, lookId: string | undefined, family: StyleFamily, style: FamilyStyle, assets: AssetResolver, extraParts: string[] = []): ResolveResult {
+export function resolveCharacter(m: AssetManifest, lookId: string | undefined, family: StyleFamily, style: FamilyStyle, assets: AssetResolver, extraParts: string[] = [], offBody: Record<string, 'L' | 'R' | 'hidden'> = {}): ResolveResult {
   const c = m.data as CharacterData;
   const missing: string[] = [];
   const get = (ref: string) => {
@@ -95,7 +95,15 @@ export function resolveCharacter(m: AssetManifest, lookId: string | undefined, f
     const data = a.data as PartData | undefined;
     if (!data?.families) continue; // data-only assets (controls, states) are not drawn
     const partOptions = look?.options?.[ref];
-    parts.push({ ref, data, ...(partOptions ? { options: partOptions } : {}) });
+    // An accessory taken off (FR-WRD-04) is held in a hand or not drawn at all.
+    const v = ref.lastIndexOf('@');
+    const id = v > 0 ? ref.slice(0, v) : ref;
+    const off = look?.accessories?.includes(ref) ? Object.entries(offBody).find(([k]) => id === k || k === ref || id.includes(k))?.[1] : undefined;
+    if (off === 'hidden') continue;
+    const pat = data.patternable ? look?.patterns?.[ref] ?? look?.patterns?.[data.colorSlot ?? data.slot] : undefined;
+    const pdata = pat ? (get(pat.pattern)?.data as { pattern?: PatternData } | undefined)?.pattern : undefined;
+    const pattern: PatternUse | undefined = pdata ? { data: pdata, ...(pat!.scale ? { scale: pdata.defaults.scale * pat!.scale } : {}), ...(pat!.rotation !== undefined ? { rotation: pat!.rotation } : {}), ...(pat!.colors?.length ? { colors: Object.fromEntries(pat!.colors.slice(0, 3).map((c, i) => [`p${i + 1}`, c])) } : {}), ...(pat!.image ? { image: pat!.image } : {}) } : undefined;
+    parts.push({ ref, data, ...(partOptions ? { options: partOptions } : {}), ...(off ? { heldIn: off } : {}), ...(pattern ? { pattern } : {}) });
     // Garment default colours unless the look overrides them.
     if (data.colors) for (const [k, v] of Object.entries(data.colors)) if (!(k in colors)) colors[k] = v;
   }

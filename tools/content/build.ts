@@ -29,6 +29,8 @@ import { IDENTITY, identityPart } from './parts/identity.js';
 import { ACCESSORIES, MAKEUP, SKIN_DETAILS, WORN_PROPS, wornPropPart, accessoryPart, makeupPart, skinDetailPart } from './parts/accessories.js';
 import { BEDROOM_KIT, CITY_STREET_KIT, CLASSROOM_KIT, FOREST_KIT, GYM_KIT, HOSPITAL_KIT, KITCHEN_KIT, LIBRARY_KIT, LIVING_ROOM_KIT, NEWSROOM_KIT, OFFICE_KIT, PARK_KIT, STAGE_KIT, TRAIN_KIT } from './parts/kits.js';
 import type { KitParts } from './parts/props.js';
+import { PATTERNS } from './parts/patterns.js';
+import { SETS } from './set-specs.js';
 
 type Mark = { name: string; x: number; y: number; facing: 'left' | 'right' | 'front' };
 const MORE_KITS: Record<string, { parts: KitParts; marks: Mark[]; ambience?: string; props: string[] }> = {
@@ -167,6 +169,35 @@ const SKIN_TONES: Record<string, string> = {
   sienna: '#7E4A2C', umber: '#6E4630', mocha: '#674132', espresso: '#4A2E24', cocoa: '#5C3A28', ebony: '#3C2620', 'deep-mahogany': '#4A2A1E', onyx: '#2E1E1A',
 };
 
+/**
+ * Kit palettes (FR-ENV-02): whole-kit recolourings keyed by colour slot, so a slot shared by several parts (wall,
+ * trim, wood…) changes the same way everywhere. Derived from the kit's own colours.
+ */
+type KitPartsOut = ReturnType<typeof kitPartsData>;
+const hexRgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as [number, number, number];
+const rgbHex = (c: number[]) => `#${c.map((v) => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+const mixHex = (a: string, b: string, t: number) => rgbHex(hexRgb(a).map((v, i) => v + (hexRgb(b)[i]! - v) * t));
+const satHex = (a: string, k: number) => {
+  const c = hexRgb(a);
+  const g = 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+  return rgbHex(c.map((v) => g + (v - g) * k));
+};
+const PALETTE_SHIFTS: { id: string; name: string; f: (c: string) => string }[] = [
+  { id: 'warm', name: 'Warm', f: (c) => mixHex(c, '#E39A54', 0.2) },
+  { id: 'cool', name: 'Cool', f: (c) => mixHex(c, '#5B86C4', 0.2) },
+  { id: 'muted', name: 'Muted', f: (c) => satHex(c, 0.5) },
+  { id: 'pastel', name: 'Pastel', f: (c) => mixHex(satHex(c, 0.8), '#FFFFFF', 0.35) },
+  { id: 'bold', name: 'Bold', f: (c) => satHex(c, 1.35) },
+];
+function kitWith(parts: KitPartsOut) {
+  return { parts, palettes: kitPalettes(parts) };
+}
+function kitPalettes(parts: KitPartsOut): { id: string; name: string; colors: Record<string, string> }[] {
+  const base: Record<string, string> = {};
+  for (const p of Object.values(parts)) for (const [k, v] of Object.entries(p.art.colors ?? {})) if (/^#[0-9a-fA-F]{6}$/.test(v)) base[k] ??= v.toUpperCase();
+  return [{ id: 'original', name: 'Original', colors: base }, ...PALETTE_SHIFTS.map((s) => ({ id: s.id, name: s.name, colors: Object.fromEntries(Object.entries(base).map(([k, v]) => [k, s.f(v)])) }))];
+}
+
 function build(list: CatalogList, item: CatalogItem): Built | undefined {
   const s = slug(item.id);
   switch (list.prefix) {
@@ -205,6 +236,8 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'stage': return { data: { lifeStage: { headRatio: { flat: STAGES[s]!.flat, illustrated: STAGES[s]!.illustrated }, heightScale: STAGES[s]!.height } } };
     case 'skin': return { data: { skinTone: { base: SKIN_TONES[s], undertone: item.undertone?.toLowerCase() } } };
     case 'exp': return EXPRESSIONS[s] ? { data: { expression: EXPRESSIONS[s] }, families: ['flat', 'illustrated'], views: ['front', 'three', 'side'], viewExemptions: { back: 'Faces are not visible from behind; expressions still drive head attitude.' }, capabilities: ['rig.biped@1'] } : undefined;
+    case 'set': return SETS[s] ? { data: { set: SETS[s] }, families: ['flat', 'illustrated'], views: ['front'], dependencies: [SETS[s]!.kit, ...new Set(SETS[s]!.props.map((p) => p.ref))] } : undefined;
+    case 'pattern': return PATTERNS[s] ? { data: { pattern: PATTERNS[s] }, families: ['flat', 'illustrated'], ...(PATTERNS[s]!.image ? { tags: ['image'] } : !PATTERNS[s]!.layers.length ? { tags: ['plain'] } : {}) } : undefined;
     case 'act': {
       const a = ACTIONS[s];
       return a ? { data: { action: a }, families: ['flat', 'illustrated'], views: ALL_VIEWS, capabilities: ['rig.biped@1', ...a.channels.map((c) => `channel:${c}`)], parameters: [{ key: 'intensity', type: 'number', default: 1, range: [0, 2], label: 'Intensity' }, { key: 'speed', type: 'number', default: 1, range: [0.25, 3], label: 'Speed' }, ...(a.hand && a.hand !== 'both' ? [{ key: 'hand', type: 'enum' as const, default: a.hand, options: ['L', 'R'], label: 'Hand' }] : [])] } : undefined;
@@ -220,9 +253,9 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
       return p ? { data: propPart(p), families: ['flat', 'illustrated'], views: ['front'], viewExemptions: { three: 'Props are drawn from the camera.', side: 'Props are drawn from the camera.', back: 'Props are drawn from the camera.' }, anchors: { ...(p.anchors ?? {}), bounds: p.bounds }, capabilities: p.capabilities ?? [], ...(p.states ? { parameters: [{ key: 'state', type: 'enum' as const, default: p.states[0], options: p.states, label: 'State' }] } : {}) } : undefined;
     }
     case 'kit':
-      if (MORE_KITS[s]) return { data: { kit: { parts: kitPartsData(MORE_KITS[s]!.parts), marks: MORE_KITS[s]!.marks, ...(MORE_KITS[s]!.ambience ? { ambience: MORE_KITS[s]!.ambience } : {}), props: MORE_KITS[s]!.props } }, families: ['flat', 'illustrated'], views: ['front'] };
-      if (s === 'coffee-shop') return { data: { kit: { parts: kitPartsData(COFFEE_KIT_PARTS), marks: [{ name: 'Counter', x: 560, y: 1000, facing: 'right' }, { name: 'Table left', x: 1050, y: 1000, facing: 'right' }, { name: 'Table right', x: 1500, y: 1000, facing: 'left' }, { name: 'Door', x: 1800, y: 1000, facing: 'left' }], ambience: 'amb.coffee-shop@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.mug@1', 'prop.phone@1', 'prop.potted-plant@1', 'prop.door@1'] } }, families: ['flat', 'illustrated'], views: ['front'] };
-      return s === 'podcast-studio' ? { data: { kit: { parts: kitPartsData(), marks: [{ name: 'Seat A', x: 640, y: 960, facing: 'right' }, { name: 'Seat B', x: 1280, y: 960, facing: 'left' }, { name: 'Seat C', x: 420, y: 980, facing: 'right' }, { name: 'Seat D', x: 1500, y: 980, facing: 'left' }], ambience: 'amb.studio-room-tone@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.desk-microphone@1', 'prop.on-air-sign@1', 'prop.floor-lamp@1', 'prop.potted-plant@1', 'prop.mug@1'] } }, families: ['flat', 'illustrated'], views: ['front'] } : undefined;
+      if (MORE_KITS[s]) return { data: { kit: { ...kitWith(kitPartsData(MORE_KITS[s]!.parts)), marks: MORE_KITS[s]!.marks, ...(MORE_KITS[s]!.ambience ? { ambience: MORE_KITS[s]!.ambience } : {}), props: MORE_KITS[s]!.props } }, families: ['flat', 'illustrated'], views: ['front'] };
+      if (s === 'coffee-shop') return { data: { kit: { ...kitWith(kitPartsData(COFFEE_KIT_PARTS)), marks: [{ name: 'Counter', x: 560, y: 1000, facing: 'right' }, { name: 'Table left', x: 1050, y: 1000, facing: 'right' }, { name: 'Table right', x: 1500, y: 1000, facing: 'left' }, { name: 'Door', x: 1800, y: 1000, facing: 'left' }], ambience: 'amb.coffee-shop@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.mug@1', 'prop.phone@1', 'prop.potted-plant@1', 'prop.door@1'] } }, families: ['flat', 'illustrated'], views: ['front'] };
+      return s === 'podcast-studio' ? { data: { kit: { ...kitWith(kitPartsData()), marks: [{ name: 'Seat A', x: 640, y: 960, facing: 'right' }, { name: 'Seat B', x: 1280, y: 960, facing: 'left' }, { name: 'Seat C', x: 420, y: 980, facing: 'right' }, { name: 'Seat D', x: 1500, y: 980, facing: 'left' }], ambience: 'amb.studio-room-tone@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.desk-microphone@1', 'prop.on-air-sign@1', 'prop.floor-lamp@1', 'prop.potted-plant@1', 'prop.mug@1'] } }, families: ['flat', 'illustrated'], views: ['front'] } : undefined;
     case 'music':
     case 'cue':
     case 'amb': {

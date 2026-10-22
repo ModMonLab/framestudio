@@ -307,3 +307,7 @@
 .st-tour-card h2 { margin: 0; font-size: inherit; font-weight: 600; }
 .st-tour-card p { margin: 0; }
 .st-palette-detail { color: var(--color-text2); }
+.st-swatches { display: inline-flex; margin-right: var(--space-2); }
+.st-swatches i { width: 8px; height: 12px; display: inline-block; }
+.st-swatches i:first-child { border-radius: 2px 0 0 2px; }
+.st-swatches i:last-child { border-radius: 0 2px 2px 0; }

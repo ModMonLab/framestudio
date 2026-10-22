@@ -28,7 +28,7 @@ import { PartEditor } from './PartEditor.js';
 import { LibraryScreen } from './LibraryScreen.js';
 import { VersionsDialog } from './VersionsDialog.js';
 import { RecipeDialog } from './RecipeDialog.js';
-import { TemplateDialog, saveSceneAsTemplate } from './TemplateDialog.js';
+import { TemplateDialog, saveSceneAsSet, saveSceneAsTemplate } from './TemplateDialog.js';
 import { api } from '../lib/api.js';
 import { usePlayback } from '../lib/playback.js';
 import { ResizeHandle, usePanelSize } from './Resize.js';
@@ -260,6 +260,7 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
     ] },
     { id: 'scene', label: 'Scene', items: [
       { id: 'voice', label: 'Design a voice…', onSelect: () => openVoiceDesigner(undefined) },
+      { id: 'set-save', label: 'Save set…', disabled: !scene?.instances.some((i) => i.kind === 'set-piece'), disabledReason: 'Place a kit in this scene first', onSelect: () => saveSceneAsSet(studio, (message) => toasts.show({ tone: 'success', message })) },
       { id: 'tpl-save-ep', label: 'Save episode as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message }), 'episode') },
       { id: 'episode-view', label: 'Episode view', checked: !!studio.state.episodeView, onSelect: () => studio.set({ episodeView: !studio.state.episodeView, scriptView: false }) },
       { id: 'script-view', label: 'Script view', checked: !!studio.state.scriptView, onSelect: () => studio.set({ scriptView: !studio.state.scriptView, episodeView: false }) },

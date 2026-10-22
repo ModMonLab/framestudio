@@ -36,6 +36,41 @@
       "wide": "cam.wide@1",
       "single": "cam.medium-close-up@1",
       "two": "cam.two-shot@1"
-    }
+    },
+    "timeOfDay": [
+      {
+        "id": "day",
+        "name": "Day",
+        "tint": "#FFF6E0",
+        "amount": 0,
+        "darken": 0,
+        "atmosphere": "atmo.day@1"
+      },
+      {
+        "id": "golden-hour",
+        "name": "Golden hour",
+        "tint": "#FFB36B",
+        "amount": 0.16,
+        "darken": 0.04,
+        "atmosphere": "atmo.golden-hour@1"
+      },
+      {
+        "id": "dusk",
+        "name": "Dusk",
+        "tint": "#8A5FA8",
+        "amount": 0.2,
+        "darken": 0.22,
+        "atmosphere": "atmo.dusk@1"
+      },
+      {
+        "id": "night",
+        "name": "Night",
+        "tint": "#24365F",
+        "amount": 0.32,
+        "darken": 0.48,
+        "atmosphere": "atmo.night@1"
+      }
+    ],
+    "accessoryGesture": "act.wave-hello@1"
   }
 }

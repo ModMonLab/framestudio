@@ -38,7 +38,7 @@ const FILTERS: Record<string, { title: string; kinds?: string[]; empty: string }
 const PART_KINDS = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'feet', 'top', 'outer', 'bottom', 'dress', 'shoe', 'acc', 'skin-detail', 'makeup']);
 
 /** Kinds that can be placed or applied from this panel. */
-const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img', 'rcp', 'cam', 'sfx', 'atmo', 'fx', 'tr', 'music', 'amb', 'cue', 'tpl']);
+const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'set', 'img', 'rcp', 'cam', 'sfx', 'atmo', 'fx', 'tr', 'music', 'amb', 'cue', 'tpl']);
 
 export function AssetsPanel({ filter }: { filter: string }) {
   const { studio } = useCtx();
@@ -213,6 +213,9 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
     case 'rcp':
       studio.set({ recipe: { ref: h.ref, name: h.name } });
       return undefined;
+    case 'set':
+      await api.applySet(s.pid, scene.id, h.ref);
+      return `${h.name} set added`;
     case 'tpl':
       studio.set({ template: { ref: h.ref, name: h.name } });
       return undefined;

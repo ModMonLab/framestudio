@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { CLIPBOARD_FORMAT, pasteCommands, type ClipboardData, actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { CLIPBOARD_FORMAT, pasteCommands, type ClipboardData, kitLookCommands, type TimeOfDay, setCommands, setFromScene, type SetData, ProjectSession, actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
@@ -687,6 +687,75 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
+  /* ---------------------------------------------------------------- kit palettes and time of day (FR-ENV-02) */
+  app.post<{ Params: { pid: string; sid: string }; Body: { kit: string; palette?: string; timeOfDay?: string } }>('/api/projects/:pid/scenes/:sid/kit-look', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      const kit = (library(p).manifest(b?.kit ?? '')?.data as { kit?: Parameters<typeof kitLookCommands>[3] } | undefined)?.kit;
+      if (!kit) throw new FrameError('NOT_FOUND', `Kit ${b?.kit} not found`);
+      const presets = (libraryDefaults as { timeOfDay?: TimeOfDay[] }).timeOfDay ?? [];
+      const tod = b.timeOfDay ? presets.find((t) => t.id === b.timeOfDay) : undefined;
+      if (b.timeOfDay && !tod) throw new FrameError('USAGE', `Unknown time of day ${b.timeOfDay}`, { known: presets.map((t) => t.id) });
+      let cmds;
+      try {
+        cmds = kitLookCommands(p.open.state, req.params.sid, b.kit, kit, { ...(b.palette ? { palette: b.palette } : {}), ...(tod ? { timeOfDay: tod } : {}), presets });
+      } catch (e) {
+        throw new FrameError('USAGE', (e as Error).message);
+      }
+      const name = kit.palettes?.find((x) => x.id === b.palette)?.name;
+      const r = p.open.session.apply({ commands: cmds, source: sourceOf(req), label: [name && `${name} palette`, tod?.name].filter(Boolean).join(', ') || 'Recolour set' });
+      return { revision: r.revision };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- ready-made sets (FR-ENV-01) */
+  app.post<{ Params: { pid: string; sid: string }; Body: { ref: string } }>('/api/projects/:pid/scenes/:sid/set/apply', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const lib = library(p);
+      const set = (lib.manifest(req.body?.ref ?? '')?.data as { set?: SetData } | undefined)?.set;
+      if (!set) throw new FrameError('NOT_FOUND', `Set ${req.body?.ref} not found`);
+      const kit = (lib.manifest(set.kit)?.data as { kit?: Parameters<typeof kitLookCommands>[3] & Parameters<typeof setCommands>[3] } | undefined)?.kit;
+      if (!kit) throw new FrameError('NOT_FOUND', `Kit ${set.kit} not found`);
+      // Plan on a scratch session so the palette and time of day apply to the new pieces; one undo step.
+      const scratch = new ProjectSession(p.open.state, 0, { newId: randomId });
+      const placed = setCommands(scratch.state, req.params.sid, set, kit, { newId: randomId, propName: (r) => lib.manifest(r)?.name });
+      const out = [...scratch.apply({ commands: placed.commands }).commands];
+      const presets = (libraryDefaults as { timeOfDay?: TimeOfDay[] }).timeOfDay ?? [];
+      const tod = set.timeOfDay ? presets.find((t) => t.id === set.timeOfDay) : undefined;
+      if (set.palette || tod) out.push(...kitLookCommands(scratch.state, req.params.sid, set.kit, kit, { ...(set.palette ? { palette: set.palette } : {}), ...(tod ? { timeOfDay: tod } : {}), presets }));
+      const r = p.open.session.apply({ commands: out, source: sourceOf(req), label: `Set ${lib.manifest(req.body.ref)?.name ?? ''}`.trim() });
+      return { revision: r.revision, pieces: placed.pieces };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; sid: string }; Body: { name: string } }>('/api/projects/:pid/scenes/:sid/set/save', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const name = req.body?.name?.trim();
+      if (!name) throw new FrameError('USAGE', 'Name the set');
+      let data: SetData;
+      try {
+        data = setFromScene(p.open.state, req.params.sid);
+      } catch (e) {
+        throw new FrameError('USAGE', (e as Error).message);
+      }
+      const id = `user.${randomUUID()}`;
+      const manifest = {
+        schemaVersion: 1, id, version: 1, kind: 'set', name, category: 'Ready-made sets', group: 'My sets', tags: ['set', 'mine'], synonyms: [], families: ['flat', 'illustrated'], views: ['front'], viewExemptions: {}, anchors: {}, capabilities: [], parameters: [], dependencies: [data.kit, ...new Set(data.props.map((x) => x.ref))], layering: {}, previews: {},
+        license: { id: 'LicenseRef-User-Owned', redistributable: true, commercialUse: true }, provenance: { method: 'authored', author: sourceOf(req), date: new Date().toISOString().slice(0, 10), notes: 'Saved from a scene (FR-ENV-01).' }, data: { set: data },
+      };
+      const r = p.open.session.apply({ commands: [{ name: 'asset.addLocal', params: { manifest } }] as never, source: sourceOf(req), label: `Save set ${name}` });
+      return { ref: `${id}@1`, revision: r.revision };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- project settings (FR-PRJ-05) */
   app.get<{ Params: { pid: string }; Querystring: { family?: string } }>('/api/projects/:pid/style-check', async (req, reply) => {
     try {
@@ -1110,7 +1179,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (!png) {
         const pc = libraryDefaults.previewCharacter;
         const pcm = pc ? lib.manifest(pc) : undefined;
-        const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm } : undefined);
+        const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm } : undefined, (r) => lib.manifest(r));
         if (!setup) throw new FrameError('NOT_FOUND', `${ref} has no visual preview`);
         const renderer = await getRenderer();
         const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));

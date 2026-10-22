@@ -72,6 +72,11 @@ export interface ActionData {
   prop?: { grip: 'L' | 'R'; returns?: boolean; states?: string[]; hold?: [number, number] };
   /** Rig variants this action supports (wheelchair seated rig…). */
   rigs?: string[];
+  /**
+   * Accessory as prop (FR-WRD-04): at normalised time `at` the worn accessory whose id contains `match` (or the
+   * clip's `params.accessory`) is taken off into the action's hand, put back on, or put away.
+   */
+  accessory?: { op: 'remove' | 'wear' | 'stow'; match: string; at: number };
 }
 
 export function ease(e: Ease | undefined, x: number): number {
@@ -190,4 +195,44 @@ export function postureAt(scene: SceneLike, owner: string, start: string, t: num
     if (r) posture = r;
   }
   return posture;
+}
+
+/**
+ * The look a character wears at t (FR-WRD-03): the latest look clip (`params.look` on an acting track) that has
+ * started, else the instance's look. During a clip's `transitionS` the previous look dissolves into the new one.
+ */
+export function lookAt(scene: SceneLike, owner: string, start: string, t: number): { look: string; from?: string; w?: number } {
+  const tracks = new Set(scene.tracks.filter((tr) => tr.owner === owner && tr.kind === 'acting' && !tr.mute).map((tr) => tr.id));
+  const changes = scene.clips.filter((c) => c.enabled && tracks.has(c.track) && typeof c.params.look === 'string' && c.start <= t).sort((a, b) => a.start - b.start);
+  if (!changes.length) return { look: start };
+  const last = changes[changes.length - 1]!;
+  const look = String(last.params.look);
+  const prev = changes.length > 1 ? String(changes[changes.length - 2]!.params.look) : start;
+  const d = Math.max(0, Number(last.params.transitionS ?? 0.5)) * 48000;
+  if (d > 0 && t < last.start + d && prev !== look) return { look, from: prev, w: (t - last.start) / d };
+  return { look };
+}
+
+/** Accessories off the body at t (FR-WRD-04): match → the hand holding it, or `hidden` once put away. */
+export function accessoriesAt(scene: SceneLike, owner: string, t: number, actionOf: ActionLookup): Record<string, 'L' | 'R' | 'hidden'> {
+  const tracks = new Set(scene.tracks.filter((tr) => tr.owner === owner && tr.kind === 'acting' && !tr.mute).map((tr) => tr.id));
+  const events: { at: number; key: string; op: 'remove' | 'wear' | 'stow'; hand: 'L' | 'R' }[] = [];
+  for (const c of scene.clips) {
+    if (!c.enabled || !tracks.has(c.track) || !c.asset) continue;
+    const a = actionOf(c.asset);
+    // Any hand action can take an accessory off or put it on through clip params (accessoryOp, accessory, accessoryAt).
+    const op = c.params.accessoryOp === 'remove' || c.params.accessoryOp === 'wear' || c.params.accessoryOp === 'stow' ? c.params.accessoryOp : a?.accessory?.op;
+    const key = typeof c.params.accessory === 'string' ? c.params.accessory : a?.accessory?.match;
+    if (!op || !key) continue;
+    const u = typeof c.params.accessoryAt === 'number' ? c.params.accessoryAt : a?.accessory?.at ?? 0.5;
+    const hand = c.params.hand === 'L' || c.params.hand === 'R' ? c.params.hand : a?.hand === 'L' ? 'L' : 'R';
+    events.push({ at: c.start + u * (c.end - c.start), key, op, hand });
+  }
+  const out: Record<string, 'L' | 'R' | 'hidden'> = {};
+  for (const e of events.sort((x, y) => x.at - y.at)) {
+    if (e.at > t) break;
+    if (e.op === 'wear') delete out[e.key];
+    else out[e.key] = e.op === 'stow' ? 'hidden' : e.hand;
+  }
+  return out;
 }
