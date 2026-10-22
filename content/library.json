@@ -16,6 +16,7 @@
     "styleFamily": "flat",
     "captionStyle": "txt.podcast-captions@1",
     "previewCharacter": "chr.maya-bennett@1",
+    "previewHair": "hair.straight-long@1",
     "builderTests": {
       "expressions": [
         "exp.smile@1",

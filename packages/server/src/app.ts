@@ -43,7 +43,7 @@ interface RigBuildBody {
 
 export const SERVER_VERSION = '0.1.0';
 /** Bump when thumbnail framing or rendering changes so cached thumbnails are rebuilt. */
-const THUMB_VERSION = 2; // 2: kit parts keep their declared order
+const THUMB_VERSION = 3; // 3: eye and hair controls, eye and brow states, hair-control previews on the library's preview hair
 
 export interface ServerOptions {
   contentDir: string;
@@ -1179,7 +1179,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     const file = thumbDir ? path.join(thumbDir, `${key}.png`) : undefined;
     let png = thumbs.get(key) ?? (file && fs.existsSync(file) ? fs.readFileSync(file) : undefined);
     if (!png) {
-      const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm } : undefined, (r) => lib.manifest(r));
+      const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm, ...((libraryDefaults as { previewHair?: string }).previewHair ? { hair: (libraryDefaults as { previewHair?: string }).previewHair } : {}) } : undefined, (r) => lib.manifest(r));
       if (!setup) throw new FrameError('NOT_FOUND', `${ref} has no visual preview`);
       const renderer = await getRenderer();
       const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));

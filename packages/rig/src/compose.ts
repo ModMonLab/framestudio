@@ -125,13 +125,17 @@ export function buildPalette(colors: Record<string, string>, style: FamilyStyle)
   p.line = p['skin.line'] ?? '#3A2A22';
   if (colors.skin) p['skin.blush'] = mixHex(colors.skin, '#E2555A', 0.55);
   p.eyewhite = '#F8F4EF';
+  // Hair control colours: grey for greying, a lighter tone for highlights unless one is chosen.
+  p.hairGrey = colors.hairGrey ?? '#C9C6C0';
+  p.hairHighlight = colors.hairHighlight ?? lighten(colors.hair ?? '#3A2A20', 1.8);
   p.lash = colors.lash ?? (colors.hair ? scale(mixHex(colors.hair, '#1A1210', 0.6), 0.8) : '#231815');
   if (!colors.brow && colors.hair) {
     p.brow = scale(colors.hair, 0.92);
     p['brow.light'] = lighten(colors.hair, 1.3);
   }
   const iris = colors.eye ?? '#5A3A26';
-  for (const [k, c] of [['iris', iris], ['iris2', colors.eye2 ?? iris]] as const) {
+  // The second eye colour (heterochromia) defaults to a contrasting blue-grey until one is chosen.
+  for (const [k, c] of [['iris', iris], ['iris2', colors.eye2 ?? mixHex(iris, '#6A8FB0', 0.75)]] as const) {
     p[k] = c;
     p[`${k}.deep`] = scale(c, 0.55);
     p[`${k}.light`] = lighten(c, 1.35);
@@ -538,8 +542,8 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
 
   function drawShapes(layer: LayerDef, art: ViewArt, part: ResolvedPart, map: Mapper, params: Params, state: Record<string, string>, slot: string, side: 'L' | 'R') {
     const shapes = (layer.shapes ?? []).filter((s) => whenOk(s.when, state));
-    // Heterochromia: the right-side instance uses the second iris colour.
-    const pal = side === 'R' ? { ...palette, iris: palette.iris2!, 'iris.deep': palette['iris2.deep']!, 'iris.light': palette['iris2.light']! } : palette;
+    // Heterochromia (eye control): the right-side instance uses the second iris colour.
+    const pal = side === 'R' && state.heterochromia === 'on' ? { ...palette, iris: palette.iris2!, 'iris.deep': palette['iris2.deep']!, 'iris.light': palette['iris2.light']! } : palette;
     const byId = new Map<string, string>();
     const missing = (n: string) => issues.push(`${part.ref}: missing point ${n}`);
     const items: Item[] = [];

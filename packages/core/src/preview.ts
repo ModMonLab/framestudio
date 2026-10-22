@@ -27,15 +27,29 @@ export interface PreviewSetup {
   subject?: string;
 }
 
+/** The preset colour farthest from `from` (RGB distance), so a colour control's preview reads at thumbnail size. */
+function mostDifferent(presets: string[], from: string): string | undefined {
+  const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) || 0);
+  const a = rgb(from);
+  let best: string | undefined;
+  let d = -1;
+  for (const p of presets) {
+    const b = rgb(p);
+    const dist = (a[0]! - b[0]!) ** 2 + (a[1]! - b[1]!) ** 2 + (a[2]! - b[2]!) ** 2;
+    if (dist > d) [best, d] = [p, dist];
+  }
+  return best;
+}
+
 /** Kinds that have a visual preview; others (output presets, controls without art) return undefined. */
 export function previewable(kind: string): boolean {
-  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'skin-detail' || kind === 'makeup' || kind === 'identity' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'prop' || kind === 'kit' || kind === 'txt' || kind === 'pattern' || kind === 'set';
+  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'skin-detail' || kind === 'makeup' || kind === 'identity' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'eyestate' || kind === 'browstate' || kind === 'face-ctl' || kind === 'eye-ctl' || kind === 'hair-ctl' || kind === 'prop' || kind === 'kit' || kind === 'txt' || kind === 'pattern' || kind === 'set';
 }
 
 const PREVIEW_USER_ID = 'user.00000000-0000-4000-8000-0000000000ff';
 
 /** Builds the preview project for `ref`. `previewCharacter` comes from the library defaults (content), never code. */
-export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { ref: string; manifest: AssetManifest } | undefined, lookup?: (ref: string) => AssetManifest | undefined): PreviewSetup | undefined {
+export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { ref: string; manifest: AssetManifest; /** Long hairstyle for hair-control previews (library defaults). */ hair?: string } | undefined, lookup?: (ref: string) => AssetManifest | undefined): PreviewSetup | undefined {
   if (!previewable(m.kind)) return undefined;
   const ids = sequentialIds(1);
   const state = createProjectState(ids, { name: 'Preview', styleFamily: 'flat', frameRate: 24, output: { preset: 'preview', width: 1920, height: 1080, aspectRatios: ['16:9'] }, appVersion: 'preview', now: '2000-01-01T00:00:00Z', seed: 1 });
@@ -70,7 +84,8 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
   if (!previewCharacter) return undefined;
   const base = previewCharacter.manifest.data as CharacterData;
   let charRef = previewCharacter.ref;
-  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin' || m.kind === 'body' || m.kind === 'skin-detail' || m.kind === 'makeup' || m.kind === 'identity' || m.kind === 'pattern') {
+  const control = (m.data as { control?: { type: string; target?: string; default?: number | string; range?: [number, number]; options?: string[]; presets?: string[] } }).control;
+  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin' || m.kind === 'body' || m.kind === 'skin-detail' || m.kind === 'makeup' || m.kind === 'identity' || m.kind === 'pattern' || control) {
     // A project-local copy of the preview character wearing the item.
     const data: CharacterData = JSON.parse(JSON.stringify(base));
     if (m.kind in PART_KEYS) data.parts[PART_KEYS[m.kind]!] = ref;
@@ -81,6 +96,15 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
     }
     else if (m.kind === 'skin-detail' || m.kind === 'makeup') data.details = [ref];
     else if (m.kind === 'identity') data.rigVariant = ref;
+    else if (control) {
+      // A control shown away from its default (FR-AST-07): a slider at its far end, the last option, another colour.
+      const value = control.type === 'slider' ? (control.range?.[1] ?? 100)
+        : control.type === 'enum' ? [...(control.options ?? [])].reverse().find((o) => o !== control.default)
+        : mostDifferent(control.presets ?? [], String(control.default ?? '#000000'));
+      if (value !== undefined) data.controls = { ...data.controls, [ref]: value };
+      // Hair controls read best on long hair (length, sway, greying of the lengths).
+      if (m.kind === 'hair-ctl' && previewCharacter.hair) data.parts.hair = previewCharacter.hair;
+    }
     else if (m.kind === 'pattern') {
       // A fabric pattern on the preview character's top and bottom (FR-WRD-02).
       const look = data.looks.find((l) => l.id === data.defaultLook) ?? data.looks[0]!;
@@ -98,6 +122,18 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
   }
   const inst = addCharacter(charRef, base.defaultLook);
   let t = 0;
+  if (m.kind === 'eyestate' || m.kind === 'browstate') {
+    // Eye and brow states (Catalog A6/A7) shown as a held expression with only those values.
+    const st = (m.data as { eyeState?: Record<string, number>; browState?: Record<string, number> });
+    const BROW: Record<string, string> = { inner: 'browInner', outer: 'browOuter', innerL: 'browInnerL', innerR: 'browInnerR', outerL: 'browOuterL', outerR: 'browOuterR', furrow: 'browFurrow' };
+    const expression = st.eyeState ? { ...st.eyeState } : Object.fromEntries(Object.entries(st.browState ?? {}).map(([k, v]) => [BROW[k] ?? k, v]));
+    const exp = { ...m, id: PREVIEW_USER_ID.replace(/ff$/, 'fc'), version: 1, kind: 'exp', data: { expression: { ...expression, intensity: 100, transition: 0 } } } as AssetManifest;
+    apply([{ name: 'asset.addLocal', params: { manifest: exp } }]);
+    const track = trackFor(s.state.scenes[scene]!, inst, 'face')!;
+    apply([{ name: 'clip.add', params: { scene, track: track.id, start: 0, end: 48000 * 4, asset: `${exp.id}@1`, blendIn: 0, blendOut: 0 } }]);
+    return { state: s.state, scene, t: 48000, framing: 'face', subject: inst };
+  }
+  if (control?.target === 'body') return { state: s.state, scene, t, framing: 'full', subject: inst };
   if (m.kind === 'exp' || m.kind === 'act') {
     const sc = s.state.scenes[scene]!;
     const track = trackFor(sc, inst, m.kind === 'exp' ? 'face' : 'acting')!;

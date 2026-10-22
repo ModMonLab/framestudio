@@ -193,6 +193,7 @@ function hairArt(h: HairSpec, fam: StyleFamily, view: View) {
   if (back) {
     backShapes.push({ id: 'back', path: a.smooth(back, true, 0.85), fill: h.cover ? cfill : fill(g0, g1), ...line });
     if (!h.cover) backShapes.push({ path: a.smooth(back, true, 0.85), fill: 'hair.shade', opacity: ill ? 0.45 : 0.55, clip: 'back' });
+    if (!h.cover) backShapes.push({ path: a.smooth(back, true, 0.85), fill: 'hairGrey', opacity: 0.85, opacityParam: 'hair.grey' });
     if (h.locs || h.braids) {
       for (let i = -3; i <= 3; i++) {
         const u = (i / 3.4) * h.backW;
@@ -207,6 +208,7 @@ function hairArt(h: HairSpec, fam: StyleFamily, view: View) {
     const bunShapes: ShapeDef[] = [
       { id: 'bun', ellipse: { c: a.pt([bu, b.v, VOL(0, -1)]), rx: b.r, ry: b.r * 0.92 }, fill: fill(g0, g1), ...line },
       { path: a.path([['M', [bu - b.r * 0.6, b.v + b.r * 0.15]], ['Q', [bu, b.v - b.r * 0.4], [bu + b.r * 0.6, b.v + b.r * 0.15]]]), stroke: { c: 'hair.deep', w: 1.6 }, opacity: 0.7, clip: 'bun' },
+      { ellipse: { c: a.pt([bu, b.v, VOL(0, -1)]), rx: b.r, ry: b.r * 0.92 }, fill: 'hairGrey', opacity: 0.85, opacityParam: 'hair.grey' },
     ];
     a.layer(behind ? 'hair.back' : 'hair.front', 'head', bunShapes);
   }
@@ -237,12 +239,41 @@ function hairArt(h: HairSpec, fam: StyleFamily, view: View) {
         ? [[-0.6, -0.9], [0.1, -1.05], [0.3, -0.95], [-0.5, -0.78]]
         : [[-0.55, -0.92], [0.0, -1.08], [0.45, -0.95], [0.0, -0.95]];
       capShapes.push({ path: a.smooth(shine, true, 0.9), fill: 'hair.light', opacity: ill ? 0.55 : 0.8, clip: 'cap' });
+      // Hair controls (Catalog A9b): highlights, greying, a parting, curl texture and flyaways.
+      capShapes.push({ path: a.smooth(shine.map(([u, v]) => [u * 1.25, v + 0.12] as PS), true, 0.9), fill: 'hairHighlight', opacity: 0.6, opacityParam: 'hair.highlight', clip: 'cap' });
+      capShapes.push({ path: a.smooth(cap, true, 0.85), fill: 'hairGrey', opacity: 0.85, opacityParam: 'hair.grey' });
+      if (view !== 'back') {
+        for (const [opt, pu] of [['left', -0.38], ['centre', 0], ['right', 0.38]] as const) {
+          const u = view === 'side' ? pu * 0.5 - 0.2 : pu;
+          capShapes.push({ path: a.path([['M', [u, h.hairline - 0.02]], ['Q', [u * 0.9, (h.hairline - 1.05) / 2], [u * 0.6, -1.0 - h.lift * 0.6]]]), stroke: { c: 'hair.deep', w: ill ? 1.2 : 1.8 }, opacity: 0.8, clip: 'cap', when: { parting: opt } });
+        }
+      }
+      for (let i = 0; i < 7; i++) {
+        const t = i / 6;
+        const ang = Math.PI * (1.12 + t * 0.76);
+        const rr = 1.0 + h.puff + h.lift * 0.3;
+        const u = Math.cos(ang) * rr;
+        const v = Math.sin(ang) * (1 + h.lift * 0.7);
+        if ((view === 'side' && u > 0.6) || (view === 'three' && u > 0.8)) continue;
+        capShapes.push({ path: a.path([['M', [u * 0.97, v * 0.97, VOL(u, v)]], ['Q', [u * 1.12 + 0.05, v * 1.1, VOL(u, v)], [u * 1.18 - 0.04, v * 1.2, VOL(u, v)]]]), stroke: { c: 'hair', w: ill ? 0.8 : 1.2 }, opacity: 0.9, opacityParam: 'hair.flyaways' });
+      }
       if (ill) {
         for (let i = 0; i < 6; i++) {
           const u = -0.75 + i * 0.3;
           capShapes.push({ path: a.path([['M', [u * 0.4, -1.05 - h.lift * 0.6]], ['Q', [u * 0.9, -0.8], [u * 1.05, -0.35]]]), stroke: { c: 'hair.light', w: 0.9 }, opacity: 0.45, clip: 'cap' });
         }
       }
+    }
+  }
+  if (!h.curls && !h.cover && !h.shaved) {
+    // Curl texture (hair control): small curls along the silhouette, stronger with the control.
+    for (let i = 0; i <= 10; i++) {
+      const ang = Math.PI * (1.02 + (i / 10) * 0.96);
+      const rr = 1.0 + h.puff + h.lift * 0.3;
+      const u = Math.cos(ang) * rr * (view === 'side' ? 0.95 : 1);
+      const v = Math.sin(ang) * (1 + h.lift * 0.7) - 0.05;
+      if ((view === 'side' && u > 0.6) || (view === 'three' && u > 0.8)) continue;
+      capShapes.push({ ellipse: { c: a.pt([u, v, VOL(Math.cos(ang), Math.sin(ang))]), rx: 0.1, ry: 0.095 }, fill: i % 2 ? 'hair' : 'hair.shade', opacityParam: 'hair.curl' });
     }
   }
   if (h.curls) {
@@ -254,7 +285,7 @@ function hairArt(h: HairSpec, fam: StyleFamily, view: View) {
       const rr = 1.0 + h.puff + h.lift * 0.3;
       const u = Math.cos(ang) * rr * (view === 'side' ? 0.95 : 1);
       const v = Math.sin(ang) * (1 + h.lift * 0.7) - 0.05;
-      if (view === 'side' && u > 0.6) continue;
+      if ((view === 'side' && u > 0.6) || (view === 'three' && u > 0.8)) continue;
       capShapes.push({ ellipse: { c: a.pt([u, v, VOL(Math.cos(ang), Math.sin(ang))]), rx: r, ry: r * 0.95 }, fill: i % 2 ? 'hair' : 'hair.shade' });
     }
   }

@@ -80,6 +80,8 @@ function eyeArt(e: EyeShape, fam: StyleFamily, view: View) {
   // White: upper curve then lower curve.
   const white = a.smooth([...upper, ...lower], true, 0.9);
   const irisR = (ill ? 0.5 : 0.6) * e.irisScale * (e.style === 'cartoon' ? 1.2 : 1) * sc;
+  // Iris size control (eye.iris −1…1): ±30 % of the iris radius.
+  const irisD = (kx: number, ky = 1) => ({ drx: { 'eye.iris': irisR * 0.3 * kx }, dry: { 'eye.iris': irisR * 0.3 * ky } });
   const ic = a.pt([side ? -0.3 * W : 0, 0.05 * H, { 'gaze.x': [0.38 * W, 0], 'gaze.y': [0, 0.22 * H], 'eye.lookdown': [0, 0.2 * H], 'eye.open': [0, 0] }]);
   const hl = a.pt([side ? -0.12 * W : 0.22 * irisR, -0.32 * irisR, { 'gaze.x': [0.38 * W, 0], 'gaze.y': [0, 0.22 * H] }]);
   const shapes: ShapeDef[] = [];
@@ -92,24 +94,30 @@ function eyeArt(e: EyeShape, fam: StyleFamily, view: View) {
   if (ill) {
     const it = a.pt([0, -irisR, { 'gaze.x': [0.38 * W, 0], 'gaze.y': [0, 0.22 * H] }]);
     const ib = a.pt([0, irisR, { 'gaze.x': [0.38 * W, 0], 'gaze.y': [0, 0.22 * H] }]);
-    shapes.push({ ellipse: { c: ic, rx: irisR * (side ? 0.55 : 1), ry: irisR }, fill: lin(it, ib, [[0, 'iris.deep'], [0.6, 'iris'], [1, 'iris.light']]), clip: 'white' });
-    shapes.push({ ellipse: { c: ic, rx: irisR * (side ? 0.55 : 1), ry: irisR }, stroke: { c: 'iris.deep', w: 0.8 }, clip: 'white' });
+    shapes.push({ ellipse: { c: ic, rx: irisR * (side ? 0.55 : 1), ry: irisR, ...irisD(side ? 0.55 : 1) }, fill: lin(it, ib, [[0, 'iris.deep'], [0.6, 'iris'], [1, 'iris.light']]), clip: 'white' });
+    shapes.push({ ellipse: { c: ic, rx: irisR * (side ? 0.55 : 1), ry: irisR, ...irisD(side ? 0.55 : 1) }, stroke: { c: 'iris.deep', w: 0.8 }, clip: 'white' });
   } else {
-    shapes.push({ ellipse: { c: ic, rx: irisR * (side ? 0.6 : 1), ry: irisR }, fill: 'iris', clip: 'white' });
+    shapes.push({ ellipse: { c: ic, rx: irisR * (side ? 0.6 : 1), ry: irisR, ...irisD(side ? 0.6 : 1) }, fill: 'iris', clip: 'white' });
   }
-  shapes.push({ ellipse: { c: ic, rx: irisR * 0.48 * (side ? 0.6 : 1), ry: irisR * 0.48 }, fill: '#15110F', clip: 'white' });
-  shapes.push({ ellipse: { c: hl, rx: irisR * (ill ? 0.2 : 0.26), ry: irisR * (ill ? 0.2 : 0.26) }, fill: '#FFFFFF', clip: 'white' });
-  if (e.style === 'cartoon') shapes.push({ ellipse: { c: a.pt([-0.25 * irisR, 0.38 * irisR, { 'gaze.x': [0.38 * W, 0], 'gaze.y': [0, 0.22 * H] }]), rx: irisR * 0.12, ry: irisR * 0.12 }, fill: '#FFFFFF', clip: 'white' });
+  shapes.push({ ellipse: { c: ic, rx: irisR * 0.48 * (side ? 0.6 : 1), ry: irisR * 0.48, ...irisD(0.48 * (side ? 0.6 : 1), 0.48) }, fill: '#15110F', clip: 'white' });
+  // Pupil style (eye control): highlighted (default) and cartoon keep the catch light; round has none.
+  shapes.push({ ellipse: { c: hl, rx: irisR * (ill ? 0.2 : 0.26), ry: irisR * (ill ? 0.2 : 0.26) }, fill: '#FFFFFF', clip: 'white', when: { pupil: ['', 'highlighted', 'cartoon'] } });
+  const second: ShapeDef = { ellipse: { c: a.pt([-0.25 * irisR, 0.38 * irisR, { 'gaze.x': [0.38 * W, 0], 'gaze.y': [0, 0.22 * H] }]), rx: irisR * 0.12, ry: irisR * 0.12 }, fill: '#FFFFFF', clip: 'white' };
+  if (e.style === 'cartoon') shapes.push(second);
+  else shapes.push({ ...second, when: { pupil: 'cartoon' } });
   // Upper lid line (thick, dark) — doubles as the closed-eye line.
   const lidPath = a.smooth(upper, false, 0.9);
   shapes.push({ path: lidPath, stroke: { c: ill ? 'lash' : 'lash', w: ill ? 2.2 : 3.2 } });
   if (ill) {
     shapes.push({ path: a.smooth(lower, false, 0.9), stroke: { c: 'skin.line', w: 0.7 }, opacity: 0.8 });
   }
-  if (e.crease && ill) {
-    const crease = upper.map(([u, v, d]) => [u * 0.92, v - 0.42 * H, { ...(d as D), 'eye.open': [0, ((d as D)['eye.open']?.[1] ?? 0) * 0.35] }] as PS);
-    shapes.push({ path: a.smooth(crease.slice(1), false), stroke: { c: 'skin.line', w: 0.8 }, opacity: 0.6 });
-  }
+  // Lower lash line (eye control).
+  shapes.push({ path: a.smooth(lower, false, 0.9), stroke: { c: 'lash', w: ill ? 1.1 : 1.6 }, opacity: 0.85, when: { lowerLash: 'on' } });
+  // Eyelid crease (eye control): the shape's own crease unless set to none; double adds a second line.
+  const creaseAt = (k: number) => upper.map(([u, v, d]) => [u * 0.92, v - k * H, { ...(d as D), 'eye.open': [0, ((d as D)['eye.open']?.[1] ?? 0) * 0.35] }] as PS);
+  if (e.crease && ill) shapes.push({ path: a.smooth(creaseAt(0.42).slice(1), false), stroke: { c: 'skin.line', w: 0.8 }, opacity: 0.6, when: { crease: ['', 'single', 'double'] } });
+  else shapes.push({ path: a.smooth(creaseAt(0.42).slice(1), false), stroke: { c: 'skin.line', w: ill ? 0.8 : 1.2 }, opacity: 0.6, when: { crease: ['single', 'double'] } });
+  shapes.push({ path: a.smooth(creaseAt(0.62).slice(1), false), stroke: { c: 'skin.line', w: ill ? 0.7 : 1 }, opacity: 0.45, when: { crease: 'double' } });
   // Lashes (option): small strokes at the outer corner.
   const outer = upper[upper.length - 1]!;
   const lashes: ShapeDef = {
@@ -118,6 +126,10 @@ function eyeArt(e: EyeShape, fam: StyleFamily, view: View) {
     when: { lashes: ['defined', 'bold'] },
   };
   shapes.push(lashes);
+  // Bold lashes: a second, longer lash and a heavier lid line.
+  const mid = upper[upper.length - 2]!;
+  shapes.push({ path: a.path([['M', mid], ['L', [mid[0] + 0.12 * W, mid[1] - 0.42 * H, mid[2] as D]]]), stroke: { c: 'lash', w: ill ? 1.4 : 2 }, when: { lashes: 'bold' } });
+  shapes.push({ path: lidPath, stroke: { c: 'lash', w: ill ? 3.4 : 4.6 }, when: { lashes: 'bold' } });
   a.layer('eyes', 'eye', shapes, { sides: ['L', 'R'] });
   return a.build();
 }

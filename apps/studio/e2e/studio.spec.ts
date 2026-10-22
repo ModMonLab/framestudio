@@ -1093,3 +1093,32 @@ test.describe(() => {
     expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
   });
 });
+
+test('a prop state change lands in the Props group; pinch zoom zooms the timeline (FR-TML-01, FR-TML-08, FR-PRP-01)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const add = await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'instance.add', params: { scene: sid, kind: 'prop', asset: 'prop.door@1', name: 'Side door', transform: { x: 1600, y: 1000 }, depthPlane: 'back' } }] } });
+  expect(add.ok()).toBe(true);
+  await page.getByRole('treeitem', { name: /Side door/ }).first().click();
+  await page.getByRole('tab', { name: 'Properties', exact: true }).click();
+  await page.getByRole('button', { name: 'Change to: Choose a state' }).click();
+  await page.getByRole('option', { name: 'Open' }).click();
+  await page.getByRole('button', { name: 'Add at playhead' }).click();
+  const timeline = page.getByRole('region', { name: 'Timeline' });
+  await expect(timeline.getByRole('button', { name: /^Props/ })).toBeVisible();
+  await expect.poll(async () => (await state()).scenes[sid].clips.some((c: { params: { state?: string } }) => c.params.state === 'open')).toBe(true);
+  // Trackpad pinch (ctrl + wheel) over the lanes zooms in.
+  const zoom = timeline.getByRole('slider', { name: 'Zoom' });
+  const val = async () => Number(await zoom.inputValue());
+  const before = await val();
+  expect(before).toBeGreaterThan(0);
+  const box = (await timeline.locator('.st-tl-body').boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 20);
+  await page.keyboard.down('Control');
+  await page.mouse.wheel(0, -120);
+  await page.keyboard.up('Control');
+  await expect.poll(val).toBeGreaterThan(before);
+});

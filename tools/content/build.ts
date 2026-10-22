@@ -125,7 +125,7 @@ const HAIR_CTL: Record<string, unknown> = {
   volume: slider('hair.volume').control, length: slider('hair.length').control, 'curl-tightness': slider('hair.curl').control,
   parting: { type: 'enum', option: 'parting', options: ['left', 'centre', 'right', 'none'], default: 'none' },
   'hair-colour': { type: 'color', color: 'hair', presets: ['#1E1612', '#2F221C', '#4A3020', '#6B4423', '#8A5A2B', '#A8743A', '#C9A063', '#E3C98F', '#B5552E', '#8C2F1F', '#D9D4CC', '#9A9A9A', '#5A5A5A', '#2A2A3A', '#5E2E6E', '#2E5E8C'], default: '#2F221C' },
-  'highlight-colour': { type: 'color', color: 'hairHighlight', presets: [], default: null },
+  'highlight-colour': { type: 'color', color: 'hairHighlight', presets: ['#C9A063', '#E3C98F', '#B5552E', '#D9D4CC', '#8A5A2B', '#5E2E6E', '#2E5E8C', '#C24A7A'], default: null },
   'highlight-amount': slider('hair.highlight').control, greying: slider('hair.grey').control, flyaways: slider('hair.flyaways').control, sway: slider('hair.sway').control,
 };
 
