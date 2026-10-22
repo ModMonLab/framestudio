@@ -51,12 +51,14 @@ describe.skipIf(!WORKER)('M1 vertical slice with the Voice Worker (AC-01 path, F
     if (fixture) expect(status.label).toBe('Fixture audio — not real speech');
 
     // Design and save one voice per host (FR-VOI-02).
+    const designs: Record<string, any[]> = {};
     for (const [who, name, description] of [[maya, 'Host A voice', 'Warm, articulate radio host in her thirties, relaxed pace'], [leo, 'Host B voice', 'Dry, playful co-host in his late twenties, quick delivery']] as const) {
       const dj = await api('POST', `/api/projects/${pid}/voices/design`, { description, sampleText: SAMPLE, candidates: 2, seed: 7 });
       expect(dj.status).toBe(202);
       const done = await waitJob(dj.json.id);
       expect(done.state, JSON.stringify(done.error)).toBe('succeeded');
       expect(done.result.candidates).toHaveLength(2);
+      designs[who] = done.result.candidates;
       const saved = await api('POST', `/api/projects/${pid}/voices`, { name, description, sampleText: SAMPLE, candidate: done.result.candidates[0], assignTo: [{ scene, instance: who }] });
       expect(saved.status, JSON.stringify(saved.json)).toBe(200);
     }
@@ -94,6 +96,23 @@ describe.skipIf(!WORKER)('M1 vertical slice with the Voice Worker (AC-01 path, F
       const shapes = new Set(mouthTrackFromAlignment(take.alignment, { fps: 24 }).blocks.map((b) => b.shape));
       expect(shapes.size).toBeGreaterThan(3);
     }
+
+    // Redesigning a voice saves a new version; lines keep their takes and characters switch only when asked (FR-VOI-10).
+    const leoVoice = st.scenes[scene].instances.find((i: any) => i.id === leo).character.voice as string;
+    const leoTake = st.scenes[scene].clips.find((c: any) => c.id === lines[1]).line.take;
+    const redesign = await api('POST', `/api/projects/${pid}/voices`, { name: 'Host B voice', description: 'Drier', sampleText: SAMPLE, candidate: designs[leo]![1], versionOf: leoVoice, updateUsers: true });
+    expect(redesign.status, JSON.stringify(redesign.json)).toBe(200);
+    expect(redesign.json.ref).toBe(leoVoice.replace(/@1$/, '@2'));
+    const stV = (await api('GET', `/api/projects/${pid}/state`)).json.state;
+    expect(stV.scenes[scene].instances.find((i: any) => i.id === leo).character.voice).toBe(redesign.json.ref);
+    expect(stV.scenes[scene].clips.find((c: any) => c.id === lines[1]).line.take).toBe(leoTake);
+    expect(stV.takes[leoTake].voice).toBe(leoVoice);
+    // A version made from an older version gets the next free number, not a duplicate.
+    const again = await api('POST', `/api/projects/${pid}/voices/version`, { voice: mayaVoice, accept: range.result.candidates.slice(0, 1), updateUsers: false });
+    expect(again.json.ref).toBe(mayaVoice.replace(/@1$/, '@3'));
+    await api('POST', `/api/projects/${pid}/undo`);
+    await api('POST', `/api/projects/${pid}/undo`);
+
     const problems = (await api('GET', `/api/projects/${pid}/validate`)).json.problems.filter((p: any) => p.blocksExport);
     expect(problems).toEqual([]);
 

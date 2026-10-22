@@ -448,12 +448,16 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
-  app.post<{ Params: { pid: string }; Body: { name: string; description: string; language?: string; sampleText: string; candidate: { media: { hash: string; ext: string; mime: string; bytes: number; durationS?: number }; seed: number | null; durationS: number; fixture: boolean }; assignTo?: { scene: string; instance: string }[] } }>('/api/projects/:pid/voices', async (req, reply) => {
+  app.post<{ Params: { pid: string }; Body: { name: string; description: string; language?: string; sampleText: string; candidate: { media: { hash: string; ext: string; mime: string; bytes: number; durationS?: number }; seed: number | null; durationS: number; fixture: boolean }; assignTo?: { scene: string; instance: string }[]; versionOf?: string; updateUsers?: boolean } }>('/api/projects/:pid/voices', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
       const b = req.body;
       if (!b?.name || !b.candidate?.media?.hash) throw new FrameError('USAGE', 'name and candidate are required');
       if (!p.open.store.findMedia(b.candidate.media.hash)) throw new FrameError('NOT_FOUND', 'Candidate audio is not in this project');
+      // A redesign of a project voice is a new version of it (FR-VOI-10); emotion references of the old version were
+      // rendered from the old neutral reference, so the new version starts with the new neutral only.
+      const prev = b.versionOf ? p.open.state.assets[b.versionOf] : undefined;
+      if (b.versionOf && prev?.kind !== 'voice') throw new FrameError('NOT_FOUND', `${b.versionOf} is not a voice in this project`, undefined, 'Only voices designed in this project can be versioned.');
       // The neutral reference must be long enough for cloning takes (worker limit, default 3 s).
       let minRef = 3;
       try {
@@ -462,11 +466,18 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         /* worker offline: keep the documented default */
       }
       if (b.candidate.durationS < minRef) throw new FrameError('VALIDATION_FAILED', `This candidate is ${b.candidate.durationS.toFixed(1)} s; a voice reference needs at least ${minRef} s`, { durationS: b.candidate.durationS, minRef }, 'Design again with a longer test line.');
-      const manifest = designedVoiceManifest({ id: `user.${randomUUID()}`, name: b.name, description: b.description, language: b.language ?? 'en', sampleText: b.sampleText, candidate: b.candidate as never, date: new Date().toISOString().slice(0, 10) });
+      const id = prev?.id ?? `user.${randomUUID()}`;
+      const manifest = designedVoiceManifest({ id, name: b.name, description: b.description, language: b.language ?? 'en', sampleText: b.sampleText, candidate: b.candidate as never, date: new Date().toISOString().slice(0, 10), version: prev ? nextVersion(p, id) : 1 });
       const ref = `${manifest.id}@${manifest.version}`;
-      const cmds = [{ name: 'asset.addLocal', params: { manifest } }, ...(b.assignTo ?? []).map((a) => ({ name: 'instance.update', params: { scene: a.scene, id: a.instance, set: { character: { ...currentCharacter(p, a.scene, a.instance), voice: ref } } } }))];
-      const r = p.open.session.apply({ commands: cmds, source: 'user', label: `Save voice ${b.name}` });
-      return { ref, revision: r.revision };
+      const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest } }];
+      const switched = prev && b.updateUsers ? switchUsers(p, b.versionOf!, ref) : [];
+      cmds.push(...switched);
+      for (const a of b.assignTo ?? []) {
+        if (switched.some((c) => c.params.id === a.instance && c.params.scene === a.scene)) continue;
+        cmds.push({ name: 'instance.update', params: { scene: a.scene, id: a.instance, set: { character: { ...currentCharacter(p, a.scene, a.instance), voice: ref } } } });
+      }
+      const r = p.open.session.apply({ commands: cmds as never, source: 'user', label: prev ? `${prev.name} version ${manifest.version}` : `Save voice ${b.name}` });
+      return { ref, revision: r.revision, updated: cmds.length - 1 };
     } catch (e) {
       return sendError(reply, e);
     }
@@ -495,14 +506,9 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (!voice) throw new FrameError('NOT_FOUND', `${b?.voice} is not a voice in this project`, undefined, 'Only voices designed in this project can be versioned here.');
       if (!Array.isArray(b.accept) || !b.accept.length) throw new FrameError('USAGE', 'accept[] is required');
       for (const a of b.accept) if (!p.open.store.findMedia(a.media?.hash ?? '')) throw new FrameError('NOT_FOUND', `Reference audio for ${a.emotion} is not in this project`);
-      const next = voiceWithReferences(voice, b.accept, new Date().toISOString().slice(0, 10));
+      const next = voiceWithReferences(voice, b.accept, new Date().toISOString().slice(0, 10), nextVersion(p, voice.id));
       const ref = `${next.id}@${next.version}`;
-      const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest: next } }];
-      if (b.updateUsers) {
-        for (const sc of Object.values(p.open.state.scenes)) {
-          for (const i of sc.instances) if (i.character?.voice === b.voice) cmds.push({ name: 'instance.update', params: { scene: sc.id, id: i.id, set: { character: { ...i.character, voice: ref } } } });
-        }
-      }
+      const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest: next } }, ...(b.updateUsers ? switchUsers(p, b.voice, ref) : [])];
       const r = p.open.session.apply({ commands: cmds as never, source: 'user', label: `${voice.name} version ${next.version}` });
       return { ref, revision: r.revision, updated: cmds.length - 1 };
     } catch (e) {
@@ -614,6 +620,20 @@ export function visibleBox(rgba: Uint8Array, w: number, h: number): { x: number;
     }
   }
   return x1 < 0 ? undefined : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+
+/** The version after the newest one of `id` in the project (an older version can be the base of a new one). */
+function nextVersion(p: HubProject, id: string): number {
+  return Math.max(0, ...Object.values(p.open.state.assets).filter((a) => a.id === id).map((a) => a.version)) + 1;
+}
+
+/** instance.update commands moving every character that uses voice `from` to `to` (FR-VOI-10; takes are kept). */
+function switchUsers(p: HubProject, from: string, to: string) {
+  const out: { name: string; params: Record<string, unknown> }[] = [];
+  for (const sc of Object.values(p.open.state.scenes)) {
+    for (const i of sc.instances) if (i.character?.voice === from) out.push({ name: 'instance.update', params: { scene: sc.id, id: i.id, set: { character: { ...i.character, voice: to } } } });
+  }
+  return out;
 }
 
 function currentCharacter(p: HubProject, scene: string, instance: string) {

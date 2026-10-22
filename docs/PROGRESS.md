@@ -172,7 +172,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-VOI-07 | In progress | slice.test.ts; studio e2e “Generate takes” | Generate takes — Generation, takes list, choose; seed policy UI pending |
 | FR-VOI-08 | In progress | voice-client workflow sends only reported controls; Studio delivery shows only worker emotions and states unsupported pace/instruction | Honest capabilities — Delivery presets (Q2) pending |
 | FR-VOI-09 | Done | session.test.ts outdated takes; workflow.ts never auto-selects stale; Studio “Previous text” badge | Stale results |
-| FR-VOI-10 | In progress | `voiceWithReferences` + `POST /voices/version`: accepting references saves version n+1, optionally switches characters, existing takes kept; slice test + Studio e2e | Versions — redesigning an existing voice still creates a new voice instead of a version |
+| FR-VOI-10 | Done | Accepting range references (`POST /voices/version`) or redesigning (`POST /voices` with `versionOf`) saves version n+1 (next free number); characters switch only when asked; existing takes keep their voice version. Evidence: `tools/test/slice.test.ts`, Studio e2e M1 slice | Versions |
 | FR-VOI-11 | Not started | — | Starter voices |
 | FR-VOI-12 | Done | server.test.ts worker status; Studio WorkerBadge (connected/busy/offline/not set up with hint) | Worker status |
 | FR-VWK-01 | In progress | services/voice-worker (FastAPI), README, Dockerfile, setup-wsl.sh | The Voice Worker is a separate service the owner runs (WSL2/Docker on — Install not verified on the reference machine |
@@ -291,7 +291,7 @@ H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output p
 2. M1 exit sign-off: run `apps/studio/e2e` + `tools/test/slice.test.ts` in CI (fixture worker) and record in the
    acceptance report; owner runs the same with the Qwen3 engine (docs/acceptance/owner-checklist.md §1).
 3. Studio polish for UI-02: Problems panel,
-   record in browser (FR-VOI-05), redesign-as-version (FR-VOI-10), clip trim handles.
+   record in browser (FR-VOI-05), clip trim handles.
 4. MCP server (`frame mcp`) over the same commands (FR-AGT, M4) — CLI server mode is done.
 5. Freeze the part contract (end of M1) and start the content track (M5) in parallel with M2.
 6. M2: full character builder with part editing and character versions, part editor, importers and rigging

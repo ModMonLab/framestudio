@@ -1,7 +1,7 @@
 /** Voice designer (FR-VOI-02): description + test line → candidates on the worker → audition → save as a voice. */
 import { useEffect, useRef, useState } from 'react';
 import { Pause, Play } from 'lucide-react';
-import { Button, Dialog, IconButton, Progress, Select, StatusBadge, TextArea, TextField, useToasts } from '@frame/ui';
+import { Button, Dialog, IconButton, Progress, Select, StatusBadge, TextArea, TextField, ToggleRow, useToasts } from '@frame/ui';
 import { api, type WorkerStatus } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -33,6 +33,12 @@ export function VoiceDesigner({ open, instance, onClose }: { open: boolean; inst
   const [assign, setAssign] = useState<string>(instance ?? '');
   const [worker, setWorker] = useState<WorkerStatus>();
   const [saving, setSaving] = useState(false);
+  // Redesigning the instance's current project voice saves a new version of it (FR-VOI-10).
+  const current = inst?.character?.voice && project.assets[inst.character.voice]?.kind === 'voice' ? inst.character.voice : undefined;
+  const currentManifest = current ? project.assets[current] : undefined;
+  const newest = currentManifest ? Math.max(...Object.values(project.assets).filter((a) => a.id === currentManifest.id).map((a) => a.version)) : 0;
+  const [saveAs, setSaveAs] = useState<'new' | 'version'>('new');
+  const [updateUsers, setUpdateUsers] = useState(true);
 
   useEffect(() => {
     if (!open) return;
@@ -40,6 +46,7 @@ export function VoiceDesigner({ open, instance, onClose }: { open: boolean; inst
     setName(inst ? `${inst.name} voice` : '');
     setJobId(undefined);
     setPicked(undefined);
+    setSaveAs('new');
     api.worker(pid).then(setWorker).catch(() => undefined);
   }, [open, instance, inst, pid]);
 
@@ -62,8 +69,9 @@ export function VoiceDesigner({ open, instance, onClose }: { open: boolean; inst
     if (!c) return;
     setSaving(true);
     try {
-      await api.saveVoice(pid, { name, description, sampleText: line, candidate: c, ...(assign && sceneId ? { assignTo: [{ scene: sceneId, instance: assign }] } : {}) });
-      toasts.show({ tone: 'success', message: `Saved ${name}.` });
+      const asVersion = saveAs === 'version' && current;
+      await api.saveVoice(pid, { name, description, sampleText: line, candidate: c, ...(assign && sceneId ? { assignTo: [{ scene: sceneId, instance: assign }] } : {}), ...(asVersion ? { versionOf: current, updateUsers } : {}) });
+      toasts.show({ tone: 'success', message: asVersion ? `Saved ${name} version ${newest + 1}.` : `Saved ${name}.` });
       onClose();
     } catch (e) {
       toasts.show({ tone: 'error', message: (e as Error).message });
@@ -97,10 +105,18 @@ export function VoiceDesigner({ open, instance, onClose }: { open: boolean; inst
         {candidates.some((c) => c.fixture) && <p className="fr-hint">These candidates come from the fixture worker: test signals, not real speech.</p>}
         {chosen && (
           <div className="st-grid2">
+            {currentManifest && <Select label="Save as" value={saveAs} options={[{ value: 'new', label: 'A new voice' }, { value: 'version', label: `Version ${newest + 1} of ${currentManifest.name}` }]} onChange={(v) => {
+              setSaveAs(v as 'new' | 'version');
+              if (v === 'version') setName(currentManifest.name);
+            }} />}
             <TextField label="Voice name" value={name} onChange={setName} placeholder="Voice name" />
             <Select label="Assign to" value={assign} options={[{ value: '', label: 'Nobody yet' }, ...chars.map((c) => ({ value: c.id, label: c.name }))]} onChange={setAssign} />
           </div>
         )}
+        {chosen && saveAs === 'version' && currentManifest && <>
+          <ToggleRow label={`Use the new version for every character that uses ${currentManifest.name}`} description="Existing takes are kept; regenerate lines to hear the new version." checked={updateUsers} onChange={setUpdateUsers} />
+          {(currentManifest.data as { references: { emotion: string }[] }).references.some((r) => r.emotion !== 'neutral') && <p className="fr-hint">Emotion references belong to the old neutral reference and are not carried over; render the emotional range again for the new version.</p>}
+        </>}
       </div>
     </Dialog>
   );

@@ -230,13 +230,13 @@ export async function rangeCandidates(client: VoiceClient, p: ProjectAccess, voi
  * A new voice version with accepted emotion references (FR-VOI-10: changing a voice creates a new version; lines keep
  * their takes). Accepted references replace earlier ones of the same emotion.
  */
-export function voiceWithReferences(voice: AssetManifest, accepted: RangeCandidate[], date: string): AssetManifest {
+export function voiceWithReferences(voice: AssetManifest, accepted: RangeCandidate[], date: string, version = voice.version + 1): AssetManifest {
   const vd = voice.data as VoiceData;
   const refs = vd.references.filter((r) => !accepted.some((a) => a.emotion === r.emotion));
   for (const a of accepted) refs.push({ emotion: a.emotion, media: a.media, transcript: a.transcript, ...(a.seed !== null ? { seed: a.seed } : {}), accepted: true, fixture: a.fixture });
   return {
     ...voice,
-    version: voice.version + 1,
+    version,
     tags: [...new Set([...voice.tags, ...(accepted.some((a) => a.fixture) ? ['fixture'] : [])])],
     provenance: { ...voice.provenance, date },
     data: { ...vd, references: refs, auditions: [...vd.auditions, ...accepted.map((a) => ({ text: a.transcript, media: a.media, emotion: a.emotion }))], engineData: {} },
