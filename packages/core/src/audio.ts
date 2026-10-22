@@ -120,12 +120,23 @@ export function scheduleSceneAudio(state: ProjectState, scene: Scene, range?: { 
       ...(fixture !== undefined ? { fixture } : {}),
     });
   }
+  const speech = mergeSpans(events.filter((e) => e.bus === 'dialogue').map((e) => [e.start, e.start + e.duration]));
+  // Room tone (FR-SND-06): the scene's ambience, quietly, in the gaps between lines so speech never drops to silence.
+  if (scene.audio.roomTone) {
+    const amb = events.find((e) => e.bus === 'ambience');
+    if (!amb) warnings.push('Room tone is on but the scene has no ambience sound to take it from.');
+    else for (let i = 0; i + 1 < speech.length; i++) {
+      const [g0, g1] = [speech[i]![1], speech[i + 1]![0]];
+      if (g1 - g0 < 0.05) continue;
+      events.push({ id: `roomtone-${i}`, bus: 'ambience', source: amb.source, start: g0, offset: g0, duration: g1 - g0, gainDb: amb.gainDb - 18, pan: 0, fadeIn: 0.05, fadeOut: 0.05, curve: 'equal-power', loop: true, ducks: false });
+    }
+  }
   events.sort((a, b) => a.start - b.start || a.id.localeCompare(b.id));
   return {
     duration: sec(to - from),
     events,
     duck: { db: scene.audio.duckingDb, attack: scene.audio.duckAttack, release: scene.audio.duckRelease },
-    speech: mergeSpans(events.filter((e) => e.bus === 'dialogue').map((e) => [e.start, e.start + e.duration])),
+    speech,
     warnings,
   };
 }

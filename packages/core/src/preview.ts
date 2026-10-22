@@ -3,6 +3,7 @@
  * character (parts swapped in through a project-local copy, expressions and actions as clips), framed for a
  * thumbnail. Uses the same commands and evaluation as real scenes, so previews look exactly like the item in use.
  */
+import { setCommands, type SetData } from './sets.js';
 import type { AssetManifest } from '@frame/schema';
 import { createProjectState } from './defaults.js';
 import { sequentialIds } from './ids.js';
@@ -28,13 +29,13 @@ export interface PreviewSetup {
 
 /** Kinds that have a visual preview; others (output presets, controls without art) return undefined. */
 export function previewable(kind: string): boolean {
-  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'skin-detail' || kind === 'makeup' || kind === 'identity' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'prop' || kind === 'kit' || kind === 'txt';
+  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'skin-detail' || kind === 'makeup' || kind === 'identity' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'prop' || kind === 'kit' || kind === 'txt' || kind === 'pattern' || kind === 'set';
 }
 
 const PREVIEW_USER_ID = 'user.00000000-0000-4000-8000-0000000000ff';
 
 /** Builds the preview project for `ref`. `previewCharacter` comes from the library defaults (content), never code. */
-export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { ref: string; manifest: AssetManifest } | undefined): PreviewSetup | undefined {
+export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { ref: string; manifest: AssetManifest } | undefined, lookup?: (ref: string) => AssetManifest | undefined): PreviewSetup | undefined {
   if (!previewable(m.kind)) return undefined;
   const ids = sequentialIds(1);
   const state = createProjectState(ids, { name: 'Preview', styleFamily: 'flat', frameRate: 24, output: { preset: 'preview', width: 1920, height: 1080, aspectRatios: ['16:9'] }, appVersion: 'preview', now: '2000-01-01T00:00:00Z', seed: 1 });
@@ -54,6 +55,14 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
     apply(Object.entries(parts).map(([part, p]) => ({ name: 'instance.add', params: { scene, kind: 'set-piece', asset: ref, name: part, transform: { x: p.at?.[0] ?? 960, y: p.at?.[1] ?? 1080 }, depthPlane: p.plane ?? 'back', ...(p.order !== undefined ? { order: p.order } : {}), params: { part } } })));
     return { state: s.state, scene, t: 0, framing: 'scene' };
   }
+  if (m.kind === 'set') {
+    // A ready-made set (FR-ENV-01): its kit pieces and props in place.
+    const set = (m.data as { set?: SetData }).set;
+    const kit = set && (lookup?.(set.kit)?.data as { kit?: Parameters<typeof setCommands>[3] } | undefined)?.kit;
+    if (!set || !kit) return undefined;
+    apply(setCommands(s.state, scene, { ...set, cameras: [], marks: [] }, kit, { newId: ids }).commands);
+    return { state: s.state, scene, t: 0, framing: 'scene' };
+  }
   if (m.kind === 'chr') {
     const subject = addCharacter(ref, (m.data as CharacterData).defaultLook);
     return { state: s.state, scene, t: 0, framing: 'full', subject };
@@ -61,7 +70,7 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
   if (!previewCharacter) return undefined;
   const base = previewCharacter.manifest.data as CharacterData;
   let charRef = previewCharacter.ref;
-  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin' || m.kind === 'body' || m.kind === 'skin-detail' || m.kind === 'makeup' || m.kind === 'identity') {
+  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin' || m.kind === 'body' || m.kind === 'skin-detail' || m.kind === 'makeup' || m.kind === 'identity' || m.kind === 'pattern') {
     // A project-local copy of the preview character wearing the item.
     const data: CharacterData = JSON.parse(JSON.stringify(base));
     if (m.kind in PART_KEYS) data.parts[PART_KEYS[m.kind]!] = ref;
@@ -72,6 +81,11 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
     }
     else if (m.kind === 'skin-detail' || m.kind === 'makeup') data.details = [ref];
     else if (m.kind === 'identity') data.rigVariant = ref;
+    else if (m.kind === 'pattern') {
+      // A fabric pattern on the preview character's top and bottom (FR-WRD-02).
+      const look = data.looks.find((l) => l.id === data.defaultLook) ?? data.looks[0]!;
+      look.patterns = { top: { pattern: ref }, bottom: { pattern: ref } };
+    }
     else {
       const look = data.looks.find((l) => l.id === data.defaultLook) ?? data.looks[0]!;
       const replaced = m.kind === 'dress' ? new Set(['top', 'bottom', 'dress']) : new Set([m.kind]);

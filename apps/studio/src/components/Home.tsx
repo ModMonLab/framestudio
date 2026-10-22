@@ -1,9 +1,10 @@
 /** Home and project browser (Design System §7.3): open a project folder; recent projects. */
 import { useEffect, useState } from 'react';
-import { FolderOpen, Moon, MoreHorizontal, Pin, PinOff, Sun } from 'lucide-react';
+import { FolderOpen, HelpCircle, Moon, MoreHorizontal, Pin, PinOff, Settings, Sun } from 'lucide-react';
 import type { Problem } from '@frame/schema';
 import { AppBar, Button, Dialog, EmptyState, IconButton, MenuButton, Panel, SearchField, Select, TextField, useTheme, useToasts } from '@frame/ui';
 import { api, ApiError, type RecentProject } from '../lib/api.js';
+import { FirstRun } from './Onboarding.js';
 
 interface Recent {
   path: string;
@@ -36,12 +37,14 @@ export function Home() {
   const [open, setOpen] = useState<{ id: string; name: string; root: string }[]>([]);
   const [server, setServer] = useState<'checking' | 'ok' | 'down'>('checking');
   const [template, setTemplate] = useState('empty');
+  const [templates, setTemplates] = useState<{ value: string; label: string }[]>([]);
   const { resolved, setTheme } = useTheme();
 
   useEffect(() => {
     api.projects().then((r) => {
       setOpen(r.projects);
       setServer('ok');
+      api.library('', 'tpl', undefined, 100).then((t) => setTemplates(t.results.map((h) => ({ value: h.ref, label: h.name })))).catch(() => setTemplates([]));
     }).catch(() => setServer('down'));
   }, []);
 
@@ -69,11 +72,15 @@ export function Home() {
 
   return (
     <div className="fr-root st-app">
-      <AppBar right={<IconButton label={resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} icon={resolved === 'dark' ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')} />} />
+      <AppBar right={<>
+        <IconButton label="Help" icon={<HelpCircle size={16} />} onClick={() => (location.hash = '#/help')} />
+        <IconButton label="Settings" icon={<Settings size={16} />} onClick={() => (location.hash = '#/settings')} />
+        <IconButton label={resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} icon={resolved === 'dark' ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')} />
+      </>} />
       <main className="st-home">
         <h1 className="fr-sr">Frame projects</h1>
         <div className="st-home-col">
-          <Panel title="Open a project" label="Open a project">
+          <Panel title="Open a project" label="Open a project" help="#/help/projects">
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {server === 'down' && <p className="fr-error-text" role="alert">The Frame Server is not reachable. Start it with <code className="fr-mono">frame server start</code>.</p>}
               <form onSubmit={(e) => { e.preventDefault(); if (path.trim()) void openPath(path); }} style={{ display: 'flex', gap: 8 }}>
@@ -96,6 +103,7 @@ export function Home() {
         </div>
         <ProjectBrowser server={server} open={open} onOpen={(root) => void openPath(root)} onUseTemplate={setTemplate} />
       </main>
+      {server === 'ok' && <FirstRun templates={templates} onTemplate={setTemplate} />}
       {report && (
         <Dialog title={`${report.name} opened with problems`} open onClose={() => setReport(undefined)} footer={<>
           <Button onClick={() => setReport(undefined)}>Close</Button>
@@ -191,7 +199,7 @@ function ProjectBrowser({ server, open, onOpen, onUseTemplate }: { server: strin
   );
   return (
     <div className="st-home-col st-home-col--wide">
-      <Panel title="Projects" label="Projects">
+      <Panel title="Projects" label="Projects" help="#/help/projects">
         <div className="st-home-tools">
           <div style={{ flex: 1 }}><SearchField label="Search projects" placeholder="Search projects" value={q} onChange={setQ} /></div>
           <div style={{ width: 150 }}><Select label="Sort" value={sort} onChange={(v) => setSort(v as 'recent' | 'name')} options={[{ value: 'recent', label: 'Last opened' }, { value: 'name', label: 'Name' }]} /></div>
@@ -204,7 +212,7 @@ function ProjectBrowser({ server, open, onOpen, onUseTemplate }: { server: strin
           </>}
       </Panel>
       {templates.length > 0 && (
-        <Panel title="Templates" label="Templates">
+        <Panel title="Templates" label="Templates" help="#/help/start">
           <ul className="st-home-templates">
             {templates.map((t) => (
               <li key={t.ref}><span>{t.name}</span><Button variant="ghost" onClick={() => { onUseTemplate(t.ref); document.querySelector<HTMLInputElement>('[aria-label="Folder"]')?.focus(); }}>Use</Button></li>
@@ -289,7 +297,7 @@ function NewProject({ disabled, onCreated, template, setTemplate }: { disabled: 
     }
   };
   return (
-    <Panel title="New project" label="New project">
+    <Panel title="New project" label="New project" help="#/help/start">
       <form style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }} onSubmit={(e) => { e.preventDefault(); if (folder.trim()) void create(); }}>
         <TextField label="Folder" placeholder="/path/to/NewShow.frame" value={folder} onChange={setFolder} icon={<FolderOpen size={14} />} />
         <TextField label="Name" placeholder="Defaults to the folder name" value={name} onChange={setName} />

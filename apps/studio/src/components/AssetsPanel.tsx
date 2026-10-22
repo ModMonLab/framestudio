@@ -38,7 +38,7 @@ const FILTERS: Record<string, { title: string; kinds?: string[]; empty: string }
 const PART_KINDS = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'feet', 'top', 'outer', 'bottom', 'dress', 'shoe', 'acc', 'skin-detail', 'makeup']);
 
 /** Kinds that can be placed or applied from this panel. */
-const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img', 'rcp', 'cam', 'sfx', 'atmo', 'fx', 'tr', 'music', 'amb', 'cue', 'tpl']);
+const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'set', 'img', 'rcp', 'cam', 'sfx', 'atmo', 'fx', 'tr', 'music', 'amb', 'cue', 'tpl']);
 
 export function AssetsPanel({ filter }: { filter: string }) {
   const { studio } = useCtx();
@@ -109,7 +109,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
 
   const pickedHit = all?.find((h) => h.ref === picked);
   return (
-    <Panel title={f.title} label={f.title} actions={<><IconButton label="Open the full library" icon={<Maximize2 size={16} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/library`)} /><IconButton label="Import a file…" icon={<Upload size={16} />} onClick={() => fileInput.current?.click()} /></>} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
+    <Panel title={f.title} label={f.title} help="#/help/assets" actions={<><IconButton label="Open the full library" icon={<Maximize2 size={16} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/library`)} /><IconButton label="Import a file…" icon={<Upload size={16} />} onClick={() => fileInput.current?.click()} /></>} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
       {all === undefined ? <p className="fr-faint" style={{ padding: 12 }}>Loading library…</p> : groups.length === 0 ? (
         <EmptyState title={q ? 'No matches' : f.title}>{q ? `Nothing matches “${q}”.` : f.empty}</EmptyState>
       ) : groups.map(([cat, hits]) => (
@@ -213,6 +213,9 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
     case 'rcp':
       studio.set({ recipe: { ref: h.ref, name: h.name } });
       return undefined;
+    case 'set':
+      await api.applySet(s.pid, scene.id, h.ref);
+      return `${h.name} set added`;
     case 'tpl':
       studio.set({ template: { ref: h.ref, name: h.name } });
       return undefined;

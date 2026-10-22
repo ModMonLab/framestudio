@@ -1,9 +1,9 @@
 /** Properties panel (Design System §7.1): Properties / Acting / Audio tabs with collapsible sections. */
 import { useEffect, useRef, useState } from 'react';
 import { Pause, Play, Plus, Sparkles, Upload, UserCog } from 'lucide-react';
-import { lineTakeState, trackFor, type ProjectState } from '@frame/core';
+import { lineTakeState, lookAt, trackFor, type ProjectState } from '@frame/core';
 import type { Clip, Instance, Scene, Take } from '@frame/schema';
-import { Button, Chip, EmptyState, IconButton, NumberField, Panel, Section, Select, SliderRow, StatusBadge, Tabs, TextArea, ToggleRow, useSectionState, type EditPhase } from '@frame/ui';
+import { Button, Chip, EmptyState, IconButton, NumberField, Panel, Section, Segmented, Select, SliderRow, StatusBadge, Tabs, TextArea, ToggleRow, useSectionState, useToasts, type EditPhase } from '@frame/ui';
 import { api, type WorkerStatus } from '../lib/api.js';
 import { useStudio, type Mode } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -27,7 +27,7 @@ export function PropertiesPanel({ mode }: { mode: Mode }) {
   const owner = inst ?? (clip ? scene?.instances.find((i) => i.id === scene.tracks.find((t) => t.id === clip.track)?.owner) : undefined);
 
   return (
-    <Panel label="Properties" className="st-right">
+    <Panel label="Properties" className="st-right" help="#/help/modes">
       <Tabs label="Properties tabs" value={tab} onChange={setTab} tabs={[{ value: 'properties', label: 'Properties' }, { value: 'acting', label: 'Acting' }, { value: 'audio', label: 'Audio' }]} style={{ padding: '0 8px' }} />
       <div className="st-props-body">
         {!scene ? <EmptyState title="No scene">Add a scene from the Layers panel.</EmptyState>
@@ -82,6 +82,7 @@ function InstanceProps({ scene, inst }: { scene: Scene; inst: Instance }) {
         <SliderRow label="Opacity" value={Math.round(inst.opacity * 100)} min={0} max={100} defaultValue={100} format={(v) => `${Math.round(v)} %`} onChange={(v, phase) => phase === 'commit' && set({ opacity: v / 100 })} />
         <SliderRow label="Parallax" value={Math.round(inst.parallax * 100)} min={0} max={200} defaultValue={100} format={(v) => `${Math.round(v)} %`} onChange={(v, phase) => phase === 'commit' && set({ parallax: v / 100 })} />
         <ToggleRow label="Visible" checked={inst.visible} onChange={(v) => set({ visible: v })} />
+        <ToggleRow label="Locked" description="Locked objects select but do not move" checked={inst.locked} onChange={(v) => set({ locked: v }, `${v ? 'Lock' : 'Unlock'} ${inst.name}`)} />
       </Section>
       {inst.kind === 'character' && inst.character && (
         <Section title="Appearance" open={open.appearance!} onToggle={(o) => toggle('appearance', o)}>
@@ -94,7 +95,47 @@ function InstanceProps({ scene, inst }: { scene: Scene; inst: Instance }) {
           <Button icon={<UserCog size={14} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(studio.state.pid)}/builder/${scene.id}/${inst.id}`)}>Open in builder</Button>
         </Section>
       )}
+      {inst.kind === 'set-piece' && inst.asset && typeof inst.params.part === 'string' && <KitLook scene={scene} inst={inst} />}
     </>
+  );
+}
+
+/** Kit palette and time of day (FR-ENV-02): recolours every piece of this kit in the scene together. */
+function KitLook({ scene, inst }: { scene: Scene; inst: Instance }) {
+  const { studio, assets } = useCtx();
+  const toasts = useToasts();
+  const pid = useStudio(studio, (s) => s.pid);
+  const [open, toggle] = useSections('kit', { kit: true });
+  const [times, setTimes] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    api.libraryDefaults().then((d) => setTimes((d as { timeOfDay?: { id: string; name: string }[] }).timeOfDay ?? [])).catch(() => setTimes([]));
+  }, []);
+  const kit = (assets.manifest(inst.asset!)?.data as { kit?: { palettes?: { id: string; name: string; colors: Record<string, string> }[] } } | undefined)?.kit;
+  const kitName = assets.manifest(inst.asset!)?.name ?? 'Set';
+  const apply = async (body: { palette?: string; timeOfDay?: string }) => {
+    try {
+      await api.kitLook(pid, scene.id, inst.asset!, body);
+    } catch (e) {
+      toasts.show({ tone: 'error', message: (e as Error).message });
+    }
+  };
+  if (!kit) return null;
+  const palette = typeof inst.params.palette === 'string' ? inst.params.palette : 'original';
+  const tod = typeof inst.params.timeOfDay === 'string' ? inst.params.timeOfDay : 'day';
+  return (
+    <Section title={kitName} summary={[kit.palettes?.find((p) => p.id === palette)?.name, times.find((t) => t.id === tod)?.name].filter(Boolean).join(' · ')} open={open.kit!} onToggle={(o) => toggle('kit', o)}>
+      <p className="fr-hint">Applies to every {kitName.toLowerCase()} piece in this scene.</p>
+      {kit.palettes && <div className="st-field-col"><span className="fr-label">Palette</span>
+        <div className="fr-chips" role="group" aria-label="Kit palette">{kit.palettes.map((p) => (
+          <Chip key={p.id} selected={p.id === palette} onClick={() => void apply({ palette: p.id })}>
+            <span className="st-swatches" aria-hidden>{Object.values(p.colors).slice(0, 4).map((c, i) => <i key={i} style={{ background: c }} />)}</span>{p.name}
+          </Chip>
+        ))}</div>
+      </div>}
+      {times.length > 0 && <div className="st-field-col"><span className="fr-label">Time of day</span>
+        <div className="fr-chips" role="group" aria-label="Time of day">{times.map((t) => <Chip key={t.id} selected={t.id === tod} onClick={() => void apply({ timeOfDay: t.id })}>{t.name}</Chip>)}</div>
+      </div>}
+    </Section>
   );
 }
 
@@ -114,7 +155,34 @@ function ClipProps({ scene, clip }: { scene: Scene; clip: Clip }) {
       <ToggleRow label="Enabled" checked={clip.enabled} onChange={(v) => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: clip.id, set: { enabled: v } } }])} />
     </Section>
     {acting && <MotionProps scene={scene} clip={clip} />}
+    {AUDIO_KINDS.has(scene.tracks.find((t) => t.id === clip.track)?.kind ?? '') && <ClipSound scene={scene} clip={clip} />}
     </>
+  );
+}
+
+const AUDIO_KINDS = new Set(['dialogue', 'music', 'ambience', 'sfx']);
+
+/** Clip sound (FR-SND-02/03): gain, pan, fades with curve, mute, and whether it ducks under dialogue. */
+function ClipSound({ scene, clip }: { scene: Scene; clip: Clip }) {
+  const { studio } = useCtx();
+  const [open, toggle] = useSections('clipsound', { sound: true });
+  const kind = scene.tracks.find((t) => t.id === clip.track)?.kind;
+  const p = clip.params as { gainDb?: number; pan?: number; fadeIn?: number; fadeOut?: number; fadeCurve?: string; mute?: boolean; duck?: boolean };
+  const set = (patch: Record<string, unknown>, label: string) => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: clip.id, set: { params: patch } } }], label);
+  const len = (clip.end - clip.start) / 48000;
+  const ducks = typeof p.duck === 'boolean' ? p.duck : kind === 'music' || kind === 'ambience';
+  return (
+    <Section title="Sound" summary={`${(p.gainDb ?? 0) >= 0 ? '+' : ''}${(p.gainDb ?? 0).toFixed(1)} dB`} open={open.sound!} onToggle={(o) => toggle('sound', o)}>
+      <SliderRow label="Gain" value={p.gainDb ?? 0} min={-40} max={12} step={0.5} defaultValue={0} format={(v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)} dB`} onChange={(v, ph) => ph === 'commit' && set({ gainDb: v }, `Clip gain ${v} dB`)} />
+      <SliderRow label="Pan" value={Math.round((p.pan ?? 0) * 100)} min={-100} max={100} defaultValue={0} format={(v) => (v === 0 ? 'Centre' : v < 0 ? `L ${-v}` : `R ${v}`)} onChange={(v, ph) => ph === 'commit' && set({ pan: v / 100 }, 'Clip pan')} />
+      <div className="st-grid2">
+        <NumberField label="Fade in" prefix="In" unit=" s" precision={2} min={0} max={len} value={p.fadeIn ?? 0} onChange={(v, ph) => ph === 'commit' && set({ fadeIn: v }, 'Fade in')} />
+        <NumberField label="Fade out" prefix="Out" unit=" s" precision={2} min={0} max={len} value={p.fadeOut ?? 0} onChange={(v, ph) => ph === 'commit' && set({ fadeOut: v }, 'Fade out')} />
+      </div>
+      <Segmented label="Fade curve" value={p.fadeCurve === 'equal-power' ? 'equal-power' : 'linear'} onChange={(v) => set({ fadeCurve: v }, 'Fade curve')} options={[{ value: 'linear', label: 'Linear' }, { value: 'equal-power', label: 'Equal power' }]} />
+      <ToggleRow label="Mute this clip" checked={!!p.mute} onChange={(v) => set({ mute: v }, v ? 'Mute clip' : 'Unmute clip')} />
+      {kind !== 'dialogue' && <ToggleRow label="Duck under dialogue" checked={ducks} onChange={(v) => set({ duck: v }, v ? 'Duck under dialogue' : 'Do not duck')} />}
+    </Section>
   );
 }
 
@@ -183,7 +251,7 @@ function MotionProps({ scene, clip }: { scene: Scene; clip: Clip }) {
 function ActingProps({ scene, inst }: { scene: Scene; inst: Instance }) {
   const { studio } = useCtx();
   const pid = useStudio(studio, (s) => s.pid);
-  const [open, toggle] = useSections('acting', { expression: true, gesture: true, objects: true });
+  const [open, toggle] = useSections('acting', { expression: true, gesture: true, objects: true, wardrobe: false });
   const [exps, setExps] = useState<{ ref: string; name: string }[]>([]);
   const [acts, setActs] = useState<{ ref: string; name: string }[]>([]);
   const [objects, setObjects] = useState<{ prop: string; name: string; actions: { ref: string; name: string; durationS: number }[] }[]>([]);
@@ -227,6 +295,7 @@ function ActingProps({ scene, inst }: { scene: Scene; inst: Instance }) {
       <Section title="Gesture" summary={acts.find((a) => a.ref === curAct)?.name ?? 'None'} open={open.gesture!} onToggle={(o) => toggle('gesture', o)}>
         <div className="fr-chips">{acts.slice(0, 24).map((a) => <Chip key={a.ref} selected={a.ref === curAct} onClick={() => add('acting', a.ref, a.name)}>{a.name}</Chip>)}</div>
       </Section>
+      <WardrobeSection scene={scene} inst={inst} open={open.wardrobe!} onToggle={(o) => toggle('wardrobe', o)} acts={acts} />
       <Section title="Use an object" summary={objects.length ? `${objects.length} in scene` : 'None'} open={open.objects!} onToggle={(o) => toggle('objects', o)}>
         {!objects.length ? <p className="fr-hint">Add a prop that can be used (a mug, a phone, a door) to the scene.</p> : objects.map((o) => (
           <div key={o.prop} className="st-field-col">
@@ -236,6 +305,57 @@ function ActingProps({ scene, inst }: { scene: Scene; inst: Instance }) {
         ))}
       </Section>
     </>
+  );
+}
+
+/**
+ * Wardrobe at the playhead (FR-WRD-03/04): change look (a costume change that dissolves over half a second) and take
+ * a worn accessory off into a hand, put it back on, or put it away.
+ */
+function WardrobeSection({ scene, inst, open, onToggle, acts }: { scene: Scene; inst: Instance; open: boolean; onToggle: (o: boolean) => void; acts: { ref: string; name: string }[] }) {
+  const { studio, assets } = useCtx();
+  const time = useStudio(studio, (s) => s.time);
+  const man = inst.asset ? assets.manifest(inst.asset) : undefined;
+  const data = man?.data as { looks?: { id: string; name: string; accessories?: string[] }[] } | undefined;
+  const looks = data?.looks ?? [];
+  const track = trackFor(scene, inst.id, 'acting');
+  const lookNow = lookAt(scene, inst.id, inst.character!.look, time).look;
+  const worn = looks.find((l) => l.id === lookNow)?.accessories ?? [];
+  const [look, setLook] = useState<string>();
+  const [acc, setAcc] = useState<string>();
+  const [hand, setHand] = useState<'R' | 'L'>('R');
+  // The hand gesture that carries the change comes from the library defaults (content, not code).
+  const [gesture, setGesture] = useState<string>();
+  useEffect(() => {
+    api.libraryDefaults().then((d) => setGesture((d as { accessoryGesture?: string }).accessoryGesture)).catch(() => undefined);
+  }, []);
+  const gestureFor = () => gesture ?? acts[0]?.ref;
+  const change = () => {
+    if (!track || !look) return;
+    void studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: time, end: Math.min(scene.duration, time + 24000), name: `Look: ${looks.find((l) => l.id === look)?.name ?? look}`, params: { look, transitionS: 0.5 } } }], `Change ${inst.name}'s look`);
+  };
+  const accessory = (op: 'remove' | 'wear' | 'stow') => {
+    const a = acc ?? worn[0];
+    const g = gestureFor();
+    if (!track || !a || !g) return;
+    const id = a.split('@')[0]!;
+    void studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: time, end: Math.min(scene.duration, time + 72000), asset: g, blendIn: 2400, blendOut: 2400, params: { accessoryOp: op, accessory: id, accessoryAt: 0.4, hand } } }], `${op === 'remove' ? 'Take off' : op === 'wear' ? 'Put on' : 'Put away'} ${assets.manifest(a)?.name ?? id}`);
+  };
+  return (
+    <Section title="Wardrobe" summary={looks.find((l) => l.id === lookNow)?.name ?? lookNow} open={open} onToggle={onToggle}>
+      <p className="fr-hint">Changes at the playhead ({(time / 48000).toFixed(1)} s) and lasts until the next change.</p>
+      <div className="st-grid2">
+        <Select label="Change look to" value={look} placeholder="Choose a look" options={looks.filter((l) => l.id !== lookNow).map((l) => ({ value: l.id, label: l.name }))} onChange={setLook} />
+        <Button disabled={!look || !track} disabledReason="Choose a look" onClick={change}>Change look</Button>
+      </div>
+      <Select label="Accessory" value={acc ?? worn[0]} placeholder={worn.length ? 'Choose' : 'No accessories in this look'} disabled={!worn.length} disabledReason="This look has no accessories" options={worn.map((r) => ({ value: r, label: assets.manifest(r)?.name ?? r }))} onChange={setAcc} />
+      <Segmented label="Hand" value={hand} onChange={(v) => setHand(v as 'L' | 'R')} options={[{ value: 'R', label: 'Right hand' }, { value: 'L', label: 'Left hand' }]} />
+      <div className="fr-chips" role="group" aria-label="Accessory actions">
+        <Chip disabled={!worn.length} onClick={() => accessory('remove')}>Take off and hold</Chip>
+        <Chip disabled={!worn.length} onClick={() => accessory('wear')}>Put back on</Chip>
+        <Chip disabled={!worn.length} onClick={() => accessory('stow')}>Put away</Chip>
+      </div>
+    </Section>
   );
 }
 
@@ -254,7 +374,10 @@ function SceneAudioProps({ scene }: { scene: Scene }) {
   return (
     <Section title="Mix" open={open.mix!} onToggle={(o) => toggle('mix', o)}>
       <SliderRow label="Duck music under dialogue" value={scene.audio.duckingDb} min={-40} max={0} defaultValue={-12} format={(v) => `${v} dB`} onChange={(v, p) => p === 'commit' && set({ duckingDb: v })} />
-      <p className="fr-hint">Select a character to manage its voice and lines.</p>
+      <SliderRow label="Duck attack" value={scene.audio.duckAttack} min={0} max={2} step={0.05} defaultValue={0.15} format={(v) => `${v.toFixed(2)} s`} onChange={(v, p) => p === 'commit' && set({ duckAttack: v })} />
+      <SliderRow label="Duck release" value={scene.audio.duckRelease} min={0} max={4} step={0.05} defaultValue={0.4} format={(v) => `${v.toFixed(2)} s`} onChange={(v, p) => p === 'commit' && set({ duckRelease: v })} />
+      <ToggleRow label="Room tone under dialogue gaps" description="Fills silences with the scene's ambience, quietly" checked={scene.audio.roomTone} onChange={(v) => void studio.exec([{ name: 'scene.setAudio', params: { id: scene.id, roomTone: v } }], v ? 'Room tone on' : 'Room tone off')} />
+      <p className="fr-hint">The ducking curve shows on music and ambience tracks. Select a character to manage its voice and lines.</p>
     </Section>
   );
 }

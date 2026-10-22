@@ -45,13 +45,13 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-PRJ-05 | Done | File ▸ Project settings…: name, description, style family (refused with a list via styleFamilyBlockers), frame rate (re-snap report), default output, captions, worker endpoint, render folder, agent permissions; e2e “project settings…” | Project settings |
 | FR-PRJ-06 | Done | Home browser: server recent list (io recent.ts) with thumbnails, last opened, episode/scene counts, pinned, templates; search and sort; open, reveal, duplicate (new id), export package, delete to OS trash; recent.test.ts; e2e “the project browser…” | Browser |
 | FR-PRJ-07 | Done | store.test.ts “invalid folders”; Home validation report for unreadable folders and “opened with problems” dialog; e2e “the project browser…” | Open folder — Studio open-folder UI |
-| FR-PER-01 | In progress | io/project.ts autosave; Studio save badge (Saved/Saving…/Unsaved/Not saved) | Autosave — Retry action in badge pending |
-| FR-PER-02 | In progress | session.test.ts (undo ≥200, labels) | Undo/redo — Studio single-step drags in M1 |
+| FR-PER-01 | Done | io/project.ts autosave (debounced, journaled); Studio save badge Saved/Saving…/Unsaved/Not saved with the error and Retry | Autosave — Retry action in badge pending |
+| FR-PER-02 | Done | session.test.ts (undo ≥200, labels); canvas drags, number fields and notes commit one command per gesture; undo never re-triggers generation | Undo/redo — Studio single-step drags in M1 |
 | FR-PER-03 | Done | store.test.ts; server/test/versions.test.ts; Studio e2e “project versions…”; `frame versions compare|restore` | Versions (snapshots) — Save, list, compare summary (scenes, clips, character versions, assets), undoable restore and “open as a copy” (new folder, new project id) |
 | FR-PER-04 | Done | store.test.ts recovery; crash.test.ts | Crash recovery |
-| FR-PER-05 | In progress | server.test.ts “detects edits made on disk and reloads”; hub.checkExternal | External changes — Merge UI when local changes are pending: event sent, dialog pending |
-| FR-PER-06 | In progress | core validate.ts; Studio Problems badge + list with “Go to” (selects and seeks) | Validation — One-click fixes pending |
-| FR-PER-07 | Not started | — | Clipboard |
+| FR-PER-05 | Done | server.test.ts “detects edits made on disk…” and “holds autosave when files change on disk under unsaved work…”; Studio “Project changed on disk” dialog (load disk version / keep mine) | External changes — Merge UI when local changes are pending: event sent, dialog pending |
+| FR-PER-06 | Done | core validate.ts problems with fix commands; Problems popover grouped by severity with Go to and one-click fixes (extend scene, cut shot, move line, end clip, generate take, relink media by hash); script.test.ts “one-click fixes” | Validation — One-click fixes pending |
+| FR-PER-07 | Done | core clipboard.ts (copySelection/pasteCommands: new ids and tracks, group members, recipe groups onto same-named characters, local assets, media across open projects); POST /scenes/:sid/paste; Edit ▸ Cut/Copy/Paste and Ctrl+X/C/V; clipboard.test.ts; e2e “copy and paste…” | Clipboard |
 | FR-AST-01 | Done | packages/io/src/user-library.ts; server/test/user-library.test.ts; Studio e2e “favourites, collections and the user library…” | Library sources — Bundled, user (profile folder, FRAME_USER_DIR), project-local and imported sources; “save to my library” and adopt-on-use keep projects self-contained |
 | FR-AST-02 | Done | library.ts (invalid manifests reported and excluded); `frame assets validate`; GET /api/library/problems shown in the full-page library | Manifests |
 | FR-AST-03 | Done | Assets panel and full-page library: search, categories with counts, filters by family/view/source, thumbnails; Studio e2e “full-page library…” | Browser |
@@ -72,7 +72,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-CHR-06 | Done | compose.ts anchors (head, face, eyes, mouth, wrists, grips …); props attach to grip anchors (tools/test/m3-acceptance.test.ts AC-07) | Anchors |
 | FR-CHR-07 | Done | compose.ts SLOT_ORDER with near/far resolution per pose; rig check validates slots | Layering |
 | FR-CHR-08 | Done | scene-render.test.ts lip sync with expressions; FaceState + mouth letter composited | Expressions and mouth |
-| FR-CHR-09 | In progress | looks in character data; instances reference id@version + look; builder looks section | Identity vs appearance — Look switching clips (FR-WRD-03) pending |
+| FR-CHR-09 | Done | looks in character data; instances reference id@version + look; look clips switch costume over time (wardrobe.test.ts) | Identity vs appearance — Look switching clips (FR-WRD-03) pending |
 | FR-CHR-10 | Done | server/test/versions.test.ts; core/test/versions.test.ts; Studio e2e builder save | Versioning — New immutable version (or new character from a library one); update one instance, a scene or the project, undoable |
 | FR-CHR-11 | Done | tools/content/parts/identity.ts; PartData.variant (decision 0020); tools/test/m3-identity.test.ts | Inclusive options — All 12 A20 options; wheelchair users stay seated and roll (act.push-wheelchair or any locomotion clip); limb difference and prosthetics; pregnancy and albinism variants |
 | FR-BLD-01 | Done | apps/studio/src/components/Builder.tsx; Studio e2e “character builder…” (axe) | Layout — Parts tree with search over current values and changed dots, live canvas, turnaround, test bar, properties panel |
@@ -81,17 +81,17 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-BLD-04 | Done | Builder test bar: any expression, any action, lip-sync test with mouth readout | Testing |
 | FR-BLD-05 | In progress | Randomise (parts, build, colours); “Describe a character” states its prerequisite | Randomise and suggest — Constraint choices (life stage, palette) in the UI pending |
 | FR-BLD-06 | Done | Studio e2e builder save; leave-with-changes confirmation; Export… .framechar | Save |
-| FR-BLD-07 | In progress | Looks: new, duplicate, rename, default, delete; garments and colours per look | Looks — Patterns (B6) and per-garment options pending |
+| FR-BLD-07 | Done | Looks: new, duplicate, rename, default, delete; garments, colours, per-garment options (sleeves, hood, front) and patterns (pattern, scale, rotation, colours) per look; wardrobe.test.ts | Looks — Patterns (B6) and per-garment options pending |
 | FR-BLD-08 | Done | POST /characters/check (core/character-check.ts); builder footer and drill-down dialog | Rig check — Views, styles, mouth shapes, action compatibility, per-part contract problems |
 | FR-PED-01 | Done | apps/studio/src/components/PartEditor.tsx; rig/test/edit.test.ts; Studio e2e “part editor…” | Part editor — Points (drag, add, delete), parameter bindings, fills, strokes, slots, mirror view, live rig check |
 | FR-PED-02 | Done | core/part-save.ts; server/test/parts.test.ts; Studio e2e “part editor…” | New part from existing — New part from existing and new versions of project parts |
 | FR-PED-03 | Not started | — | AI drafting — Needs an AI drafting backend; provenance value `ai-assisted-human-reviewed` is already supported |
 | FR-PED-04 | Done | rig/src/edit.ts convertFamily; rig/test/edit.test.ts; part editor “Draft <family> from <other>” | Family conversion assist — Drafts are saved only after review (tagged draft until the rig check passes) |
 | FR-PED-05 | Done | partManifest rig-check gate; server/test/parts.test.ts | Validation — Failing parts save only as drafts with review “changes requested” |
-| FR-WRD-01 | Not started | — | Garments and accessories from Catalog B and C attach to the rig with l |
-| FR-WRD-02 | Not started | — | Colours (palette + custom), patterns (Catalog B6) with scale/rotation/ |
-| FR-WRD-03 | Not started | — | A scene instance chooses a look |
-| FR-WRD-04 | Not started | — | Accessories may also be props (e |
+| FR-WRD-01 | Done | Garments and accessories compose per look in every view, posture and action (m2-acceptance AC-02 every builder section × 4 views × 2 families; wardrobe.test.ts) | Garments and accessories from Catalog B and C attach to the rig with l |
+| FR-WRD-02 | Done | Look colours (palette + custom swatch), B6 patterns tiled over patternable garments with scale/rotation/colours (rig withPattern, 14 pattern assets incl. custom print from an image), per-garment options in the builder; wardrobe.test.ts | Colours (palette + custom), patterns (Catalog B6) with scale/rotation/ |
+| FR-WRD-03 | Done | Instance look in Properties; look clips (params.look, transitionS) on the acting track dissolve into the new look and persist (lookAt); Acting ▸ Wardrobe “Change look”; wardrobe.test.ts; e2e “a ready-made set… costume change…” | A scene instance chooses a look |
+| FR-WRD-04 | Done | Accessory taken off into a hand (held at the grip, rig heldIn), put back on or put away, via any hand action (accessoryOp/accessory params or ActionData.accessory); Acting ▸ Wardrobe; wardrobe.test.ts | Accessories may also be props (e |
 | FR-EXP-01 | Done | packages/core/test/perform.test.ts (timed clips, intensity, blends, hold variation) | Apply any Catalog E1 expression as a timed clip with intensity, blend |
 | FR-EXP-02 | Done | packages/core/test/perform.test.ts (per-clip tune without changing the preset) | Fine-tune per clip: eye state, brow states (L/R), mouth curvature, che |
 | FR-EXP-03 | Done | packages/core/test/perform.test.ts (automatic, suppressed when eyes closed, blink clips add/remove) | Blinks are automatic (natural interval, suppressed during closed-eye e |
@@ -113,8 +113,8 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-RCP-04 | Done | recipes.test.ts recipeFromClips; CLI recipe save; clip menu “Save selection as recipe…” | Users can save a selection of clips as a new recipe (with role placeho |
 | FR-PRP-01 | Done | tools/test/m3-acceptance.test.ts AC-07 (states by events and clips, anchors, sound cues); anim.* loops in prop art | Props from Catalog H1 support transform, depth, layering, states (swit |
 | FR-PRP-02 | Done | actionFitsProp; GET …/interactions; Studio e2e “uses an object from the Acting tab…” | Interactive props expose their actions in the Acting tab of characters |
-| FR-ENV-01 | Not started | — | Location kits (Catalog I1) provide layered parts with palettes |
-| FR-ENV-02 | Not started | — | Kit palettes recolour all kit parts consistently |
+| FR-ENV-01 | Done | 16 kits (I1) with layered parts and palettes; 32 ready-made sets (I2: kit pieces, props, marks, cameras, palette, time of day) applied in one undo step; Scene ▸ Save set… saves your own (user asset); sets.test.ts (all 32 place, validate, render, save back); e2e | Location kits (Catalog I1) provide layered parts with palettes |
+| FR-ENV-02 | Done | Kit palettes (original, warm, cool, muted, pastel, bold) keyed by colour slot; time-of-day presets (content library.json) shift colours and set the lighting atmosphere; Properties ▸ kit section; sets.test.ts; e2e | Kit palettes recolour all kit parts consistently |
 | FR-STG-01 | Done | scene stage schema (ground lines, marks, depth planes); stage.addMark; tools/test/m3-acceptance.test.ts AC-08 mark | Stage |
 | FR-STG-02 | In progress | evaluate.ts (draw order by plane/order; parallax per instance through the lens) | Depth vs parallax — No dedicated test yet |
 | FR-STG-03 | In progress | Canvas drag to move (one undo step), numeric transform in Properties | Placement — Smart guides, snapping, align/distribute pending |
@@ -211,10 +211,10 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-AGT-03 | Done | `frame://schemas[/{type}]`, `frame://catalog` (refs, kinds, groups, capabilities), `frame://commands`, `frame://project/{id}/summary`; mcp.test.ts reads each | Resources |
 | FR-AGT-04 | Done | Engine guard on permissions; server tags every agent change `agent:<session>` (commands, characters, voices, takes); agent undo limited to its own step, no redo, no revert-source, renders only inside the project; person-only `POST /revert-source` reverts a session as one step. Evidence: mcp.test.ts | Safety and tagging |
 | FR-AGT-05 | Done | Studio Activity popover: agent sessions with their commands and "Revert session" (one undoable step), recent changes with source; agent-made clips marked in the timeline. Evidence: Studio e2e "agent changes are tagged…" (incl. axe on the popover) | Activity log |
-| FR-ONB-01 | Not started | — | First run: choose theme, check the voice worker connection (or skip), |
-| FR-ONB-02 | Not started | — | Contextual help: every panel has a help link |
-| FR-ONB-03 | Not started | — | Command palette (Ctrl/⌘ K) searches commands, assets, layers, scenes, |
-| FR-SET-01 | Not started | — | Settings: theme (Dark, Light, System), UI density (Comfortable, Compac |
+| FR-ONB-01 | Done | Onboarding.tsx FirstRun (theme, worker check or skip, template or empty) and 8-step Tour (modes, Layers, assets, properties/builder, lines and takes, timeline, export, palette); e2e “first run…” | First run: choose theme, check the voice worker connection (or skip), |
+| FR-ONB-02 | Done | Panel `help` link on every panel (Layers, Assets, Properties, Builder, Part editor, Library, Home, Settings) and the timeline; Help screen (help/topics.ts); tooltips via IconButton labels; empty states; e2e “command palette, settings and help” | Contextual help: every panel has a help link |
+| FR-ONB-03 | Done | CommandPalette.tsx: Ctrl/⌘ K (rebindable) over commands (every menu item with shortcut), scenes, layers, assets (places the item), settings and help; `type:` filters; e2e “command palette…” | Command palette (Ctrl/⌘ K) searches commands, assets, layers, scenes, |
+| FR-SET-01 | Done | Settings screen: theme, density, language (English), autosave delay, default frame rate/output, worker URL and token (stored 0600 beside the library, never echoed), worker engines, library locations and sizes, rebindable shortcuts, privacy (no telemetry), clear thumbnail cache; server.test.ts “keeps app settings…”; e2e. GPU/model options are set where the worker runs and shown read-only | Settings: theme (Dark, Light, System), UI density (Comfortable, Compac |
 | API-01 | Done | voice-client test (Idempotency-Key); worker test_idempotency | Requests carry an idempotency key |
 | API-02 | Done | workflow.ts stores audio as project media before alignment; slice.test.ts | Frame stores all generated audio as project media immediately after do |
 | API-03 | In progress | Studio delivery controls from capabilities | The capability report is authoritative for UI controls (FR-VOI-08) — Range/voice-design screens to follow the same rule |

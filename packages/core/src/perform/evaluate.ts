@@ -10,7 +10,7 @@ import { hash32, prng } from '../ids.js';
 import { TICKS_PER_SECOND } from '../time.js';
 import { lineTakeState } from '../validate.js';
 import { applyOverrides, mouthTrackFromAlignment, mouthTrackFromEnvelope, shapeAt } from './lipsync.js';
-import { clipWeight, keySpeed, mirrorKeys, postureAt, sample, samplePrincipled, type ActionData, type ExpressionData, type Key, type Principles } from './data.js';
+import { accessoriesAt, clipWeight, keySpeed, lookAt, mirrorKeys, postureAt, sample, samplePrincipled, type ActionData, type ExpressionData, type Key, type Principles } from './data.js';
 import { characterVariant, resolveCharacter, type AssetResolver } from './character.js';
 import { motionAt, type Motion } from './locomotion.js';
 import { holderAt, propStateAt, type Interaction } from './interact.js';
@@ -36,6 +36,11 @@ export interface EvalOptions {
    * it instead of from black. Supplied by episode playback and export.
    */
   before?: () => Item[];
+  /**
+   * Stage overview (FR-CAM-01 manual framing): draw the whole stage instead of through the shot camera, so the
+   * camera's frame can be shown and dragged. `EvaluatedFrame.camera` still names the shot camera.
+   */
+  overview?: boolean;
 }
 
 export interface CaptionLine {
@@ -213,6 +218,8 @@ export interface PerfResult {
   overlays: Record<string, number>;
   speaking: boolean;
   extraParts: string[];
+  /** Accessories taken off (FR-WRD-04): match → holding hand or hidden. */
+  offBody: Record<string, 'L' | 'R' | 'hidden'>;
   /** Distance rolled (character units) for rolling rig variants; turns the wheels (FR-CHR-11). */
   rolled?: number;
 }
@@ -269,7 +276,7 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
   const pose: Pose = JSON.parse(JSON.stringify({ ...REST_POSE, posture: postureAt(scene, inst.id, ch.posture, t, actionOf) }));
   // Identity options with a rig variant (FR-CHR-11): a held posture, and rolling instead of walking.
   const man = inst.asset ? assets.manifest(inst.asset) : undefined;
-  const variant = man ? characterVariant(man, ch.look, assets) : {};
+  const variant = man ? characterVariant(man, lookAt(scene, inst.id, ch.look, t).look, assets) : {};
   if (variant.posture) pose.posture = variant.posture;
   let rolled: number | undefined;
   if (variant.rolling && motion) rolled = motion.distance / Math.max(1e-6, inst.transform.scale);
@@ -442,7 +449,8 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
       pose.head = { ...pose.head, yaw: pose.head.yaw + dir[0] * 10 };
     }
   }
-  return { pose, face, mouth, gaze, overlays, speaking, extraParts, ...(rolled !== undefined ? { rolled } : {}) };
+  const offBody = accessoriesAt(scene, inst.id, t, actionOf);
+  return { pose, face, mouth, gaze, overlays, speaking, extraParts, offBody, ...(rolled !== undefined ? { rolled } : {}) };
 }
 
 /** Performance state of a character instance at t (pose, face, mouth, gaze) — for tests, readouts and tools. */
@@ -468,7 +476,7 @@ export function characterJointsAt(state: ProjectState, sceneId: string, instance
   const ctx = motionContext(scene, t, o.assets);
   const mo = ctx.motion(inst);
   const perf = perform(state, scene, inst, t, o.assets, state.project.frameRate, mo, ctx.posOf);
-  const { spec, variant } = resolveCharacter(man, inst.character.look, family, o.styles[family], o.assets, perf.extraParts);
+  const { spec, variant } = resolveCharacter(man, lookAt(scene, inst.id, inst.character.look, t).look, family, o.styles[family], o.assets, perf.extraParts, perf.offBody);
   const composed = composeCharacter(withWheels(spec, variant, perf), { view: mo.view ?? inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
   const k = inst.transform.scale;
   const out: Record<string, [number, number]> = {};
@@ -588,7 +596,8 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
   const fxData = (c: Clip) => o.assets.manifest(c.asset!)?.data as { effect?: EffectData; atmosphere?: AtmoData } | undefined;
   const freeze = fxClips.find((c) => fxData(c)?.effect?.type === 'freeze');
   const t = freeze ? freeze.start : tIn;
-  const cs = cameraAt(scene, t, o.assets, o.aspect);
+  const shotCam = cameraAt(scene, t, o.assets, o.aspect);
+  const cs: CameraState = o.overview ? { cam: shotCam.cam, center: [scene.stage.width / 2, scene.stage.height / 2], width: scene.stage.width * 1.2, rotation: 0, shake: [0, 0] } : shotCam;
   const designAspect = state.project.output.width / state.project.output.height;
   const fps = state.project.frameRate;
   const boxes: EvaluatedFrame['boxes'] = {};
@@ -623,7 +632,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
 
   const motions = motionContext(scene, t, o.assets);
   // Characters are composed once per frame (props held in their hands need the hand position first).
-  const composedCache = new Map<string, { composed: ReturnType<typeof composeCharacter>; perf: PerfResult; missing: string[] } | null>();
+  const composedCache = new Map<string, { composed: ReturnType<typeof composeCharacter>; perf: PerfResult; missing: string[]; fading?: Item; w?: number } | null>();
   const composeInst = (inst: Instance) => {
     if (composedCache.has(inst.id)) return composedCache.get(inst.id)!;
     const man = inst.asset ? o.assets.manifest(inst.asset) : undefined;
@@ -633,9 +642,15 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
     }
     const mo = motions.motion(inst);
     const perf = perform(state, scene, inst, t, o.assets, fps, mo, motions.posOf);
-    const { spec, missing, variant } = resolveCharacter(man, inst.character.look, family, style, o.assets, perf.extraParts);
-    const composed = composeCharacter(withWheels(spec, variant, perf), { view: mo.view ?? inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
-    const r = { composed, perf, missing };
+    // A costume change (FR-WRD-03) dissolves the previous look into the new one over the clip's transition.
+    const lk = lookAt(scene, inst.id, inst.character.look, t);
+    const build = (look: string) => {
+      const { spec, missing, variant } = resolveCharacter(man, look, family, style, o.assets, perf.extraParts, perf.offBody);
+      return { composed: composeCharacter(withWheels(spec, variant, perf), { view: mo.view ?? inst.character!.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays }), missing };
+    };
+    const { composed, missing } = build(lk.look);
+    const fading = lk.from !== undefined ? build(lk.from).composed.item : undefined;
+    const r = { composed, perf, missing, ...(fading ? { fading, w: lk.w! } : {}) };
     composedCache.set(inst.id, r);
     return r;
   };
@@ -675,11 +690,11 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
           issues.push(`${inst.name}: character ${inst.asset} not found`);
           continue;
         }
-        const { composed, perf, missing } = r;
+        const { composed, perf, missing, fading, w } = r;
         mouths[inst.id] = perf.mouth;
         for (const mref of missing) issues.push(`${inst.name}: missing asset ${mref}`);
         for (const i of composed.issues) issues.push(`${inst.name}: ${i}`);
-        content = [composed.item];
+        content = fading ? [{ k: 'group', items: [fading], op: 1 - w! }, { k: 'group', items: [composed.item], op: w! }] : [composed.item];
         const b = composed.bounds;
         boxes[inst.id] = screenBox(m, b.x, b.y, b.w, b.h);
       } else if ((inst.kind === 'prop' || inst.kind === 'set-piece') && inst.asset) {
@@ -807,7 +822,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
   const view = viewMatrix(scene, cs, o.width, o.height, designAspect, 1);
   return {
     frame: { width: o.width, height: o.height, background: o.background ?? '#000000', items },
-    camera: { id: cs.cam.id, name: cs.cam.name, center: cs.center, width: cs.width, rotation: cs.rotation },
+    camera: { id: shotCam.cam.id, name: shotCam.cam.name, center: shotCam.center, width: shotCam.width, rotation: shotCam.rotation },
     captions,
     view,
     issues,

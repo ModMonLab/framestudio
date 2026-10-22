@@ -7,7 +7,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Play, Square } from 'lucide-react';
 import type { CharacterData, LookData } from '@frame/core';
 import type { AssetManifest } from '@frame/schema';
-import { Button, Chip, EmptyState, IconButton, RadioList, Section, Segmented, SliderRow, StatusBadge, SwatchGrid, TextArea, TextField, TileGrid, ToggleRow, type EditPhase } from '@frame/ui';
+import { Button, Chip, EmptyState, IconButton, RadioList, Section, Segmented, Select, SliderRow, StatusBadge, SwatchGrid, TextArea, TextField, TileGrid, ToggleRow, type EditPhase } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { ARMS, BODY_DEFAULTS, GARMENT_SLOTS, LEGS, TORSO, newLookId, type Draft } from '../lib/builder.js';
 
@@ -17,13 +17,14 @@ export interface LibraryItem {
   name: string;
   group?: string;
   preview?: boolean;
+  tags?: string[];
 }
 
 const kindCache = new Map<string, Promise<LibraryItem[]>>();
 /** Latest versions of a library kind (bundled, user and project sources). */
 export function loadKind(kind: string, pid: string): Promise<LibraryItem[]> {
   const key = `${pid}:${kind}`;
-  if (!kindCache.has(key)) kindCache.set(key, api.library('', kind, pid, 500).then((r) => r.results.map((x) => ({ ref: x.ref, kind: x.kind, name: x.name, ...(x.group ? { group: x.group } : {}), ...(x.preview ? { preview: true } : {}) }))).catch(() => []));
+  if (!kindCache.has(key)) kindCache.set(key, api.library('', kind, pid, 500).then((r) => r.results.map((x) => ({ ref: x.ref, kind: x.kind, name: x.name, ...(x.group ? { group: x.group } : {}), ...(x.preview ? { preview: true } : {}), ...(x.tags.length ? { tags: x.tags } : {}) }))).catch(() => []));
   return kindCache.get(key)!;
 }
 export function forgetKinds() {
@@ -152,13 +153,60 @@ function Garments({ c, kind, label }: { c: PropsContext; kind: string; label: st
   });
   const slot = (c.manifest(current)?.data as { colorSlot?: string } | undefined)?.colorSlot ?? kind;
   const colour = look.colors[slot] ?? (c.manifest(current)?.data as { colors?: Record<string, string> } | undefined)?.colors?.[slot];
+  // Per-garment options (FR-WRD-02): sleeves rolled, hood up, jacket open… stored per look.
+  const opts = (c.manifest(current)?.data as { options?: Record<string, string[]> } | undefined)?.options ?? {};
+  const setOpt = (k: string, v: string) => c.edit((d) => {
+    const l = d.data.looks.find((x) => x.id === look.id)!;
+    l.options = { ...(l.options ?? {}), [current]: { ...(l.options?.[current] ?? {}), [k]: v } };
+  });
   return (
     <>
       {items.length ? <RadioList label={label} value={current} onChange={set} items={[{ value: '', label: 'None' }, ...items.map((i) => ({ value: i.ref, label: i.name, ...(i.group ? { meta: i.group } : {}) }))]} /> : <Note>The library has no {label.toLowerCase()} yet.</Note>}
+      {current && Object.entries(opts).map(([k, values]) => (
+        <Segmented key={k} label={`${label}: ${OPTION_LABELS[k] ?? k}`} value={look.options?.[current]?.[k] ?? values[0]!} onChange={(v) => setOpt(k, v)} options={values.map((v) => ({ value: v, label: v[0]!.toUpperCase() + v.slice(1) }))} />
+      ))}
+      {current && (c.manifest(current)?.data as { patternable?: boolean } | undefined)?.patternable && <PatternPicker c={c} garment={current} label={label} />}
       {current && <div className="st-field-col"><span className="fr-label">Colour {colour && <span className="fr-faint fr-mono">{colour.toUpperCase()}</span>}</span><SwatchGrid label={`${label} colour`} value={(colour ?? '#808080').toUpperCase()} swatches={GARMENT_SWATCHES} onChange={(v, phase) => c.edit((d) => { d.data.looks.find((x) => x.id === look.id)!.colors[slot] = v; }, phase)} /></div>}
     </>
   );
 }
+
+/** Fabric pattern for one garment in the look (Catalog B6, FR-WRD-02): pattern, scale, rotation and its colours. */
+function PatternPicker({ c, garment, label }: { c: PropsContext; garment: string; label: string }) {
+  const patterns = useKind('pattern', c.pid);
+  const look = c.look!;
+  const cur = look.patterns?.[garment];
+  const pdata = cur ? (c.manifest(cur.pattern)?.data as { pattern?: { defaults: { colors: Record<string, string> }; layers: { color: string }[] } } | undefined)?.pattern : undefined;
+  const slots = pdata ? [...new Set(pdata.layers.map((l) => l.color))].sort() : [];
+  const set = (next: Partial<NonNullable<typeof cur>> | null, phase?: EditPhase) => c.edit((d) => {
+    const l = d.data.looks.find((x) => x.id === look.id)!;
+    const all = { ...(l.patterns ?? {}) };
+    if (next === null) delete all[garment];
+    else all[garment] = { ...(all[garment] ?? { pattern: '' }), ...next } as NonNullable<typeof cur>;
+    l.patterns = all;
+  }, phase);
+  if (!patterns?.length) return null;
+  return (
+    <div className="st-field-col">
+      <Select label={`${label} pattern`} value={cur?.pattern ?? ''} onChange={(v) => set(v ? { pattern: v } : null)} options={[{ value: '', label: 'Plain' }, ...patterns.filter((p) => !p.tags?.includes('plain') && !p.tags?.includes('image')).map((p) => ({ value: p.ref, label: p.name }))]} />
+      {cur && <>
+        <SliderRow label="Pattern scale" value={cur.scale ?? 1} min={0.4} max={3} step={0.1} defaultValue={1} format={(v) => `${v.toFixed(1)}×`} onChange={(v, phase) => set({ scale: v }, phase)} />
+        <SliderRow label="Pattern rotation" value={cur.rotation ?? 0} min={-90} max={90} step={5} defaultValue={0} format={(v) => `${Math.round(v)}°`} onChange={(v, phase) => set({ rotation: v }, phase)} />
+        {slots.map((slot, i) => (
+          <div key={slot} className="st-field-col"><span className="fr-label">Pattern colour {i + 1}</span>
+            <SwatchGrid label={`Pattern colour ${i + 1}`} value={(cur.colors?.[i] ?? pdata!.defaults.colors[slot] ?? '#FFFFFF').toUpperCase()} swatches={GARMENT_SWATCHES} onChange={(v, phase) => {
+              const colors = slots.map((s2, j) => cur.colors?.[j] ?? pdata!.defaults.colors[s2] ?? '#FFFFFF');
+              colors[i] = v;
+              set({ colors }, phase);
+            }} />
+          </div>
+        ))}
+      </>}
+    </div>
+  );
+}
+
+const OPTION_LABELS: Record<string, string> = { sleeves: 'Sleeves', hood: 'Hood', front: 'Front', pattern: 'Pattern' };
 
 /** Neutral garment palette offered as presets; any colour is possible with the custom swatch. */
 const GARMENT_SWATCHES = ['#2B2D33', '#3F5F8F', '#4F8F87', '#3E5953', '#7B5EA8', '#A33F55', '#C8653F', '#D9A441', '#EFE7DA', '#7F8A96'].map((v) => ({ value: v, label: 'Colour' }));

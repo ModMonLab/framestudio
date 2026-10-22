@@ -63,6 +63,8 @@ export function channelConflicts(scene: SceneT, ctx: ValidationContext = {}): { 
     if (t.kind === 'face' && c.params.blink !== undefined) continue;
     // Turn clips change facing only; they combine with any action (FR-ACT-04).
     if (t.kind === 'acting' && (typeof c.params.turn === 'string' || (!c.asset && typeof c.params.view === 'string'))) continue;
+    // Look changes (FR-WRD-03) switch costume only.
+    if (t.kind === 'acting' && typeof c.params.look === 'string') continue;
     const info = c.asset ? ctx.channelsOf?.(c.asset) ?? channelInfo(ctx, c.asset, c.params) : undefined;
     const channels = info?.channels ?? base;
     const list = byOwner.get(t.owner) ?? [];

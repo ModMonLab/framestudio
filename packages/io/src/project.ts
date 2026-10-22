@@ -126,6 +126,11 @@ export class OpenProject {
     }
   }
 
+  /** Autosave delay after the last change (FR-PER-01, FR-SET-01 autosave interval). */
+  setDebounce(ms: number): void {
+    this.debounceMs = Math.max(0, ms);
+  }
+
   /** Project-relative files holding unsaved local changes. */
   pendingFiles(): string[] {
     if (this.pending.has('*')) return ['*'];

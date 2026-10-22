@@ -8,14 +8,14 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { CLIPBOARD_FORMAT, pasteCommands, type ClipboardData, kitLookCommands, type TimeOfDay, setCommands, setFromScene, type SetData, ProjectSession, actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
   projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, templateCommandsForLibrary, replaceCastCommands, projectFromTemplateCommands, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
-  scriptPdf, styleFamilyBlockers, ProjectStore, RecentProjects, duplicateProject, moveToTrash, revealInFileManager,
+  scriptPdf, styleFamilyBlockers, ProjectStore, AppSettingsStore, type AppSettings, RecentProjects, duplicateProject, moveToTrash, revealInFileManager,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -65,6 +65,8 @@ export interface ServerOptions {
   cacheDir?: string;
   /** Recent projects registry (FR-PRJ-06); defaults to <userDir>/../recent.json. */
   recentFile?: string;
+  /** App settings (FR-SET-01); defaults to <userDir>/../settings.json. */
+  settingsFile?: string;
 }
 
 const STATUS: Partial<Record<ErrorCode, number>> = {
@@ -100,8 +102,11 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   // Recent projects (FR-PRJ-06) live next to the user library, like the thumbnail cache.
   const recentFile = o.recentFile ?? (o.userDir ? path.join(path.dirname(o.userDir), 'recent.json') : undefined);
   const recent = recentFile ? new RecentProjects(recentFile) : undefined;
+  // App settings (FR-SET-01) beside the user library; the worker token lives here, never in projects (NFR-09).
+  const appSettings = new AppSettingsStore(o.settingsFile ?? (o.userDir ? path.join(path.dirname(o.userDir), 'settings.json') : undefined));
+  const startSettings = appSettings.read();
   const hub = new ProjectHub({
-    ...(o.watchMs ? { watchMs: o.watchMs } : {}), ...(o.debounceMs !== undefined ? { debounceMs: o.debounceMs } : {}),
+    ...(o.watchMs ? { watchMs: o.watchMs } : {}), ...(startSettings.autosaveMs !== undefined ? { debounceMs: startSettings.autosaveMs } : o.debounceMs !== undefined ? { debounceMs: o.debounceMs } : {}),
     onAttach: (open) => {
       open.locksFor = (state) => computeLocks(state, lockLookup());
       try {
@@ -192,13 +197,17 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const dir = path.resolve(b.path);
       const d = libraryDefaults;
       const family = b.styleFamily ?? d.styleFamily;
-      const fps = b.frameRate ?? d.frameRate;
+      const prefs = appSettings.read();
+      const fps = b.frameRate ?? prefs.defaultFrameRate ?? d.frameRate;
       if (family !== 'flat' && family !== 'illustrated') throw new FrameError('USAGE', 'styleFamily must be flat or illustrated');
       if (!fps || ![24, 25, 30].includes(fps)) throw new FrameError('USAGE', 'frameRate must be 24, 25 or 30');
       if (!d.output) throw new FrameError('INTERNAL', 'The content library has no default output preset');
       if (fs.existsSync(dir) && fs.readdirSync(dir).length > 0) throw new FrameError('CONFLICT', `${dir} is not empty`, undefined, 'Choose a new folder name.');
       const name = b.name ?? path.basename(dir).replace(/\.frame$/, '');
-      OpenProject.create(dir, { name, styleFamily: family, frameRate: fps as 24, output: d.output, appVersion: SERVER_VERSION, newId: randomId, ...(d.captionStyle ? { captionStyle: d.captionStyle } : {}) }).close();
+      // A default output chosen in Settings (FR-SET-01) when it is a picture preset.
+      const pref = prefs.defaultOutput ? (library().manifest(prefs.defaultOutput)?.data as { output?: { width?: number; height?: number; aspect?: string } } | undefined)?.output : undefined;
+      const output = pref?.width && pref.height ? { preset: prefs.defaultOutput!, width: pref.width, height: pref.height, aspectRatios: [pref.aspect ?? `${pref.width}:${pref.height}`] } : d.output;
+      OpenProject.create(dir, { name, styleFamily: family, frameRate: fps as 24, output, appVersion: SERVER_VERSION, newId: randomId, ...(d.captionStyle ? { captionStyle: d.captionStyle } : {}) }).close();
       const p = hub.open(dir);
       // From a production template (FR-PRJ-01): its scenes replace the empty first scene; one undo step.
       if (b.template) {
@@ -654,6 +663,99 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
+  /* ---------------------------------------------------------------- clipboard (FR-PER-07) */
+  app.post<{ Params: { pid: string; sid: string }; Body: { data: ClipboardData; at?: number } }>('/api/projects/:pid/scenes/:sid/paste', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const data = req.body?.data;
+      if (!data || data.format !== CLIPBOARD_FORMAT) throw new FrameError('USAGE', 'Nothing to paste (not Frame clipboard data)');
+      // Media from another open project is copied in; media already here is kept.
+      const missingMedia: string[] = [];
+      const source = data.project !== p.id ? hub.list().find((x) => x.id === data.project) : undefined;
+      for (const h of data.media) {
+        if (p.open.store.findMedia(h)) continue;
+        const f = source?.open.store.findMedia(h);
+        if (f) p.open.store.putMedia(new Uint8Array(fs.readFileSync(f)), { ext: path.extname(f).slice(1), mime: 'application/octet-stream' });
+        else missingMedia.push(h);
+      }
+      const r = pasteCommands(p.open.state, req.params.sid, data, { newId: randomId, ...(req.body.at !== undefined ? { at: req.body.at } : {}) });
+      if (!r.commands.length) throw new FrameError('USAGE', r.warnings[0] ?? 'Nothing to paste here');
+      const applied = p.open.session.apply({ commands: r.commands, source: sourceOf(req), label: 'Paste' });
+      return { revision: applied.revision, instances: r.instances, clips: r.clips, warnings: [...r.warnings, ...(missingMedia.length ? [`${missingMedia.length} media file(s) were not found; relink them from Problems`] : [])] };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- kit palettes and time of day (FR-ENV-02) */
+  app.post<{ Params: { pid: string; sid: string }; Body: { kit: string; palette?: string; timeOfDay?: string } }>('/api/projects/:pid/scenes/:sid/kit-look', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      const kit = (library(p).manifest(b?.kit ?? '')?.data as { kit?: Parameters<typeof kitLookCommands>[3] } | undefined)?.kit;
+      if (!kit) throw new FrameError('NOT_FOUND', `Kit ${b?.kit} not found`);
+      const presets = (libraryDefaults as { timeOfDay?: TimeOfDay[] }).timeOfDay ?? [];
+      const tod = b.timeOfDay ? presets.find((t) => t.id === b.timeOfDay) : undefined;
+      if (b.timeOfDay && !tod) throw new FrameError('USAGE', `Unknown time of day ${b.timeOfDay}`, { known: presets.map((t) => t.id) });
+      let cmds;
+      try {
+        cmds = kitLookCommands(p.open.state, req.params.sid, b.kit, kit, { ...(b.palette ? { palette: b.palette } : {}), ...(tod ? { timeOfDay: tod } : {}), presets });
+      } catch (e) {
+        throw new FrameError('USAGE', (e as Error).message);
+      }
+      const name = kit.palettes?.find((x) => x.id === b.palette)?.name;
+      const r = p.open.session.apply({ commands: cmds, source: sourceOf(req), label: [name && `${name} palette`, tod?.name].filter(Boolean).join(', ') || 'Recolour set' });
+      return { revision: r.revision };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- ready-made sets (FR-ENV-01) */
+  app.post<{ Params: { pid: string; sid: string }; Body: { ref: string } }>('/api/projects/:pid/scenes/:sid/set/apply', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const lib = library(p);
+      const set = (lib.manifest(req.body?.ref ?? '')?.data as { set?: SetData } | undefined)?.set;
+      if (!set) throw new FrameError('NOT_FOUND', `Set ${req.body?.ref} not found`);
+      const kit = (lib.manifest(set.kit)?.data as { kit?: Parameters<typeof kitLookCommands>[3] & Parameters<typeof setCommands>[3] } | undefined)?.kit;
+      if (!kit) throw new FrameError('NOT_FOUND', `Kit ${set.kit} not found`);
+      // Plan on a scratch session so the palette and time of day apply to the new pieces; one undo step.
+      const scratch = new ProjectSession(p.open.state, 0, { newId: randomId });
+      const placed = setCommands(scratch.state, req.params.sid, set, kit, { newId: randomId, propName: (r) => lib.manifest(r)?.name });
+      const out = [...scratch.apply({ commands: placed.commands }).commands];
+      const presets = (libraryDefaults as { timeOfDay?: TimeOfDay[] }).timeOfDay ?? [];
+      const tod = set.timeOfDay ? presets.find((t) => t.id === set.timeOfDay) : undefined;
+      if (set.palette || tod) out.push(...kitLookCommands(scratch.state, req.params.sid, set.kit, kit, { ...(set.palette ? { palette: set.palette } : {}), ...(tod ? { timeOfDay: tod } : {}), presets }));
+      const r = p.open.session.apply({ commands: out, source: sourceOf(req), label: `Set ${lib.manifest(req.body.ref)?.name ?? ''}`.trim() });
+      return { revision: r.revision, pieces: placed.pieces };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; sid: string }; Body: { name: string } }>('/api/projects/:pid/scenes/:sid/set/save', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const name = req.body?.name?.trim();
+      if (!name) throw new FrameError('USAGE', 'Name the set');
+      let data: SetData;
+      try {
+        data = setFromScene(p.open.state, req.params.sid);
+      } catch (e) {
+        throw new FrameError('USAGE', (e as Error).message);
+      }
+      const id = `user.${randomUUID()}`;
+      const manifest = {
+        schemaVersion: 1, id, version: 1, kind: 'set', name, category: 'Ready-made sets', group: 'My sets', tags: ['set', 'mine'], synonyms: [], families: ['flat', 'illustrated'], views: ['front'], viewExemptions: {}, anchors: {}, capabilities: [], parameters: [], dependencies: [data.kit, ...new Set(data.props.map((x) => x.ref))], layering: {}, previews: {},
+        license: { id: 'LicenseRef-User-Owned', redistributable: true, commercialUse: true }, provenance: { method: 'authored', author: sourceOf(req), date: new Date().toISOString().slice(0, 10), notes: 'Saved from a scene (FR-ENV-01).' }, data: { set: data },
+      };
+      const r = p.open.session.apply({ commands: [{ name: 'asset.addLocal', params: { manifest } }] as never, source: sourceOf(req), label: `Save set ${name}` });
+      return { ref: `${id}@1`, revision: r.revision };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- project settings (FR-PRJ-05) */
   app.get<{ Params: { pid: string }; Querystring: { family?: string } }>('/api/projects/:pid/style-check', async (req, reply) => {
     try {
@@ -923,6 +1025,57 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   app.get('/api/library/defaults', async () => libraryDefaults);
   const thumbs = new Map<string, Buffer>();
   const thumbDir = o.cacheDir ? path.join(o.cacheDir, 'thumbnails') : o.userDir ? path.join(path.dirname(o.userDir), 'cache', 'thumbnails') : undefined;
+  /* ---------------------------------------------------------------- app settings (FR-SET-01) */
+  app.get('/api/settings', async () => {
+    const s = appSettings.read();
+    const { workerToken, ...rest } = s;
+    const size = (dir?: string): number => {
+      if (!dir || !fs.existsSync(dir)) return 0;
+      let n = 0;
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) n += e.isDirectory() ? size(path.join(dir, e.name)) : fs.statSync(path.join(dir, e.name)).size;
+      return n;
+    };
+    return {
+      settings: { ...rest, workerTokenSet: !!workerToken },
+      effective: { workerUrl: s.workerUrl || o.workerUrl || null, autosaveMs: s.autosaveMs ?? o.debounceMs ?? 400 },
+      paths: { content: o.contentDir, userLibrary: o.userDir ?? null, cache: thumbDir ?? null, settings: appSettings.file ?? null },
+      storage: { cacheBytes: size(thumbDir), userLibraryBytes: size(o.userDir) },
+      telemetry: 'none',
+    };
+  });
+  app.post<{ Body: Partial<AppSettings> & { clearToken?: boolean } }>('/api/settings', async (req, reply) => {
+    try {
+      if (req.headers['x-frame-agent']) throw new FrameError('PERMISSION_REQUIRED', 'Agents cannot change app settings');
+      const b = req.body ?? {};
+      if (b.autosaveMs !== undefined && (!Number.isFinite(b.autosaveMs) || b.autosaveMs < 100 || b.autosaveMs > 60_000)) throw new FrameError('USAGE', 'autosaveMs must be between 100 and 60000');
+      if (b.defaultFrameRate !== undefined && ![24, 25, 30].includes(b.defaultFrameRate)) throw new FrameError('USAGE', 'defaultFrameRate must be 24, 25 or 30');
+      if (b.workerUrl && !/^https?:\/\//.test(b.workerUrl)) throw new FrameError('USAGE', 'The worker URL must start with http:// or https://');
+      const next = appSettings.update({
+        ...(b.workerUrl !== undefined ? { workerUrl: b.workerUrl.trim() } : {}),
+        ...(b.workerToken ? { workerToken: b.workerToken } : {}),
+        ...(b.clearToken ? { workerToken: '' } : {}),
+        ...(b.autosaveMs !== undefined ? { autosaveMs: Math.round(b.autosaveMs) } : {}),
+        ...(b.defaultFrameRate !== undefined ? { defaultFrameRate: b.defaultFrameRate } : {}),
+        ...(b.defaultOutput !== undefined ? { defaultOutput: b.defaultOutput } : {}),
+      });
+      if (next.autosaveMs) hub.setDebounce(next.autosaveMs);
+      const { workerToken, ...rest } = next;
+      return { settings: { ...rest, workerTokenSet: !!workerToken } };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post('/api/settings/clear-cache', async (req, reply) => {
+    try {
+      if (req.headers['x-frame-agent']) throw new FrameError('PERMISSION_REQUIRED', 'Agents cannot clear caches');
+      thumbs.clear();
+      if (thumbDir) fs.rmSync(thumbDir, { recursive: true, force: true });
+      return { cleared: true };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- project browser (FR-PRJ-06) */
   const needRecent = () => {
     if (!recent) throw new FrameError('UNSUPPORTED', 'This server keeps no recent-projects list', undefined, 'Start it with `frame server start` (uses ~/.frame).');
@@ -1026,7 +1179,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (!png) {
         const pc = libraryDefaults.previewCharacter;
         const pcm = pc ? lib.manifest(pc) : undefined;
-        const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm } : undefined);
+        const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm } : undefined, (r) => lib.manifest(r));
         if (!setup) throw new FrameError('NOT_FOUND', `${ref} has no visual preview`);
         const renderer = await getRenderer();
         const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));
@@ -1057,39 +1210,80 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   app.delete<{ Params: { id: string } }>('/api/jobs/:id', async (req) => ({ cancelled: jobs.render.cancel(req.params.id) || jobs.voice.cancel(req.params.id) }));
 
   /* ---------------------------------------------------------------- render (FR-RND) */
-  app.post<{ Params: { pid: string }; Body: { scenes?: string[]; scene?: string; preset?: string; out?: string; range?: { from: number; to: number }; width?: number; height?: number; captions?: boolean; subtitles?: ('srt' | 'vtt')[]; stems?: boolean } }>('/api/projects/:pid/renders', async (req, reply) => {
+  type RenderBody = {
+    scenes?: string[]; scene?: string; preset?: string; out?: string; range?: { from: number; to: number }; width?: number; height?: number; captions?: boolean; subtitles?: ('srt' | 'vtt')[]; stems?: boolean;
+    /** Custom settings (FR-RND-04): frame rate, aspect key for framing, quality, loudness target (null = off), motion blur (FR-RND-09). */
+    fps?: 24 | 25 | 30; aspect?: string; quality?: { crf?: number; videoBitrate?: string; audioBitrate?: string }; loudness?: number | null; motionBlur?: { samples: number; shutter: number };
+  };
+  // Settings of each render job, so a failed or cancelled export can be retried with the same settings (FR-RND-07).
+  const renderRequests = new Map<string, { pid: string; body: RenderBody; agent: boolean }>();
+  const startRender = (p: HubProject, b: RenderBody, agent: boolean) => {
+    // Snapshot now: edits made while the job runs do not affect it (FR-RND-05).
+    let state: ProjectState = p.open.state;
+    const revision = p.open.session.revision;
+    const scenes = b.scenes ?? [b.scene ?? state.episodes[state.project.episodes[0] ?? '']?.scenes[0] ?? ''];
+    for (const s of scenes) if (!state.scenes[s]) throw new FrameError('NOT_FOUND', `Scene ${s} not found`);
+    if (b.fps !== undefined && ![24, 25, 30].includes(b.fps)) throw new FrameError('USAGE', 'fps must be 24, 25 or 30');
+    if (b.fps && b.fps !== state.project.frameRate) state = { ...state, project: { ...state.project, frameRate: b.fps } };
+    if (b.motionBlur && (!Number.isInteger(b.motionBlur.samples) || b.motionBlur.samples < 1 || b.motionBlur.samples > 16)) throw new FrameError('USAGE', 'Motion blur samples must be 1–16');
+    if (b.width !== undefined && (b.width < 16 || b.width > 7680 || b.height === undefined || b.height < 16 || b.height > 4320)) throw new FrameError('USAGE', 'Custom size must be 16–7680 × 16–4320');
+    const lib = library(p);
+    const presetRef = b.preset ?? state.project.output.preset;
+    const base = (lib.manifest(presetRef)?.data as { output?: OutputPreset } | undefined)?.output;
+    if (!base) throw new FrameError('NOT_FOUND', `Output preset ${presetRef} not found`);
+    const preset: OutputPreset = { ...base, ...(b.subtitles ? { subtitles: b.subtitles } : {}), ...(b.stems ? { stems: true } : {}) };
+    if (b.loudness === null) delete preset.loudness;
+    else if (b.loudness !== undefined) preset.loudness = b.loudness;
+    const ext = preset.container === 'png' ? '' : preset.container === 'none' ? '.srt' : `.${preset.container}`;
+    const name = scenes.length === 1 ? state.scenes[scenes[0]!]!.name : state.project.name;
+    if (b.out && agent && path.relative(p.root, path.resolve(p.root, b.out)).startsWith('..')) throw new FrameError('PERMISSION_REQUIRED', 'Agents can only render inside the project folder');
+    const width = b.width ?? base.width ?? state.project.output.width;
+    const height = b.height ?? base.height ?? state.project.output.height;
+    const out = b.out ? path.resolve(p.root, b.out) : path.join(p.root, state.project.renderDir ?? 'renders', `${name.replace(/[^A-Za-z0-9_-]+/g, '-')}-${width}x${height}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}${ext}`);
+    const aspect = b.aspect ?? base.aspect;
+    const job = jobs.render.submit('render', `Export · ${name} · ${width}×${height}`, async (ctx) => {
+      const report = await renderExport({
+        state, revision, scenes, ...(b.range ? { range: b.range } : {}), preset, presetId: presetRef, width, height,
+        ...(aspect ? { aspect } : {}), ...(b.quality ? { quality: b.quality } : {}), ...(b.motionBlur ? { motionBlur: b.motionBlur } : {}),
+        burnInCaptions: b.captions ?? (state.project.captions.enabled && state.project.captions.burnIn),
+        out, assets: { manifest: (r) => lib.manifest(r) }, assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), styles, renderer: await getRenderer(),
+        resolveAudio: (src) => (src.kind === 'media' ? p.open.store.findMedia(src.hash) ?? bundledMediaFile(o.contentDir, src.hash) : undefined),
+        signal: ctx.signal,
+        onProgress: (pr) => ctx.progress(pr.phase === 'Rendering' && pr.frames ? (pr.frame ?? 0) / pr.frames * 0.9 : pr.phase === 'Completed' ? 1 : ctx.signal.aborted ? 0 : 0.95, pr.phase === 'Rendering' ? `Rendering frame ${pr.frame} of ${pr.frames} · ${(pr.fps ?? 0).toFixed(0)} fps` : pr.phase),
+      });
+      if (report.status !== 'completed') throw new FrameError((report.error?.code ?? 'RENDER_FAILED') as ErrorCode, report.error?.message ?? 'Export failed', { report });
+      return report;
+    }, p.id);
+    renderRequests.set(job.id, { pid: p.id, body: b, agent });
+    return job;
+  };
+  app.post<{ Params: { pid: string }; Body: RenderBody }>('/api/projects/:pid/renders', async (req, reply) => {
+    try {
+      return reply.code(202).send(publicJob(startRender(hub.get(req.params.pid), req.body ?? {}, !!req.headers['x-frame-agent'])));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Batch (FR-RND-10): several exports queued at once (aspect ratios, episodes); they run one after another.
+  app.post<{ Params: { pid: string }; Body: { items: RenderBody[] } }>('/api/projects/:pid/renders/batch', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
-      const b = req.body ?? {};
-      // Snapshot now: edits made while the job runs do not affect it (FR-RND-05).
-      const state: ProjectState = p.open.state;
-      const revision = p.open.session.revision;
-      const scenes = b.scenes ?? [b.scene ?? state.episodes[state.project.episodes[0] ?? '']?.scenes[0] ?? ''];
-      for (const s of scenes) if (!state.scenes[s]) throw new FrameError('NOT_FOUND', `Scene ${s} not found`);
-      const lib = library(p);
-      const presetRef = b.preset ?? state.project.output.preset;
-      const base = (lib.manifest(presetRef)?.data as { output?: OutputPreset } | undefined)?.output;
-      if (!base) throw new FrameError('NOT_FOUND', `Output preset ${presetRef} not found`);
-      const preset: OutputPreset = { ...base, ...(b.subtitles ? { subtitles: b.subtitles } : {}), ...(b.stems ? { stems: true } : {}) };
-      const ext = preset.container === 'png' ? '' : preset.container === 'none' ? '.srt' : `.${preset.container}`;
-      const name = scenes.length === 1 ? state.scenes[scenes[0]!]!.name : state.project.name;
-      if (b.out && req.headers['x-frame-agent'] && path.relative(p.root, path.resolve(p.root, b.out)).startsWith('..')) throw new FrameError('PERMISSION_REQUIRED', 'Agents can only render inside the project folder');
-      const out = b.out ? path.resolve(p.root, b.out) : path.join(p.root, state.project.renderDir ?? 'renders', `${name.replace(/[^A-Za-z0-9_-]+/g, '-')}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}${ext}`);
-      const job = jobs.render.submit('render', `Export · ${name}`, async (ctx) => {
-        const report = await renderExport({
-          state, revision, scenes, ...(b.range ? { range: b.range } : {}), preset, presetId: presetRef,
-          width: b.width ?? base.width ?? state.project.output.width, height: b.height ?? base.height ?? state.project.output.height,
-          ...(base.aspect ? { aspect: base.aspect } : {}),
-          burnInCaptions: b.captions ?? (state.project.captions.enabled && state.project.captions.burnIn),
-          out, assets: { manifest: (r) => lib.manifest(r) }, assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), styles, renderer: await getRenderer(),
-          resolveAudio: (src) => (src.kind === 'media' ? p.open.store.findMedia(src.hash) ?? bundledMediaFile(o.contentDir, src.hash) : undefined),
-          signal: ctx.signal,
-          onProgress: (pr) => ctx.progress(pr.phase === 'Rendering' && pr.frames ? (pr.frame ?? 0) / pr.frames * 0.9 : pr.phase === 'Completed' ? 1 : ctx.signal.aborted ? 0 : 0.95, pr.phase === 'Rendering' ? `Rendering frame ${pr.frame} of ${pr.frames} · ${(pr.fps ?? 0).toFixed(0)} fps` : pr.phase),
-        });
-        if (report.status !== 'completed') throw new FrameError((report.error?.code ?? 'RENDER_FAILED') as ErrorCode, report.error?.message ?? 'Export failed', { report });
-        return report;
-      }, p.id);
-      return reply.code(202).send(publicJob(job));
+      const items = req.body?.items ?? [];
+      if (!items.length || items.length > 24) throw new FrameError('USAGE', 'Send 1–24 exports');
+      const started = items.map((b) => startRender(p, b, !!req.headers['x-frame-agent']));
+      return reply.code(202).send({ jobs: started.map(publicJob) });
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Retry a failed or cancelled export with the same settings on the current project (FR-RND-07).
+  app.post<{ Params: { id: string } }>('/api/jobs/:id/retry', async (req, reply) => {
+    try {
+      const j = jobs.render.get(req.params.id);
+      const r = renderRequests.get(req.params.id);
+      if (!j || !r) throw new FrameError('NOT_FOUND', `Export job ${req.params.id} not found`);
+      if (j.state !== 'failed' && j.state !== 'cancelled') throw new FrameError('CONFLICT', 'Only failed or cancelled exports can be retried');
+      return reply.code(202).send(publicJob(startRender(hub.get(r.pid), r.body, r.agent)));
     } catch (e) {
       return sendError(reply, e);
     }
@@ -1097,9 +1291,11 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
 
   /* ---------------------------------------------------------------- voice (FR-VOI, FR-VWK-05, FR-VOI-12) */
   const workerFor = (p?: HubProject) => {
-    const url = p?.open.state.project.voiceWorkerUrl ?? o.workerUrl;
-    if (!url) throw new FrameError('WORKER_UNAVAILABLE', 'No voice worker is configured', undefined, 'Set FRAME_WORKER_URL for the server or a worker URL in project settings.');
-    return new VoiceClient({ url, ...(o.workerToken ? { token: o.workerToken } : {}) });
+    const s = appSettings.read();
+    const url = p?.open.state.project.voiceWorkerUrl || s.workerUrl || o.workerUrl;
+    if (!url) throw new FrameError('WORKER_UNAVAILABLE', 'No voice worker is configured', undefined, 'Set the worker URL in Settings, FRAME_WORKER_URL for the server, or a worker URL in project settings.');
+    const token = s.workerToken || o.workerToken;
+    return new VoiceClient({ url, ...(token ? { token } : {}) });
   };
   const access = (p: HubProject, source = 'user'): ProjectAccess => ({
     state: () => p.open.state as never,

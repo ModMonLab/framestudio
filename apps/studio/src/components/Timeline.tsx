@@ -1,8 +1,9 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
 import { useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Bot, ChevronRight, Eye, EyeOff, Lock, Maximize, Scan, SkipBack, Sparkles, SplitSquareHorizontal, Video, Volume2 } from 'lucide-react';
-import { applyOverrides, conflictingClipIds, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
+import { AlertTriangle, Bot, ChevronRight, HelpCircle, Eye, EyeOff, Lock, Maximize, Scan, SkipBack, Sparkles, SplitSquareHorizontal, Video, Volume2 } from 'lucide-react';
+import { applyOverrides, conflictingClipIds, duckCurve, scheduleSceneAudio, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
 import type { Clip, MouthBlock, MouthShape, Scene, Track } from '@frame/schema';
+import { LevelMeter } from './LevelMeter.js';
 import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
@@ -56,6 +57,8 @@ export function Timeline() {
 
   // Conflicting clips are hatched at edit time (FR-CAM-07): same-channel overlaps, same-speaker overlaps, shots, past end.
   const conflicts = useMemo(() => (scene ? conflictingClipIds(scene, { manifest: (r) => assets.manifest(r) }) : new Set<string>()), [scene, assets]);
+  // The same plan the mix uses (FR-SND-03), so the curve is exactly what is heard.
+  const duck = useMemo(() => (scene ? duckCurve(scheduleSceneAudio(project, scene, undefined, { manifest: (r) => assets.manifest(r) })) : undefined), [project, scene, assets]);
 
   if (!scene) return null;
   const width = Math.max(600, (scene.duration / 48000) * pxPerSec + 40);
@@ -94,6 +97,7 @@ export function Timeline() {
       <div className="st-tl-toolbar" role="toolbar" aria-label="Transport">
         <IconButton label="Back to start" shortcut="Home" icon={<SkipBack size={15} />} onClick={() => studio.set({ time: 0, playing: false })} />
         <button type="button" className="st-play" aria-label={playing ? 'Pause' : 'Play'} aria-keyshortcuts="Space" onClick={() => studio.set({ playing: !playing })}>{playing ? <PauseFilled /> : <PlayFilled />}</button>
+        <LevelMeter playing={playing} />
         <span className="fr-mono st-timecode" aria-live="off">{formatTimecode(time)} / {formatTimecode(scene.duration)}</span>
         <span className="fr-spacer" />
         <Button
@@ -126,6 +130,7 @@ export function Timeline() {
         <IconButton label="Zoom to selection" icon={<Scan size={14} />} disabled={!selClips.length} disabledReason="Select clips first" onClick={() => zoomTo(Math.min(...selClips.map((c) => c.start)), Math.max(...selClips.map((c) => c.end)))} />
         <IconButton label="Zoom to fit" icon={<Maximize size={14} />} onClick={() => { const w = (scroller.current?.clientWidth ?? 800) - HEADER - 40; setPx(Math.max(10, Math.min(300, w / Math.max(1, scene.duration / 48000)))); }} />
         <div style={{ width: 220 }}><SliderRow inline label="Zoom" value={pxPerSec} min={10} max={300} defaultValue={60} format={(v) => `${Math.round(v)}`} onChange={(v) => setPx(v)} /></div>
+        <IconButton size="sm" label="Help: Timeline" icon={<HelpCircle size={14} />} onClick={() => (location.hash = '#/help/timeline')} />
       </div>
       {longScene && <MiniMap scene={scene} pxPerSec={pxPerSec} scroller={scroller} />}
       <div className="st-tl-body" ref={scroller}>
@@ -188,6 +193,7 @@ export function Timeline() {
                         void placeAsset(studio, h, { at, character: t.owner });
                       }}
                     >
+                      {(t.kind === 'music' || t.kind === 'ambience') && duck && scene.clips.some((c) => c.track === t.id) && <DuckCurve points={duck} x={x} width={width} depth={scene.audio.duckingDb} />}
                       {t.kind === 'lipsync' ? <LipLane project={project} scene={scene} owner={t.owner} x={x} /> : scene.clips.filter((c) => c.track === t.id).map((c) => <ClipChip key={c.id} project={project} scene={scene} clip={c} track={t} x={x} pxPerSec={pxPerSec} selected={selIds.has(c.id)} conflict={conflicts.has(c.id)} />)}
                     </div>
                   </div>
@@ -209,6 +215,21 @@ function ticksFor(duration: number, pxPerSec: number): number[] {
   const out: number[] = [];
   for (let s = 0; s <= secs; s += step) out.push(s);
   return out;
+}
+
+/**
+ * Ducking automation (FR-SND-03) drawn over music and ambience lanes: 0 dB at the top of the lane, the duck depth at
+ * the bottom. Depth, attack and release are edited in the scene Mix section.
+ */
+function DuckCurve({ points, x, width, depth }: { points: [number, number][]; x: (t: number) => number; width: number; depth: number }) {
+  if (depth >= 0 || points.length < 2) return null;
+  const y = (db: number) => 3 + (db / depth) * 22;
+  const d = points.map(([t, db], i) => `${i ? 'L' : 'M'}${x(t * 48000).toFixed(1)} ${y(db).toFixed(1)}`).join(' ') + ` L${width} ${y(points[points.length - 1]![1]).toFixed(1)}`;
+  return (
+    <svg className="st-duck" width={width} height={28} aria-label={`Ducking curve, ${depth} dB under dialogue`} role="img">
+      <path d={d} fill="none" />
+    </svg>
+  );
 }
 
 function TrackHeader({ scene, track }: { scene: Scene; track: Track }) {

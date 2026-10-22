@@ -110,7 +110,7 @@ export function LibraryScreen() {
         </>}
       />
       <div className="st-main">
-        <Panel title="Categories" label="Categories" className="st-left">
+        <Panel title="Categories" label="Categories" help="#/help/assets" className="st-left">
           <Tree label="Categories" nodes={nodes} expanded={expanded} onExpandedChange={setExpanded} selected={category ? `cat:${category}` : 'all'} onSelect={(id) => setCategory(id === 'all' ? undefined : id.slice(4))} />
           <div className="st-form">
             <span className="fr-label">View</span>
@@ -145,7 +145,7 @@ export function LibraryScreen() {
             )) : shown.slice(0, 300).map((h) => <div role="listitem" key={h.ref}><AssetRow name={h.name} meta={`${h.category} · ${h.ref}`} selected={picked === h.ref} onClick={() => setPicked(h.ref)} thumbnail={h.preview ? <img src={thumb(h.ref, 60)} width={30} height={30} alt="" loading="lazy" /> : undefined} /></div>)}
           </div>
         </div>
-        <Panel title={details?.manifest.name ?? 'Details'} label="Asset details" className="st-right">
+        <Panel title={details?.manifest.name ?? 'Details'} label="Asset details" help="#/help/assets" className="st-right">
           {!details ? <EmptyState title="Choose an asset">Pick an item to see its versions, where it is used, its licence and provenance.</EmptyState> : (
             <div className="st-props">
               <div className="st-form">

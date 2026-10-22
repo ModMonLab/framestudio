@@ -45,6 +45,7 @@ export function instanceMenu(studio: Studio, id: string): MenuEntry[] {
   const inst = scene?.instances.find((i) => i.id === id);
   if (!scene || !inst) return [];
   const same = scene.instances.filter((i) => i.depthPlane === inst.depthPlane).sort((a, b) => a.order - b.order);
+  const sel = s.selection.filter((x) => x.kind === 'instance' && scene.instances.some((i) => i.id === x.id && !i.parent)).map((x) => x.id);
   const idx = same.findIndex((i) => i.id === id);
   const set = (patch: Record<string, unknown>, label: string) => void studio.exec([{ name: 'instance.update', params: { scene: scene.id, id, set: patch } }], label);
   return [
@@ -54,6 +55,9 @@ export function instanceMenu(studio: Studio, id: string): MenuEntry[] {
     { id: 'fwd', label: 'Bring forward', disabled: idx >= same.length - 1, disabledReason: 'Already in front in its depth plane', onSelect: () => set({ order: same[idx + 1]!.order + 1 }, `Bring ${inst.name} forward`) },
     { id: 'back', label: 'Send backward', disabled: idx <= 0, disabledReason: 'Already at the back of its depth plane', onSelect: () => set({ order: same[idx - 1]!.order - 1 }, `Send ${inst.name} backward`) },
     { id: 'hide', label: inst.visible ? 'Hide' : 'Show', onSelect: () => set({ visible: !inst.visible }, `${inst.visible ? 'Hide' : 'Show'} ${inst.name}`) },
+    { id: 'lock', label: inst.locked ? 'Unlock' : 'Lock', onSelect: () => set({ locked: !inst.locked }, `${inst.locked ? 'Unlock' : 'Lock'} ${inst.name}`) },
+    ...(sel.length >= 2 ? [{ id: 'group', label: `Group ${sel.length} objects`, onSelect: () => void studio.exec([{ name: 'instance.group', params: { scene: scene.id, ids: sel } }], 'Group') }] : []),
+    ...(inst.kind === 'group' ? [{ id: 'ungroup', label: 'Ungroup', onSelect: () => void studio.exec([{ name: 'instance.ungroup', params: { scene: scene.id, id } }], 'Ungroup') }] : []),
     { kind: 'separator', id: 's1' },
     { id: 'del', label: 'Delete', shortcut: 'Delete', onSelect: () => void deleteSelection(studio) },
   ];

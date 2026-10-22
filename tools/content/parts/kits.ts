@@ -51,7 +51,7 @@ export const LIVING_ROOM_KIT: KitParts = {
     } },
   },
   sofa: {
-    name: 'Sofa', plane: 'back', order: 3, at: [760, 1000],
+    name: 'Sofa', plane: 'ground', order: 3, at: [760, 1000],
     spec: { colors: { sofa: '#4F6D8A', cushion: '#6684A1', leg: '#3E2B20' }, bounds: [-460, -330, 920, 340], draw: (d) => {
       d.rect(-440, -330, 880, 200, 'sofa', { r: 40 });
       d.rect(-460, -190, 920, 150, 'sofa', { r: 30 });
@@ -110,7 +110,7 @@ export const OFFICE_KIT: KitParts = {
     } },
   },
   plant: {
-    name: 'Office plant', plane: 'back', order: 2, at: [180, 1000],
+    name: 'Office plant', plane: 'ground', order: 2, at: [180, 1000],
     spec: { colors: { pot: '#E8E4DC', leaf: '#4E8A5B', dark: '#3B6E47' }, bounds: [-120, -420, 240, 430], draw: (d) => {
       d.rect(-70, -140, 140, 140, 'pot', { r: 12 });
       for (const [x, y, r] of [[-60, -240, 70], [50, -280, 80], [0, -360, 70], [-20, -200, 60]] as const) d.ellipse(x, y, r, r * 0.7, (x + y) % 2 ? 'leaf' : 'dark', { flat: true });
@@ -174,7 +174,7 @@ export const PARK_KIT: KitParts = {
     } },
   },
   bench: {
-    name: 'Bench', plane: 'back', order: 1, at: [1540, 960],
+    name: 'Bench', plane: 'ground', order: 1, at: [1540, 960],
     spec: { colors: { wood: '#A0693F', iron: '#2F2F36' }, bounds: [-240, -200, 480, 210], draw: (d) => {
       for (let i = 0; i < 3; i++) d.rect(-220, -190 + i * 40, 440, 26, 'wood', { r: 6 });
       d.rect(-230, -80, 460, 26, 'wood', { r: 6 });
@@ -202,7 +202,7 @@ export const BEDROOM_KIT: KitParts = {
     } },
   },
   bed: {
-    name: 'Bed', plane: 'back', order: 2, at: [700, 1000],
+    name: 'Bed', plane: 'ground', order: 2, at: [700, 1000],
     spec: { colors: { frame: '#8C6A45', sheet: '#F2EEF8', quilt: '#7A9CCF', pillow: '#FFFFFF' }, bounds: [-460, -380, 920, 390], draw: (d) => {
       d.rect(-460, -380, 60, 380, 'frame', { r: 10 });
       d.rect(-420, -190, 860, 150, 'sheet', { r: 20 });
@@ -294,7 +294,7 @@ export const HOSPITAL_KIT: KitParts = {
     } },
   },
   bed: {
-    name: 'Hospital bed', plane: 'back', order: 2, at: [700, 1000],
+    name: 'Hospital bed', plane: 'ground', order: 2, at: [700, 1000],
     spec: { colors: { frame: '#B9C2CA', sheet: '#F7F8F8', blanket: '#8FB6C9', wheel: '#3A3F48' }, bounds: [-460, -360, 920, 370], draw: (d) => {
       d.rect(-460, -360, 40, 320, 'frame', { r: 8 }); d.rect(420, -260, 40, 220, 'frame', { r: 8 });
       d.rect(-430, -200, 860, 70, 'sheet', { r: 16 }); d.rect(-200, -215, 620, 90, 'blanket', { r: 20 });
@@ -341,7 +341,7 @@ export const STAGE_KIT: KitParts = {
 export const LIBRARY_KIT: KitParts = {
   wall: wall('Library wall', { wall: '#C8B48F', trim: '#6B4B34' }),
   shelves: {
-    name: 'Bookshelves', plane: 'back', order: 1, at: [960, 1000],
+    name: 'Bookshelves', plane: 'ground', order: 1, at: [960, 1000],
     spec: { colors: { wood: '#6B4B34', b1: '#8C2F3A', b2: '#2F5E8C', b3: '#3F6E5A', b4: '#C9A74A', b5: '#5E4A7A' }, bounds: [-1100, -820, 2200, 830], draw: (d) => {
       d.rect(-1100, -820, 2200, 820, 'wood', { flat: true });
       const cols = ['b1', 'b2', 'b3', 'b4', 'b5'];
@@ -369,7 +369,7 @@ export const LIBRARY_KIT: KitParts = {
 export const GYM_KIT: KitParts = {
   wall: wall('Gym wall', { wall: '#DCE3E8', trim: '#C8323C', band: '#2F5E8C' }, (d) => { d.rect(-1400, -420, 2800, 60, 'band', { flat: true }); }),
   rack: {
-    name: 'Weights rack', plane: 'back', order: 1, at: [500, 1000],
+    name: 'Weights rack', plane: 'ground', order: 1, at: [500, 1000],
     spec: { colors: { metal: '#3A3F48', plate: '#202024', grip: '#C9CED6' }, bounds: [-300, -420, 600, 430], draw: (d) => {
       d.rect(-280, -420, 20, 420, 'metal', { flat: true }); d.rect(260, -420, 20, 420, 'metal', { flat: true });
       for (const y of [-340, -220, -100]) { d.rect(-260, y, 520, 12, 'grip', { flat: true }); d.rect(-250, y - 40, 30, 90, 'plate', { r: 6 }); d.rect(220, y - 40, 30, 90, 'plate', { r: 6 }); }
@@ -420,7 +420,7 @@ export const FOREST_KIT: KitParts = {
     } },
   },
   trees: {
-    name: 'Giant trees', plane: 'back', order: 0, at: [960, 1000],
+    name: 'Giant trees', plane: 'ground', order: 1, at: [960, 1000],
     spec: { colors: { trunk: '#4A3A5A', leaf: '#2F6B57', leaf2: '#3F8C6E', mush: '#C94F6D', dot: '#F4EEE4' }, bounds: [-1300, -900, 2600, 910], draw: (d) => {
       for (const [x, s] of [[-1050, 1.2], [-500, 0.9], [600, 1.1], [1150, 1]] as const) {
         d.poly([[x - 50 * s, 0], [x - 30 * s, -500 * s], [x + 30 * s, -500 * s], [x + 50 * s, 0]], 'trunk');

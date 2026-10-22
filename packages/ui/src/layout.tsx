@@ -1,18 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronRight, Info, X, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronRight, HelpCircle, Info, X, XCircle } from 'lucide-react';
 import { t } from './i18n.js';
 import { Portal } from './overlay.js';
 import { IconButton } from './buttons.js';
 
 /* ------------------------------------------------------------------ panel */
 
-export function Panel({ title, actions, search, children, label, className, style }: { title?: ReactNode; actions?: ReactNode; search?: ReactNode; children: ReactNode; label?: string; className?: string; style?: React.CSSProperties }) {
+/** `help` is the panel's help link (FR-ONB-02: every panel has one). */
+export function Panel({ title, actions, search, children, label, className, style, help }: { title?: ReactNode; actions?: ReactNode; search?: ReactNode; children: ReactNode; label?: string; className?: string; style?: React.CSSProperties; help?: string }) {
+  const name = label ?? (typeof title === 'string' ? title : undefined);
   return (
-    <aside className={`fr-panel ${className ?? ''}`} aria-label={label ?? (typeof title === 'string' ? title : undefined)} style={style}>
-      {(title || actions) && (
+    <aside className={`fr-panel ${className ?? ''}`} aria-label={name} style={style}>
+      {(title || actions || help) && (
         <div className="fr-panel__head">
           <span className="fr-panel__title">{title}</span>
           {actions}
+          {help && <IconButton size="sm" label={`Help${name ? `: ${name}` : ''}`} icon={<HelpCircle size={14} />} onClick={() => (location.hash = help)} />}
         </div>
       )}
       {search && <div className="fr-panel__search">{search}</div>}

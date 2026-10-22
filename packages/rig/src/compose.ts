@@ -1,8 +1,8 @@
 import type { StyleFamily, View } from '@frame/schema';
-import type { GroupItem, Item, Paint } from '@frame/render';
+import type { GroupItem, Item, Mat, Paint } from '@frame/render';
 import { bodyDims, projectAll, solvePose, VIEW_ANGLE, type BodyDims, type BodyParams, type Joint, type Pose, type Projected, type Vec2 } from './skeleton.js';
 import { along, buildPath, ellipsePath, evalPoint, limbPath, resolveColor, resolveFill, subChain, type Mapper, type Palette, type Params, type Pt } from './geometry.js';
-import type { FamilyArt, FitSpace, LayerDef, LimbLayerDef, MouthLetter, PartData, ShapeDef, ViewArt, When } from './types.js';
+import type { FamilyArt, FitSpace, LayerDef, LimbLayerDef, MouthLetter, PartData, PatternUse, ShapeDef, ViewArt, When } from './types.js';
 
 /** Family style guide values that the engine applies generically (Vision §7). */
 export interface FamilyStyle {
@@ -23,6 +23,13 @@ export interface ResolvedPart {
   data: PartData;
   /** Option states (sleeves rolled, hood up…). */
   options?: Record<string, string>;
+  /**
+   * An accessory taken off and held (FR-WRD-04): drawn at its natural size, moved from where it is worn to that
+   * hand's grip, in front of the hand.
+   */
+  heldIn?: 'L' | 'R';
+  /** Fabric pattern over this garment's fills (FR-WRD-02); ignored unless the part is patternable. */
+  pattern?: PatternUse;
 }
 
 export interface CharacterSpec {
@@ -498,13 +505,15 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
         const space = (layer.space ?? 'head') as FitSpace;
         const sp = side && (space === 'hand' || space === 'foot') ? (`${space}${side}` as FitSpace) : side && /^(eye|brow|ear)$/.test(space) ? (`${space}${side}` as FitSpace) : space;
         if (cut(sp, side) && !part.data.variant?.truncate) continue;
-        const map = frames.map(sp, side, part.data.mirror);
-        if (!map) continue; // feature not present in this view (e.g. far eye in side view)
+        const worn = frames.map(sp, side, part.data.mirror);
+        if (!worn) continue; // feature not present in this view (e.g. far eye in side view)
+        const map = part.heldIn ? heldMap(worn, sp, part.heldIn) : worn;
+        if (!map) continue;
         const params = side && /^(eye|brow)/.test(sp) ? sideParams(side) : side && sp.startsWith('ear') ? baseParams : { ...baseParams, 'gaze.x': gx, 'gaze.y': gy, ...sideParams('L') };
         const pair = /^(hand|upperArm|foreArm)/.test(sp) ? 'arm' : /^(foot|thigh|shin)/.test(sp) ? 'leg' : undefined;
         // Limb-segment spaces carry their side in the name (upperArmL …).
         const limbSide = !side && pair && /[LR]$/.test(sp) ? (sp.slice(-1) as 'L' | 'R') : side;
-        const slot = resolveSlot(layer.slot, limbSide, pair);
+        const slot = part.heldIn ? resolveSlot('acc.hand.*', part.heldIn, 'arm') : resolveSlot(layer.slot, limbSide, pair);
         const sideState = side ? { ...state, hand: side === 'L' ? st.pose.handL : st.pose.handR, side } : state;
         if (!whenOk(layer.when, sideState)) continue;
         drawShapes(layer, art, part, map, params, sideState, slot, side === 'R' ? 'R' : 'L');
@@ -514,6 +523,17 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
       const map = frames.map(a.space, undefined, part.data.mirror);
       if (map) anchors[name] = map(a.at[0], a.at[1]);
     }
+  }
+
+  // Moves art fitted to a body space so that space's centre sits at the hand's grip (same size, upright).
+  function heldMap(worn: Mapper, space: FitSpace, hand: 'L' | 'R'): Mapper | undefined {
+    const grip = frames.map(`hand${hand}`)?.(0, 0.95);
+    if (!grip) return undefined;
+    const centre = (space === 'stage' ? undefined : frames.map(space)?.(0, 0)) ?? worn(0, 0);
+    return (u, v) => {
+      const p = worn(u, v);
+      return [p[0] - centre[0] + grip[0], p[1] - centre[1] + grip[1]];
+    };
   }
 
   function drawShapes(layer: LayerDef, art: ViewArt, part: ResolvedPart, map: Mapper, params: Params, state: Record<string, string>, slot: string, side: 'L' | 'R') {
@@ -556,7 +576,45 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
         else issues.push(`${part.ref}: clip ${s.clip} not found`);
       } else items.push(item);
     }
-    if (items.length) push(slot, { k: 'group', id: part.ref, items });
+    if (items.length) push(slot, { k: 'group', id: part.ref, items: part.pattern && part.data.patternable ? withPattern(items, part.pattern) : items });
+  }
+
+  // Fabric pattern (FR-WRD-02): tiles over the fills' bounds, clipped to the fills, rotated about their centre.
+  function withPattern(items: Item[], use: PatternUse): Item[] {
+    const fills = items.filter((i): i is Extract<Item, { k: 'path' }> => i.k === 'path' && !!i.fill && !i.op);
+    if (!fills.length) return items;
+    const clip = fills.map((f) => f.d).join(' ');
+    const nums = clip.match(/-?\d*\.?\d+(e-?\d+)?/gi)?.map(Number) ?? [];
+    if (nums.length < 2) return items;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      x0 = Math.min(x0, nums[i]!); x1 = Math.max(x1, nums[i]!);
+      y0 = Math.min(y0, nums[i + 1]!); y1 = Math.max(y1, nums[i + 1]!);
+    }
+    const P = use.data;
+    const k = (use.scale ?? P.defaults.scale) * d0();
+    const [tw, th] = [P.tile[0] * k, P.tile[1] * k];
+    if (!(tw > 0.5 && th > 0.5)) return items;
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const r = Math.hypot(x1 - x0, y1 - y0) / 2 + Math.max(tw, th);
+    const cols = Math.min(200, Math.ceil((2 * r) / tw)), rows = Math.min(200, Math.ceil((2 * r) / th));
+    const colours = { ...P.defaults.colors, ...(use.colors ?? {}) };
+    const out: Item[] = [];
+    if (P.image && use.image) for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) out.push({ k: 'image', src: use.image, x: cx - r + i * tw, y: cy - r + j * th, w: tw, h: th });
+    for (const L of P.layers) {
+      let d = '';
+      for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+        const ox = cx - r + i * tw + (P.stagger && j % 2 ? tw / 2 : 0), oy = cy - r + j * th;
+        d += L.d.replace(/(-?\d*\.?\d+(?:e-?\d+)?)\s*,?\s*(-?\d*\.?\d+(?:e-?\d+)?)/gi, (_m: string, a: string, b: string) => `${(ox + Number(a) * k).toFixed(2)} ${(oy + Number(b) * k).toFixed(2)}`) + ' ';
+      }
+      out.push({ k: 'path', d, fill: { color: resolveColor(colours[L.color], palette) }, ...(L.opacity !== undefined && L.opacity < 1 ? { op: L.opacity } : {}), ...(P.blend === 'multiply' ? { blend: 'multiply' as const } : {}) });
+    }
+    const rot = ((use.rotation ?? P.defaults.rotation) * Math.PI) / 180;
+    const c = Math.cos(rot), sn = Math.sin(rot);
+    const tf: Mat = [c, sn, -sn, c, cx - c * cx + sn * cy, cy - sn * cx - c * cy];
+    // Fills first, the pattern over them, then outlines and details on top.
+    const rest = items.filter((i) => !fills.includes(i as never));
+    return [...fills, { k: 'group', clip, items: [{ k: 'group', tf, items: out }] }, ...rest];
   }
 
   function drawLimb(layer: LayerDef, L: LimbLayerDef, part: ResolvedPart, state: Record<string, string>) {
@@ -596,7 +654,7 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
         items.push({ k: 'group', clip: dPath, items: [{ k: 'path', d: limbPath(pts.map((p) => [p[0] + (nx / nl) * off * 0.9, p[1] + (ny / nl) * off * 0.9] as Pt), widths.map((w) => w * 0.7)), fill: { color: resolveColor(L.shade, palette) }, op: 0.85 }] });
       }
       if (L.outline && spec.style.lineWidth > 0) items.push({ k: 'path', d: dPath, stroke: { paint: { color: resolveColor(L.outline, palette) }, width: spec.style.lineWidth * d0() } });
-      push(slot, { k: 'group', id: `${part.ref}:${limb}`, items });
+      push(slot, { k: 'group', id: `${part.ref}:${limb}`, items: part.pattern && part.data.patternable && !skin ? withPattern(items, part.pattern) : items });
       // Hand/foot anchors for props (grip) come from the hand frames.
       if (limb.startsWith('arm')) anchors[`wrist${side}`] = along(chain.pts, 1);
     }

@@ -262,3 +262,75 @@
 .st-settings-alert p, .st-settings-alert ul { margin: 0 0 var(--space-2); }
 .st-settings-alert ul { padding-left: 1.2em; max-height: 160px; overflow: auto; }
 .st-problem-h { margin: var(--space-3) var(--space-4) var(--space-2); font-size: inherit; font-weight: 600; color: var(--color-text2); }
+
+/* Compact density (FR-SET-01): tighter rows; spacing scale unchanged so alignment holds. */
+:root[data-density='compact'] { --size-row: 24px; --size-row-lg: 28px; --size-toolbar: 34px; }
+
+/* Help (FR-ONB-02) */
+.st-help { flex: 1; overflow: auto; display: flex; gap: var(--space-6); padding: var(--space-8) var(--space-6); justify-content: center; align-items: flex-start; }
+.st-help-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; width: 220px; }
+.st-help-nav a { display: block; padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); color: var(--color-text); text-decoration: none; }
+.st-help-nav a:hover { background: var(--color-hover); }
+.st-help-nav a[aria-current='page'] { background: var(--color-selected); font-weight: 600; }
+.st-help-nav a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.st-help-body { width: min(640px, 100%); }
+.st-help-body .st-notes-view { border: 0; max-height: none; padding: 0; }
+
+/* Settings (FR-SET-01) */
+.st-settings-page { flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: var(--space-6); padding: var(--space-8) var(--space-6); }
+.st-settings-page > .fr-panel { width: min(640px, 100%); flex: none; }
+.st-settings-title { margin: 0; width: min(640px, 100%); font-size: var(--type-title-size, 18px); }
+.st-settings-body { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); }
+.st-settings-row { display: flex; align-items: center; gap: var(--space-3); }
+.st-settings-list { list-style: none; margin: 0; padding: var(--space-2) var(--space-4); }
+.st-settings-keys li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: var(--space-4); min-height: var(--size-row); }
+.st-settings-keys kbd { color: var(--color-text2); }
+.st-settings-dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-2) var(--space-4); margin: 0; }
+.st-settings-dl dt { color: var(--color-text2); }
+.st-settings-dl dd { margin: 0; overflow-wrap: anywhere; }
+
+/* Command palette (FR-ONB-03) */
+.st-palette { display: flex; flex-direction: column; gap: var(--space-3); width: min(560px, 80vw); }
+.st-palette-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow: auto; }
+.st-palette-item { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: var(--space-3); min-height: var(--size-row); padding: 0 var(--space-3); border-radius: var(--radius-sm); cursor: pointer; }
+.st-palette-item[aria-selected='true'] { background: var(--color-selected); }
+.st-palette-item[aria-disabled='true'] { color: var(--color-text3); cursor: default; }
+.st-palette-group { color: var(--color-text2); }
+.st-palette-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-palette-empty { padding: var(--space-3); }
+
+/* Onboarding (FR-ONB-01) */
+.st-onb-templates { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.st-tour { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
+.st-tour-ring { position: fixed; border: 2px solid var(--color-focus); border-radius: var(--radius-md); box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35); }
+.st-tour-card { position: fixed; width: 320px; pointer-events: auto; background: var(--color-panel); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; gap: var(--space-2); }
+.st-tour-card h2 { margin: 0; font-size: inherit; font-weight: 600; }
+.st-tour-card p { margin: 0; }
+.st-palette-detail { color: var(--color-text2); }
+.st-swatches { display: inline-flex; margin-right: var(--space-2); }
+.st-swatches i { width: 8px; height: 12px; display: inline-block; }
+.st-swatches i:first-child { border-radius: 2px 0 0 2px; }
+.st-swatches i:last-child { border-radius: 0 2px 2px 0; }
+
+/* Smart guides, camera frame and safe areas (FR-STG-03, FR-CAM-01, FR-CAM-06) */
+.st-guide { position: absolute; pointer-events: none; background: #FF3EA5; }
+.st-guide--x { top: 0; bottom: 0; width: 1px; }
+.st-guide--y { left: 0; right: 0; height: 1px; }
+.st-guide--centre, .st-guide--ground, .st-guide--mark { background: #00C2FF; }
+.st-camframe { position: absolute; border: 2px solid #FFD43B; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35); cursor: move; pointer-events: none; }
+.st-camframe i { position: absolute; right: -6px; bottom: -6px; width: 10px; height: 10px; background: #FFD43B; border-radius: 2px; }
+.st-camframe-label { position: absolute; left: 0; top: -20px; padding: 1px 6px; background: #FFD43B; color: #1A1A1A; font-size: 10px; font-weight: 600; border-radius: 3px 3px 0 0; white-space: nowrap; }
+.st-safe { position: absolute; inset: 0; pointer-events: none; }
+.st-safe-action { position: absolute; inset: 3.5%; border: 1px dashed rgba(255, 255, 255, 0.7); }
+.st-safe-title { position: absolute; inset: 5%; border: 1px solid rgba(255, 255, 255, 0.85); }
+.st-safe-ui { position: absolute; left: 0; right: 0; bottom: 0; height: 20%; background: repeating-linear-gradient(45deg, rgba(255, 60, 60, 0.18) 0 8px, transparent 8px 16px); border-top: 1px dashed rgba(255, 90, 90, 0.8); }
+.st-safe-label { position: absolute; right: 6px; top: 6px; padding: 1px 6px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 10px; border-radius: 3px; }
+
+/* Level meter (FR-SND-05) */
+.st-meter { display: flex; flex-direction: column; justify-content: center; gap: 2px; width: 90px; position: relative; }
+.st-meter-bar { position: relative; height: 4px; background: var(--color-field); border-radius: 2px; overflow: hidden; }
+.st-meter-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--color-success); }
+.st-meter-fill--hot { background: var(--color-warning); }
+.st-meter-hold { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--color-text); }
+.st-meter-clip { position: absolute; right: -40px; top: -4px; font-size: 9px; font-weight: 700; color: #fff; background: var(--color-danger); border: 0; border-radius: 3px; padding: 1px 4px; cursor: pointer; }
+.st-duck { position: absolute; left: 0; top: 0; pointer-events: none; } .st-duck path { stroke: var(--color-warning); stroke-width: 1.5; }

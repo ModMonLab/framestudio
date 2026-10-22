@@ -23,6 +23,18 @@ export function saveSceneAsTemplate(studio: Studio, notify: (message: string) =>
     .catch((e: Error) => studio.set({ lastError: { message: e.message } }));
 }
 
+/** Saves the scene's kit pieces, props, marks and cameras as a set of your own (FR-ENV-01). */
+export function saveSceneAsSet(studio: Studio, notify: (message: string) => void) {
+  const s = studio.state;
+  const scene = s.scene ? s.project?.scenes[s.scene] : undefined;
+  if (!scene) return;
+  const name = window.prompt('Set name', `${scene.name} set`);
+  if (!name?.trim()) return;
+  api.saveSet(s.pid, scene.id, name.trim())
+    .then(() => notify(`Saved the set “${name.trim()}”. Find it under Ready-made sets ▸ My sets.`))
+    .catch((e: Error) => studio.set({ lastError: { message: e.message } }));
+}
+
 export function TemplateDialog() {
   const { studio } = useCtx();
   const toasts = useToasts();

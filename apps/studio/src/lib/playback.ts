@@ -16,6 +16,38 @@ function ctx(): AudioContext {
   return actx;
 }
 
+/** Master bus with left/right analysers for the level meter (FR-SND-05). */
+let master: { input: GainNode; l: AnalyserNode; r: AnalyserNode } | undefined;
+function bus() {
+  const ac = ctx();
+  if (!master) {
+    const input = ac.createGain();
+    const split = ac.createChannelSplitter(2);
+    const l = ac.createAnalyser();
+    const r = ac.createAnalyser();
+    l.fftSize = r.fftSize = 2048;
+    input.connect(ac.destination);
+    input.connect(split);
+    split.connect(l, 0);
+    split.connect(r, 1);
+    master = { input, l, r };
+  }
+  return master;
+}
+
+const meterBuf = new Float32Array(2048);
+/** Sample peaks of the last ~43 ms per channel in dBFS, or undefined before anything played. */
+export function meterPeaks(): [number, number] | undefined {
+  if (!master) return undefined;
+  const peak = (a: AnalyserNode) => {
+    a.getFloatTimeDomainData(meterBuf);
+    let m = 0;
+    for (let i = 0; i < meterBuf.length; i++) m = Math.max(m, Math.abs(meterBuf[i]!));
+    return m > 0 ? 20 * Math.log10(m) : -Infinity;
+  };
+  return [peak(master.l), peak(master.r)];
+}
+
 function load(pid: string, hash: string): Promise<AudioBuffer | null> {
   let p = buffers.get(hash);
   if (!p) {
@@ -49,7 +81,7 @@ export async function playPlan(pid: string, plan: AudioPlan, t0: number): Promis
     const curve = new Float32Array(n);
     for (let i = 0; i < n; i++) curve[i] = eventGainAt(plan, e, from + ((to - from) * i) / (n - 1));
     gain.gain.setValueCurveAtTime(curve, now + (from - t0), Math.max(0.01, to - from));
-    src.connect(gain).connect(pan).connect(ac.destination);
+    src.connect(gain).connect(pan).connect(bus().input);
     const offset = e.offset + (from - e.start);
     src.start(now + (from - t0), e.loop ? offset % buf.duration : offset, e.loop ? undefined : Math.max(0, to - from));
     if (e.loop) src.stop(now + (to - t0));
