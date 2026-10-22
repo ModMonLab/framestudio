@@ -188,3 +188,39 @@ describe('packages (FR-DAT-10/11, FR-IMP-04)', () => {
     expect(() => importProjectPackage(bytes, path.join(tmpdir(), 'X.frame'), { bundledHash: () => undefined })).toThrowError(expect.objectContaining({ code: 'NOT_FOUND' }) as Error);
   });
 });
+
+describe('locks (FR-DAT-06)', () => {
+  it('pins every referenced library asset with its content hash at save, keeps pins, and drops unused ones', async () => {
+    const { computeLocks, lockMismatches } = await import('../src/index.js');
+    const { p, scene } = projectWithCharacter();
+    const L = lib(p);
+    const lookup = (ref: string) => {
+      const e = L.get(ref);
+      return e ? { manifest: e.manifest, source: e.source } : undefined;
+    };
+    p.locksFor = (state) => computeLocks(state, lookup);
+    p.flush();
+    const locks = JSON.parse(fs.readFileSync(path.join(p.store.root, 'locks/assets.json'), 'utf8'));
+    expect(locks.assets['hair.afro@1']).toEqual({ hash: manifestHash(L.manifest('hair.afro@1')!), source: 'bundled' });
+    // Parts of the base character's own references are pinned too; project-local assets are not (they live in the project).
+    expect(locks.assets[`${CHAR_ID}@1`]).toBeUndefined();
+    expect(Object.keys(locks.assets).length).toBeGreaterThan(8);
+    expect(p.state.locks).toEqual(locks);
+    expect(lockMismatches(p.state.locks, lookup)).toEqual([]);
+    // A changed library manifest under the same version is reported, and the pin is kept.
+    const tampered = (ref: string) => {
+      const e = lookup(ref);
+      return e && ref === 'hair.afro@1' ? { ...e, manifest: { ...e.manifest, name: 'Changed' } } : e;
+    };
+    expect(lockMismatches(p.state.locks, tampered).map((m) => m.ref)).toEqual(['hair.afro@1']);
+    expect(computeLocks(p.state, tampered).assets['hair.afro@1']).toEqual(locks.assets['hair.afro@1']);
+    const problems = validateProject(p.state, { assetHash: (r) => { const e = tampered(r); return e ? manifestHash(e.manifest) : undefined; } });
+    expect(problems.find((x) => x.code === 'LOCK_MISMATCH')?.target?.id).toBe('hair.afro@1');
+    // Removing the only user of a part drops its pin at the next save.
+    const inst = p.state.scenes[scene]!.instances.find((i) => i.name === 'Robin')!;
+    p.session.apply({ commands: [{ name: 'instance.remove', params: { scene, ids: [inst.id] } }, { name: 'asset.removeLocal', params: { ref: `${CHAR_ID}@1` } }] });
+    p.flush();
+    expect(p.state.locks.assets['hair.afro@1']).toBeUndefined();
+    expect(OpenProject.open(p.store.root).state.locks).toEqual(p.state.locks);
+  });
+});

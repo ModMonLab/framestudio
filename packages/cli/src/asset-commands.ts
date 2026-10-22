@@ -6,7 +6,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { buildCharacter, type CharacterSpec } from '@frame/core';
-import { libraryFor } from '@frame/assets/node';
 import { parseRef, type Library } from '@frame/assets';
 import { rigCheck, type PartData } from '@frame/rig';
 import { AssetManifest, FrameError, issues, type PackageFormat } from '@frame/schema';
@@ -15,12 +14,9 @@ import {
   PACKAGE_EXTENSIONS, projectAssetSource, unresolvedReferences, type OpenProject,
 } from '@frame/io';
 import { command, type CommandContext } from './framework.js';
-import { APP_VERSION, contentDir, userLibraryDir } from './env.js';
-import { findProjectDir, localOnly, mutate, openProject } from './project-commands.js';
+import { APP_VERSION } from './env.js';
+import { findProjectDir, localOnly, mutate, openProject, projectLibrary } from './project-commands.js';
 
-function projectLibrary(ctx: CommandContext, p?: OpenProject): Library {
-  return libraryFor({ contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), ...(p ? { projectAssets: p.state.assets } : {}) });
-}
 
 function optionalProject(ctx: CommandContext): OpenProject | undefined {
   try {

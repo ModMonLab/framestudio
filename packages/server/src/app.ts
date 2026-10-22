@@ -13,7 +13,7 @@ import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, PACKAGE_EXTENSIONS, type OutputPreset,
+  projectAssetSource, unresolvedReferences, computeLocks, PACKAGE_EXTENSIONS, type OutputPreset,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -63,7 +63,20 @@ export interface FrameServer {
 
 export async function createServer(o: ServerOptions): Promise<FrameServer> {
   const app = Fastify({ logger: o.logger ?? false, bodyLimit: 512 * 1024 * 1024 });
-  const hub = new ProjectHub({ ...(o.watchMs ? { watchMs: o.watchMs } : {}), ...(o.debounceMs !== undefined ? { debounceMs: o.debounceMs } : {}) });
+  // Locks are computed against bundled + user sources at every save (FR-DAT-06).
+  const lockLookup = () => {
+    const lib = libraryFor({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}) });
+    return (ref: string) => {
+      const e = lib.get(ref);
+      return e ? { manifest: e.manifest, source: e.source } : undefined;
+    };
+  };
+  const hub = new ProjectHub({
+    ...(o.watchMs ? { watchMs: o.watchMs } : {}), ...(o.debounceMs !== undefined ? { debounceMs: o.debounceMs } : {}),
+    onAttach: (open) => {
+      open.locksFor = (state) => computeLocks(state, lockLookup());
+    },
+  });
   const jobs = { render: new JobQueue(1), voice: new JobQueue(1) };
   const styles = loadStyles(o.contentDir);
   let renderer: Promise<NodeRenderer> | undefined;
@@ -223,7 +236,8 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     try {
       const p = hub.get(req.params.pid);
       const lib = library(p);
-      const problems = validateProject(p.open.state, { assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h) });
+      const locked = lockLookup();
+      const problems = validateProject(p.open.state, { assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), assetHash: (r) => { const m = locked(r)?.manifest; return m ? manifestHash(m) : undefined; } });
       return { revision: p.open.session.revision, problems };
     } catch (e) {
       return sendError(reply, e);

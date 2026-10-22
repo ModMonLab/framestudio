@@ -231,6 +231,14 @@ export class ProjectSession {
     return this.emit({ revision: this._revision, baseRevision: this._revision - 1, rebased: false, dryRun: false, label, commands: [], changed, state: next, reports: [] });
   }
 
+  /**
+   * Updates derived lock data (FR-DAT-06) without a revision or undo step: locks are computed from the project and the
+   * library at save time, not edited.
+   */
+  setLocks(locks: ProjectState['locks']): void {
+    this._state = { ...this._state, locks };
+  }
+
   /** Replace the state wholesale (external change reload, FR-PER-05). Clears undo history for safety. */
   replaceState(state: ProjectState, label = 'Reload from disk'): ApplyResult {
     const [, patches] = produceWithPatches(this._state, () => state);

@@ -6,3 +6,4 @@ export * from './ffmpeg.js';
 export * from './export.js';
 export * from './package.js';
 export * from './assets-io.js';
+export * from './locks.js';

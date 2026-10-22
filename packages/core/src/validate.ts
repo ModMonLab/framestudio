@@ -38,6 +38,8 @@ export interface ValidationContext {
   mediaExists?: (hash: string) => boolean;
   /** Channels an action/expression asset drives (from its manifest). */
   channelsOf?: (ref: string) => ChannelInfo | undefined;
+  /** Current content hash of a library asset, to compare with the project's locks (FR-DAT-06). */
+  assetHash?: (ref: string) => string | undefined;
 }
 
 const exclusiveDefaults: Record<string, string[]> = { face: ['expression'], gaze: ['gaze'], acting: ['gesture'] };
@@ -175,6 +177,14 @@ export function validateProject(state: ProjectState, ctx: ValidationContext = {}
     for (const k of channelConflicts(scene, ctx)) {
       const who = scene.instances.find((i) => i.id === k.owner)?.name ?? 'A character';
       add({ severity: 'error', code: 'CHANNEL_CONFLICT', message: `${who} has two ${k.channel} clips at ${formatTimecode(k.b.start)}`, blocksExport: true, target: { kind: 'clip', id: k.b.id }, details: [k.a.id, k.b.id], ...where } as Problem);
+    }
+  }
+  if (ctx.assetHash) {
+    for (const [ref, lock] of Object.entries(state.locks.assets)) {
+      const current = ctx.assetHash(ref);
+      if (current && current !== lock.hash) {
+        add({ severity: 'warning', code: 'LOCK_MISMATCH', message: `${ref} in the library differs from the version this project pinned; renders may change`, blocksExport: false, target: { kind: 'asset', id: ref } });
+      }
     }
   }
   return problems.map((p) => {
