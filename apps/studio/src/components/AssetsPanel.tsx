@@ -1,10 +1,10 @@
 /** Library browser (Design System §5.3, FR-AST-03/04): search, categories with live counts, apply to the scene. */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Upload } from 'lucide-react';
-import { AssetRow, Button, EmptyState, IconButton, Panel, SearchField, Section, useToasts } from '@frame/ui';
+import { Star, Upload } from 'lucide-react';
+import { AssetRow, Button, EmptyState, IconButton, Panel, SearchField, Section, Segmented, Select, useToasts } from '@frame/ui';
 import { ImportDialog, IMPORT_ACCEPT } from './ImportDialog.js';
 import { trackFor } from '@frame/core';
-import { api } from '../lib/api.js';
+import { api, type UserPrefs } from '../lib/api.js';
 import { useStudio, type Studio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
 
@@ -20,6 +20,8 @@ export interface Hit {
   tags: string[];
   /** Why the item cannot be applied to the current selection (FR-AST-04). */
   incompatible?: string;
+  /** bundled, user, project or imported (FR-AST-01). */
+  source?: string;
 }
 
 /** Which library kinds each rail destination shows (Design System §4.3). */
@@ -47,6 +49,13 @@ export function AssetsPanel({ filter }: { filter: string }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [picked, setPicked] = useState<string>();
   const [importing, setImporting] = useState<File>();
+  const [scope, setScope] = useState<string>('all');
+  const [prefs, setPrefsState] = useState<UserPrefs>();
+  useEffect(() => {
+    api.prefs().then(setPrefsState).catch(() => setPrefsState(undefined));
+  }, []);
+  const savePrefs = (next: Omit<UserPrefs, 'schemaVersion'>) => api.setPrefs(next).then(setPrefsState).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }));
+  const idOf = (ref: string) => ref.slice(0, ref.lastIndexOf('@'));
   const fileInput = useRef<HTMLInputElement>(null);
   const f = FILTERS[filter] ?? FILTERS.assets!;
 
@@ -65,14 +74,20 @@ export function AssetsPanel({ filter }: { filter: string }) {
 
   const groups = useMemo(() => {
     const m = new Map<string, Hit[]>();
+    const coll = scope.startsWith('col:') ? prefs?.collections.find((c) => c.id === scope.slice(4)) : undefined;
     for (const h of all ?? []) {
       if (h.kind === 'base' || h.kind === 'out') continue;
+      // Favourites, my library, this project, or a collection (FR-AST-01/06).
+      if (scope === 'fav' && !prefs?.favourites.includes(idOf(h.ref))) continue;
+      if (scope === 'user' && h.source !== 'user') continue;
+      if (scope === 'project' && h.source !== 'project') continue;
+      if (coll && !coll.items.includes(idOf(h.ref))) continue;
       const list = m.get(h.category) ?? [];
       list.push(h);
       m.set(h.category, list);
     }
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [all]);
+  }, [all, scope, prefs]);
 
   const scene = sceneId ? project.scenes[sceneId] : undefined;
   const selChar = selection.find((s) => s.kind === 'instance' && scene?.instances.find((i) => i.id === s.id)?.kind === 'character');
@@ -113,12 +128,30 @@ export function AssetsPanel({ filter }: { filter: string }) {
           {hits.length > 60 && <p className="fr-faint" style={{ padding: '4px 12px' }}>{hits.length - 60} more · refine the search to see them</p>}
         </Section>
       ))}
+      <div className="st-assets-scope">
+        <Segmented label="Show" value={scope.startsWith('col:') ? 'all' : scope} onChange={setScope} options={[{ value: 'all', label: 'All' }, { value: 'fav', label: 'Favourites' }, { value: 'user', label: 'My library' }, { value: 'project', label: 'Project' }]} />
+        {!!prefs?.collections.length && <span className="st-tb-select"><Select label="Collection" placeholder="Collection" value={scope.startsWith('col:') ? scope : undefined} onChange={setScope} options={[...prefs.collections.map((c) => ({ value: `col:${c.id}`, label: c.name }))]} /></span>}
+      </div>
       <input ref={fileInput} type="file" hidden accept={IMPORT_ACCEPT} aria-label="Import a file" onChange={(e) => { setImporting(e.target.files?.[0]); e.target.value = ''; }} />
       <ImportDialog file={importing} onClose={() => setImporting(undefined)} />
       {pickedHit && (
-        <div className="st-panel-foot">
+        <div className="st-panel-foot st-panel-foot--wrap">
           <span className="fr-faint">{pickedHit.name}</span>
           <span className="fr-spacer" />
+          {prefs && <IconButton label={prefs.favourites.includes(idOf(pickedHit.ref)) ? 'Remove from favourites' : 'Add to favourites'} pressed={prefs.favourites.includes(idOf(pickedHit.ref))} icon={<Star size={16} />} onClick={() => {
+            const id = idOf(pickedHit.ref);
+            const fav = prefs.favourites.includes(id) ? prefs.favourites.filter((x) => x !== id) : [...prefs.favourites, id];
+            void savePrefs({ favourites: fav, collections: prefs.collections });
+          }} />}
+          {prefs && <span className="st-tb-select"><Select label="Add to collection" placeholder="Collection…" value={undefined} onChange={(v) => {
+            const id = idOf(pickedHit.ref);
+            if (v === '__new') {
+              const name = window.prompt('Name the new collection');
+              if (!name?.trim()) return;
+              void savePrefs({ favourites: prefs.favourites, collections: [...prefs.collections, { id: `c${Date.now().toString(36)}`, name: name.trim(), items: [id] }] });
+            } else void savePrefs({ favourites: prefs.favourites, collections: prefs.collections.map((c) => (c.id === v ? { ...c, items: c.items.includes(id) ? c.items.filter((x) => x !== id) : [...c.items, id] } : c)) });
+          }} options={[...prefs.collections.map((c) => ({ value: c.id, label: `${c.items.includes(idOf(pickedHit.ref)) ? '✓ ' : ''}${c.name}` })), { value: '__new', label: 'New collection…' }]} /></span>}
+          {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Save to my library</Button>}
           <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' ? 'Add at playhead' : pickedHit.kind === 'txt' ? 'Use for captions' : 'Add to scene'}</Button>
         </div>
       )}
@@ -135,6 +168,12 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
   const project = s.project!;
   const scene = s.scene ? project.scenes[s.scene] : undefined;
   if (!scene) return undefined;
+  if (h.incompatible) {
+    studio.set({ lastError: { message: `${h.name}: ${h.incompatible}` } });
+    return undefined;
+  }
+  // Assets from the user library are copied into the project first, so it stays self-contained (FR-DAT-06).
+  if (h.source === 'user') await api.adopt(s.pid, [h.ref]);
   const at = o.at ?? s.time;
   const pos = o.position;
   const cx = project.project.output.width / 2;

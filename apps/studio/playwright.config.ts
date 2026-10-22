@@ -1,3 +1,5 @@
+import os from 'node:os';
+import path from 'node:path';
 import { defineConfig } from '@playwright/test';
 
 /**
@@ -15,6 +17,7 @@ export default defineConfig({
     url: `http://127.0.0.1:${port}/api/health`,
     reuseExistingServer: false,
     timeout: 120_000,
-    env: { ...(process.env.FRAME_TEST_WORKER_URL ? { FRAME_WORKER_URL: process.env.FRAME_TEST_WORKER_URL } : {}) },
+    // A throwaway user library: tests never touch the real profile (FR-AST-01).
+    env: { FRAME_USER_DIR: path.join(os.tmpdir(), `frame-e2e-user-${Date.now()}`, 'library'), ...(process.env.FRAME_TEST_WORKER_URL ? { FRAME_WORKER_URL: process.env.FRAME_TEST_WORKER_URL } : {}) },
   },
 });

@@ -290,3 +290,28 @@ test('rigging assistant: a layered PSD becomes a character with declared view ga
   await page.waitForTimeout(800);
   await previewMatchesServer(page, 0);
 });
+
+test('favourites, collections and the user library in the Assets panel (FR-AST-01/06, FR-AST-04)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const from = st.scenes[sid].instances.find((i: { kind: string }) => i.kind === 'character').asset;
+  const made = await (await page.request.post(`/api/projects/${pid}/characters`, { data: { spec: { name: 'Keeper', from } } })).json();
+  await page.getByRole('button', { name: 'Cast', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Search cast' }).fill('Keeper');
+  await page.getByRole('button', { name: /^Keeper/ }).click();
+  await page.getByRole('button', { name: 'Add to favourites' }).click();
+  await expect(page.getByRole('button', { name: 'Remove from favourites' })).toBeVisible();
+  await page.getByRole('button', { name: 'Save to my library' }).click();
+  await expect(page.getByText('Saved Keeper to your library')).toBeVisible();
+  await page.getByRole('textbox', { name: 'Search cast' }).fill('');
+  await page.getByRole('radio', { name: 'Favourites' }).click();
+  await expect(page.getByRole('button', { name: /^Keeper/ })).toBeVisible();
+  await expect(page.locator('.st-left').getByRole('button', { name: /^Maya Bennett/ })).toHaveCount(0);
+  const prefs = await (await page.request.get('/api/user/prefs')).json();
+  expect(prefs.favourites).toEqual([made.ref.replace(/@1$/, '')]);
+  // Expressions are offered with a reason when the selected character cannot use them (incompatible items stay visible).
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+});

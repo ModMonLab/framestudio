@@ -13,7 +13,7 @@ import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, UserLibrary, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -371,7 +371,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const charMan = inst?.kind === 'character' && inst.asset ? lib.manifest(inst.asset) : undefined;
       const target: CompatTarget | undefined = p ? { family: p.open.state.project.styleFamily, ...(charMan && inst?.character ? { character: { manifest: charMan, view: inst.character.view, posture: inst.character.posture } } : {}) } : undefined;
       const hits = lib.search(req.query.q ?? '', { ...(req.query.kind ? { kind: req.query.kind } : {}), ...(target ? { compatible: (m) => compatibility(m, target) } : {}) }).slice(0, limit);
-      return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source, preview: previewable(m.kind), ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views, capabilities: m.capabilities })) };
+      return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source: m.id.startsWith('user.') && p?.open.state.assets[`${m.id}@${m.version}`] ? 'project' : source, preview: previewable(m.kind), ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views, capabilities: m.capabilities })) };
     } catch (e) {
       return sendError(reply, e);
     }
@@ -386,6 +386,47 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
+  /* ---------------------------------------------------------------- user library and preferences (FR-AST-01/06) */
+  const userLib = () => {
+    if (!o.userDir) throw new FrameError('UNSUPPORTED', 'No user library folder is configured for this server', undefined, 'Start the server with `frame server start` (uses ~/.frame/library or FRAME_USER_DIR).');
+    return new UserLibrary(o.userDir);
+  };
+  app.get('/api/user/prefs', async (_req, reply) => {
+    try {
+      return userLib().prefs();
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.put<{ Body: { favourites: string[]; collections: { id: string; name: string; items: string[] }[] } }>('/api/user/prefs', async (req, reply) => {
+    try {
+      return userLib().setPrefs({ favourites: req.body?.favourites ?? [], collections: req.body?.collections ?? [] });
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Keeps project assets (characters, voices, imports) in the user library for other projects.
+  app.post<{ Params: { pid: string }; Body: { refs: string[] } }>('/api/projects/:pid/library/save', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      return userLib().saveFromProject(p.open, library(p), req.body?.refs ?? []);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Copies user-library assets (and their media) into the project before they are used, so it stays self-contained.
+  app.post<{ Params: { pid: string }; Body: { refs: string[] } }>('/api/projects/:pid/library/adopt', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const cmds = userLib().adoptCommands(p.open, library(p), req.body?.refs ?? []);
+      if (!cmds.length) return { added: [], revision: p.open.session.revision };
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: `Use ${cmds.length} asset(s) from my library` });
+      return { added: cmds.map((c) => { const m = c.params.manifest as AssetManifest; return `${m.id}@${m.version}`; }), revision: r.revision };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- file import (FR-IMP-01/02) */
   app.post<{ Params: { pid: string }; Querystring: { name: string; rights: string; licence?: string; attribution?: string; scene?: string; as?: string; at?: string; x?: string; y?: string; dryRun?: string }; Body: Buffer }>('/api/projects/:pid/import', async (req, reply) => {
     try {

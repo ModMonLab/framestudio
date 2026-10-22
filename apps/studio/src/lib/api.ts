@@ -110,6 +110,10 @@ export const api = {
   },
   readArtwork: (pid: string, name: string, bytes: Uint8Array) => req<unknown>('POST', `/api/projects/${pid}/rigging/read?name=${encodeURIComponent(name)}`, bytes, { 'content-type': 'application/octet-stream' }),
   buildRig: (pid: string, body: Record<string, unknown>) => req<unknown>('POST', `/api/projects/${pid}/rigging/build`, body),
+  prefs: () => req<UserPrefs>('GET', '/api/user/prefs'),
+  setPrefs: (p: Omit<UserPrefs, 'schemaVersion'>) => req<UserPrefs>('PUT', '/api/user/prefs', p),
+  saveToLibrary: (pid: string, refs: string[]) => req<{ added: string[]; unchanged: string[] }>('POST', `/api/projects/${pid}/library/save`, { refs }),
+  adopt: (pid: string, refs: string[]) => req<{ added: string[]; revision: number }>('POST', `/api/projects/${pid}/library/adopt`, { refs }),
   versions: (pid: string) => req<{ versions: { id: string; name: string; createdAt: string; revision: number }[] }>('GET', `/api/projects/${pid}/versions`),
   saveVersion: (pid: string, name: string) => req<{ id: string; name: string; createdAt: string; revision: number }>('POST', `/api/projects/${pid}/versions`, { name }),
   compareVersion: (pid: string, vid: string) => req<VersionComparison>('GET', `/api/projects/${pid}/versions/${vid}/compare`),
@@ -163,4 +167,10 @@ export function connectEvents(pid: string, onEvent: (e: ServerEvent) => void, on
     closed = true;
     ws?.close();
   };
+}
+
+export interface UserPrefs {
+  schemaVersion: 1;
+  favourites: string[];
+  collections: { id: string; name: string; items: string[] }[];
 }
