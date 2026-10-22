@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "fonts": [
+    { "family": "Inter", "weight": 400, "style": "normal", "file": "Inter-Regular.otf" },
+    { "family": "Inter", "weight": 500, "style": "normal", "file": "Inter-Medium.otf" },
+    { "family": "Inter", "weight": 600, "style": "normal", "file": "Inter-SemiBold.otf" },
+    { "family": "Inter", "weight": 700, "style": "normal", "file": "Inter-Bold.otf" },
+    { "family": "Inter", "weight": 900, "style": "normal", "file": "Inter-Black.otf" },
+    { "family": "Inter", "weight": 400, "style": "italic", "file": "Inter-Italic.otf" },
+    { "family": "Inter", "weight": 700, "style": "italic", "file": "Inter-BoldItalic.otf" },
+    { "family": "JetBrains Mono", "weight": 400, "style": "normal", "file": "JetBrainsMono-Regular.ttf" },
+    { "family": "JetBrains Mono", "weight": 500, "style": "normal", "file": "JetBrainsMono-Medium.ttf" },
+    { "family": "JetBrains Mono", "weight": 700, "style": "normal", "file": "JetBrainsMono-Bold.ttf" }
+  ],
+  "license": { "Inter": "OFL-1.1 (licenses/Inter.txt), from Debian fonts-inter 4.x", "JetBrains Mono": "OFL-1.1 (licenses/JetBrainsMono.txt), from Debian fonts-jetbrains-mono" }
+}
