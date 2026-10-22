@@ -196,3 +196,12 @@
 .st-minimap { position: relative; height: 18px; margin: 0 8px 4px; border-radius: 4px; background: var(--color-subtle); overflow: hidden; cursor: pointer; }
 .st-mini-clip { position: absolute; top: 4px; height: 10px; border-radius: 1px; opacity: .7; }
 .st-mini-view { position: absolute; top: 0; bottom: 0; border: 1.5px solid var(--color-accent); border-radius: 4px; pointer-events: none; }
+/* Episode view (FR-TML-09). */
+.st-ep-strip { display: flex; gap: var(--space-4); padding: var(--space-4); margin: 0; list-style: none; overflow-x: auto; align-items: flex-start; }
+.st-ep-card { flex: 0 0 auto; width: 208px; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-panel); }
+.st-ep-card--current { border-color: var(--color-accent); }
+.st-ep-thumb { padding: 0; border: 0; background: var(--color-canvas); border-radius: var(--radius-xs); cursor: pointer; line-height: 0; }
+.st-ep-thumb img { width: 100%; height: auto; border-radius: var(--radius-xs); }
+.st-ep-meta { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.st-ep-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-ep-num { font-variant-numeric: tabular-nums; opacity: .6; }

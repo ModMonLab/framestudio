@@ -4,8 +4,8 @@ import { FrameError, jsonSchema, schemas, type Command, type CommandBatch, type 
 import { compareStates, describeCommands, formatTimecode, lineTakeState, validateProject, ticksToSeconds, randomId, type ProjectState } from '@frame/core';
 import { remote, remoteProject } from './remote.js';
 import { remoteState } from './remote.js';
-import { OpenProject, isProjectFolder, computeLocks, manifestHash } from '@frame/io';
-import { libraryFor } from '@frame/assets/node';
+import { OpenProject, isProjectFolder, computeLocks, manifestHash, projectFromTemplateCommands } from '@frame/io';
+import { libraryFor, loadStyles } from '@frame/assets/node';
 import type { Library } from '@frame/assets';
 import { command, commands, type CommandContext } from './framework.js';
 import { APP_VERSION, contentDir, libraryDefaults, userLibraryDir } from './env.js';
@@ -124,8 +124,10 @@ command({
     { name: 'name', description: 'Project name (default: folder name)' },
     { name: 'family', description: 'Style family: flat or illustrated' },
     { name: 'fps', description: 'Frame rate: 24, 25 or 30', type: 'number' },
+    { name: 'template', description: 'Start from a production template (see `frame template list`)' },
+    { name: 'cast', description: 'With --template: role=chr.…@1,role=chr.…@1' },
   ],
-  examples: ['frame init MyShow.frame --name "My show" --family illustrated --fps 24'],
+  examples: ['frame init MyShow.frame --name "My show" --family illustrated --fps 24', 'frame init Pod.frame --template tpl.two-person-podcast@1 --cast host=chr.aiko-tanaka@1'],
   run: (ctx) => {
     const dir = path.resolve(ctx.io.cwd, String(ctx.args.path));
     const defaults = libraryDefaults();
@@ -137,6 +139,19 @@ command({
     if (ctx.opts.dryRun) return { dryRun: true, path: dir, name, styleFamily: family, frameRate: fps };
     if (fs.existsSync(dir) && fs.readdirSync(dir).length > 0) throw new FrameError('CONFLICT', `${dir} is not empty`);
     const p = OpenProject.create(dir, { name, styleFamily: family, frameRate: fps as 24, output: defaults.output, appVersion: APP_VERSION, newId: randomId, ...(defaults.captionStyle ? { captionStyle: defaults.captionStyle } : {}) });
+    // From a production template (FR-PRJ-01): its scenes replace the empty first scene.
+    if (ctx.args.template) {
+      const lib = libraryFor({ contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), projectAssets: p.state.assets });
+      const cast = Object.fromEntries(String(ctx.args.cast ?? '').split(',').filter(Boolean).map((kv) => kv.split('=') as [string, string]));
+      try {
+        const ex = projectFromTemplateCommands(p.state, String(ctx.args.template), { cast }, { lib, styles: loadStyles(contentDir()) });
+        p.session.apply({ commands: ex.commands, source: 'cli', label: `Start from ${lib.manifest(String(ctx.args.template))?.name ?? 'template'}` });
+      } catch (e) {
+        p.close();
+        fs.rmSync(dir, { recursive: true, force: true });
+        throw e;
+      }
+    }
     p.close();
     return { path: dir, id: p.state.project.id, name, styleFamily: family, frameRate: fps, revision: p.session.revision };
   },

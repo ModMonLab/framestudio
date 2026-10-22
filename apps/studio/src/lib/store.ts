@@ -38,6 +38,9 @@ export interface StudioState {
   recipe?: { ref: string; name: string };
   /** Ripple editing (FR-TML-02): moves, trims and deletes shift later clips on the same track. */
   ripple?: boolean;
+  /** Episode view in the timeline area, and playback that continues into the next scene (FR-TML-05/09). */
+  episodeView?: boolean;
+  episodePlay?: boolean;
   /** Template being applied as a new scene (FR-TPL-01), or a character being recast (FR-TPL-03). */
   template?: { ref: string; name: string };
   recast?: { instance: string };

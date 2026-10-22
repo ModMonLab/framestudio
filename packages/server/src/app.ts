@@ -8,13 +8,13 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { actionFitsProp, recipeFromClips, templateFromScene, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, templateCommandsForLibrary, replaceCastCommands, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, templateCommandsForLibrary, replaceCastCommands, projectFromTemplateCommands, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -174,7 +174,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
   // New project folder with the library defaults (same as `frame init`), then opened.
-  app.post<{ Body: { path: string; name?: string; styleFamily?: StyleFamily; frameRate?: number } }>('/api/projects/create', async (req, reply) => {
+  app.post<{ Body: { path: string; name?: string; styleFamily?: StyleFamily; frameRate?: number; template?: string; cast?: Record<string, string> } }>('/api/projects/create', async (req, reply) => {
     try {
       const b = req.body;
       if (!b?.path) throw new FrameError('USAGE', 'path is required');
@@ -189,6 +189,11 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const name = b.name ?? path.basename(dir).replace(/\.frame$/, '');
       OpenProject.create(dir, { name, styleFamily: family, frameRate: fps as 24, output: d.output, appVersion: SERVER_VERSION, newId: randomId, ...(d.captionStyle ? { captionStyle: d.captionStyle } : {}) }).close();
       const p = hub.open(dir);
+      // From a production template (FR-PRJ-01): its scenes replace the empty first scene; one undo step.
+      if (b.template) {
+        const ex = projectFromTemplateCommands(p.open.state, b.template, { ...(b.cast ? { cast: b.cast } : {}) }, { lib: library(p), styles });
+        p.open.session.apply({ commands: ex.commands as never, source: sourceOf(req), label: `Start from ${library(p).manifest(b.template)?.name ?? 'template'}` });
+      }
       return { id: p.id, root: p.root, revision: p.open.session.revision, name };
     } catch (e) {
       return sendError(reply, e);
@@ -618,13 +623,15 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
   // Saves a scene as a project template (FR-TPL-02); "Save to my library" keeps it for other projects.
-  app.post<{ Params: { pid: string; sid: string }; Body: { name: string } }>('/api/projects/:pid/scenes/:sid/templates/save', async (req, reply) => {
+  app.post<{ Params: { pid: string; sid: string }; Body: { name: string; scope?: 'scene' | 'episode' } }>('/api/projects/:pid/scenes/:sid/templates/save', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
       const b = req.body ?? ({} as never);
       if (!b.name?.trim()) throw new FrameError('USAGE', 'Name the template');
-      if (!p.open.state.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
-      const data = templateFromScene(p.open.state, req.params.sid);
+      const st = p.open.state;
+      if (!st.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      // A scene, or every scene of its episode as a project template (FR-TPL-02).
+      const data = b.scope === 'episode' ? templateFromScenes(st, st.episodes[st.sceneEpisode[req.params.sid]!]!.scenes) : templateFromScene(st, req.params.sid);
       const id = `user.${randomUUID()}`;
       const manifest = {
         schemaVersion: 1, id, version: 1, kind: 'tpl', name: b.name.trim(), category: 'Production templates', group: 'My templates', tags: ['template', 'mine'], synonyms: [], families: ['flat', 'illustrated'], views: [], viewExemptions: {}, anchors: {}, capabilities: [], parameters: [], dependencies: [], layering: {}, previews: {},

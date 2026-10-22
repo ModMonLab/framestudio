@@ -1,6 +1,6 @@
 /** `frame recipe apply|save|list`, `frame scene coverage`, `frame camera frame`, `frame template list|apply|save`, `frame cast replace` (FR-RCP, FR-CAM-01/04/05, FR-TPL, FR-CLI-05). */
 import { FrameError } from '@frame/schema';
-import { recipeFromClips, secondsToTicks, templateFromScene, type TemplateData } from '@frame/core';
+import { recipeFromClips, secondsToTicks, templateFromScene, templateFromScenes, type TemplateData } from '@frame/core';
 import { autoCoverageForLibrary, frameCameraCommand, recipeCommandsForLibrary, replaceCastCommands, templateCommandsForLibrary } from '@frame/io';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { randomUUID } from 'node:crypto';
@@ -150,10 +150,11 @@ command({
   args: [
     { name: 'scene', description: 'Scene id', positional: true, required: true },
     { name: 'name', description: 'Template name', required: true },
+    { name: 'episode', description: "Save every scene of the scene's episode as one project template", type: 'boolean' },
   ],
   run: async (ctx) => {
     const { state, sceneId } = await setup(ctx);
-    const data = templateFromScene(state, sceneId);
+    const data = ctx.args.episode ? templateFromScenes(state, state.episodes[state.sceneEpisode[sceneId]!]!.scenes) : templateFromScene(state, sceneId);
     const id = `user.${randomUUID()}`;
     const manifest = {
       schemaVersion: 1, id, version: 1, kind: 'tpl', name: String(ctx.args.name), category: 'Production templates', group: 'My templates', tags: ['template', 'mine'], synonyms: [], families: ['flat', 'illustrated'], views: [], viewExemptions: {}, anchors: {}, capabilities: [], parameters: [], dependencies: [], layering: {}, previews: {},

@@ -9,6 +9,7 @@ import { AssetsPanel } from './AssetsPanel.js';
 import { CanvasView } from './CanvasView.js';
 import { PropertiesPanel } from './PropertiesPanel.js';
 import { Timeline } from './Timeline.js';
+import { EpisodeView } from './EpisodeView.js';
 import { ExportDialog } from './ExportDialog.js';
 import { JobsButton } from './JobsButton.js';
 import { WorkerBadge } from './WorkerBadge.js';
@@ -140,10 +141,16 @@ function Shell() {
         {panels.right && <PropertiesPanel mode={mode} />}
       </div>
       {panels.timeline && <ResizeHandle label="Resize timeline" value={tlH} min={160} max={600} defaultValue={332} onChange={setTlH} dir={-1} orientation="horizontal" />}
-      {panels.timeline && <Timeline />}
+      {panels.timeline && <TimelineArea />}
       <span className="fr-sr" aria-live="polite">{mode} mode</span>
     </div>
   );
+}
+
+function TimelineArea() {
+  const { studio } = useCtx();
+  const episode = useStudio(studio, (s) => !!s.episodeView);
+  return episode ? <EpisodeView /> : <Timeline />;
 }
 
 function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right' | 'timeline') => void; panels: { left: boolean; right: boolean; timeline: boolean } }) {
@@ -193,6 +200,8 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
     ] },
     { id: 'scene', label: 'Scene', items: [
       { id: 'voice', label: 'Design a voice…', onSelect: () => openVoiceDesigner(undefined) },
+      { id: 'tpl-save-ep', label: 'Save episode as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message }), 'episode') },
+      { id: 'episode-view', label: 'Episode view', checked: !!studio.state.episodeView, onSelect: () => studio.set({ episodeView: !studio.state.episodeView }) },
       { id: 'tpl-save', label: 'Save scene as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message })) },
       { kind: 'separator', id: 's-go' },
       ...project.project.episodes.flatMap((e) => (project.episodes[e]?.scenes ?? []).map((s) => ({ id: `go-${s}`, label: `Go to ${project.scenes[s]?.name ?? s}`, checked: s === sceneId, onSelect: () => studio.set({ scene: s, selection: [], time: 0 }) }))),

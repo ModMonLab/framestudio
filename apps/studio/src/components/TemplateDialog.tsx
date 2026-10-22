@@ -11,13 +11,14 @@ import { useCtx } from './Workspace.js';
 
 type Option = { value: string; label: string };
 
-export function saveSceneAsTemplate(studio: Studio, notify: (message: string) => void) {
+export function saveSceneAsTemplate(studio: Studio, notify: (message: string) => void, scope: 'scene' | 'episode' = 'scene') {
   const s = studio.state;
   const scene = s.scene ? s.project?.scenes[s.scene] : undefined;
   if (!scene) return;
-  const name = window.prompt('Template name', scene.name);
+  const ep = s.project!.episodes[s.project!.sceneEpisode[scene.id] ?? ''];
+  const name = window.prompt(scope === 'episode' ? 'Template name (every scene of this episode)' : 'Template name', scope === 'episode' ? ep?.name ?? s.project!.project.name : scene.name);
   if (!name?.trim()) return;
-  api.saveTemplate(s.pid, scene.id, name.trim())
+  api.saveTemplate(s.pid, scene.id, name.trim(), scope)
     .then((r) => notify(`Saved “${name.trim()}” with ${r.roles.length} cast role${r.roles.length === 1 ? '' : 's'}. Find it under Production templates.`))
     .catch((e: Error) => studio.set({ lastError: { message: e.message } }));
 }

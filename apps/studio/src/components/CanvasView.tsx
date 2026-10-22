@@ -71,7 +71,12 @@ export function CanvasView() {
   useEffect(() => {
     if (!renderer || !styles || !sceneId || !project.scenes[sceneId] || !canvas.current) return;
     try {
-      const e = evaluateFrame(project, sceneId, Math.min(time, project.scenes[sceneId]!.duration - 1), { assets: { manifest: assets.manifest }, styles: styles as never, width: rw, height: rh, captions: project.project.captions.enabled, ...(family ? { family } : {}), aspect: `${out.aspectRatios[0] ?? '16:9'}` });
+      const opts = { assets: { manifest: assets.manifest }, styles: styles as never, width: rw, height: rh, ...(family ? { family } : {}), aspect: `${out.aspectRatios[0] ?? '16:9'}` };
+      // A transition into this scene blends from the previous scene's last picture, as in an episode export (FR-FX-03).
+      const ep = project.episodes[project.sceneEpisode[sceneId] ?? ''];
+      const prev = ep ? ep.scenes[ep.scenes.indexOf(sceneId) - 1] : undefined;
+      const before = prev && project.scenes[prev] ? () => evaluateFrame(project, prev, project.scenes[prev]!.duration - 1, { ...opts, captions: false }).frame.items : undefined;
+      const e = evaluateFrame(project, sceneId, Math.min(time, project.scenes[sceneId]!.duration - 1), { ...opts, captions: project.project.captions.enabled, ...(before ? { before } : {}) });
       blit(renderer, e.frame, canvas.current);
       setEv(e);
       setError(undefined);

@@ -713,3 +713,42 @@ test('timeline: box selection, moving several clips, ripple delete, marker renam
   await tl.getByRole('button', { name: 'Marker Marker 1' }).dblclick();
   await expect.poll(async () => (await state()).scenes[sid].markers[0].name).toBe('Punchline');
 });
+
+test('a new project starts from a template; the episode view reorders scenes and sets the transition into a scene (FR-PRJ-01, FR-TML-09, FR-FX-03)', async ({ page }) => {
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-e2e-new-')), 'Comedy.frame');
+  await page.goto('/');
+  const form = page.getByRole('region', { name: 'New project' }).or(page.locator('form').filter({ has: page.getByRole('button', { name: 'Create project' }) })).first();
+  await form.getByRole('textbox', { name: 'Folder' }).fill(dir);
+  await form.getByRole('textbox', { name: 'Name' }).fill('Coffee bits');
+  await form.getByRole('button', { name: /^Start from: / }).click();
+  await page.getByRole('option', { name: 'Comedy exchange' }).click();
+  await form.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('tab', { name: 'Direct' })).toBeVisible();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  let st = await state();
+  expect(st.project.name).toBe('Coffee bits');
+  const ep = st.episodes[st.project.episodes[0]];
+  expect(ep.scenes.map((id: string) => st.scenes[id].name)).toEqual(['Comedy exchange']);
+  // A second scene from another template, then the episode view.
+  await page.request.post(`/api/projects/${pid}/templates/apply`, { data: { ref: 'tpl.news-segment@1' } });
+  await expect.poll(async () => (await state()).episodes[ep.id].scenes.length).toBe(2);
+  await page.getByRole('menuitem', { name: 'Scene' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Episode view' }).click();
+  const view = page.getByRole('region', { name: 'Episode' });
+  await expect(view.getByRole('button', { name: 'Open News segment' })).toBeVisible();
+  // Transition into the news segment: crossfade from the comedy scene's last picture.
+  await view.getByRole('button', { name: /^Into News segment: / }).click();
+  await page.getByRole('option', { name: 'Crossfade' }).click();
+  await expect.poll(async () => {
+    const s2 = await state();
+    const sc = s2.scenes[s2.episodes[ep.id].scenes[1]];
+    const shot = sc.tracks.find((t: { kind: string }) => t.kind === 'shot').id;
+    return sc.clips.find((c: { track: string; start: number }) => c.track === shot && c.start === 0)?.params.transition;
+  }).toBe('tr.crossfade@1');
+  // Reorder: the news segment first.
+  await view.getByRole('button', { name: 'Move News segment earlier' }).click();
+  await expect.poll(async () => { const s3 = await state(); return s3.episodes[ep.id].scenes.map((id: string) => s3.scenes[id].name); }).toEqual(['News segment', 'Comedy exchange']);
+  st = await state();
+  await new AxeBuilder({ page }).include('[aria-label="Episode"]').analyze().then((r) => expect(r.violations.map((v) => v.id)).toEqual([]));
+});

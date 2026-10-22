@@ -55,8 +55,12 @@ export interface TemplateClip {
   blendOut?: number;
 }
 
+export type TemplateScene = TemplateData['scene'];
+
 export interface TemplateData {
   roles: TemplateRole[];
+  /** Further scenes of a project template (FR-TPL-02), after `scene`; cast roles are shared across scenes. */
+  scenes?: TemplateScene[];
   scene: {
     name: string;
     durationS: number;
@@ -87,10 +91,10 @@ export interface TemplatePlan {
 const S = TICKS_PER_SECOND;
 
 /** Plans the scene for a template. `cast` maps role keys to character refs (defaults from the template). */
-export function planTemplate(state: ProjectState, episodeId: string, data: TemplateData, o: { cast?: Record<string, string>; looks?: Record<string, string>; kitParts?: (ref: string) => Record<string, { plane?: string; at?: [number, number]; order?: number; name?: string }> | undefined; assetName?: (ref: string) => string | undefined; sceneName?: string }): TemplatePlan {
+export function planTemplate(state: ProjectState, episodeId: string, data: TemplateData, o: { scene?: TemplateScene; cast?: Record<string, string>; looks?: Record<string, string>; kitParts?: (ref: string) => Record<string, { plane?: string; at?: [number, number]; order?: number; name?: string }> | undefined; assetName?: (ref: string) => string | undefined; sceneName?: string }): TemplatePlan {
   if (!state.episodes[episodeId]) throw new Error(`Episode ${episodeId} not found`);
   const sceneId = randomId('scn');
-  const sc = data.scene;
+  const sc = o.scene ?? data.scene;
   const cmds: Command[] = [{ name: 'scene.add', params: { episode: episodeId, id: sceneId, name: o.sceneName ?? sc.name, durationS: sc.durationS, ...(sc.kit ? { kit: sc.kit } : {}) } }];
   if (sc.notes) cmds.push({ name: 'scene.setNotes', params: { id: sceneId, notes: sc.notes } });
   // The set: every kit part on its plane in the kit's order.
@@ -146,22 +150,47 @@ export function resolveTrackRefs(state: ProjectState, sceneId: string, cmds: Com
 
 /** A scene as a template (FR-TPL-02): characters become cast roles; ids become keys; cameras keep their presets. */
 export function templateFromScene(state: ProjectState, sceneId: string): TemplateData {
+  return templateFromScenes(state, [sceneId]);
+}
+
+/**
+ * Scenes as one template (FR-TPL-02, a whole project or episode): the same character across scenes (same asset and
+ * name) is one cast role, so replacing the cast of an applied project template recasts every scene.
+ */
+export function templateFromScenes(state: ProjectState, sceneIds: string[]): TemplateData {
+  if (!sceneIds.length) throw new Error('No scenes to save');
+  const roles: TemplateRole[] = [];
+  const roleKey = new Map<string, string>();
+  const scenes = sceneIds.map((id) => sceneTemplate(state, id, (i) => {
+    const ident = `${i.asset}|${i.name}`;
+    let key = roleKey.get(ident);
+    if (!key) {
+      key = `role${roles.length + 1}`;
+      roleKey.set(ident, key);
+      roles.push({ key, label: i.name, kind: 'character', default: i.asset!, ...(i.character ? { look: i.character.look } : {}) });
+    }
+    return key;
+  }));
+  // A project template keeps the project's caption style (FR-TPL-02).
+  const captionStyle = sceneIds.length > 1 ? state.project.captions.style : undefined;
+  return { roles, scene: scenes[0]!, ...(scenes.length > 1 ? { scenes: scenes.slice(1) } : {}), ...(captionStyle ? { captionStyle } : {}) };
+}
+
+function sceneTemplate(state: ProjectState, sceneId: string, roleFor: (i: ProjectState['scenes'][string]['instances'][number]) => string): TemplateScene {
   const scene = state.scenes[sceneId];
   if (!scene) throw new Error(`Scene ${sceneId} not found`);
   const keyOf = new Map<string, string>();
-  const roles: TemplateRole[] = [];
   const instances: TemplateInstance[] = [];
   let n = 0;
   for (const i of scene.instances) {
     if (i.kind === 'set-piece' && scene.kit && i.asset === scene.kit) continue; // the kit brings its parts
     if (i.kind !== 'character' && i.kind !== 'prop' && i.kind !== 'image') continue;
-    const key = `${i.kind === 'character' ? 'role' : i.kind}${++n}`;
+    const key = i.kind === 'character' ? roleFor(i) : `${i.kind}${++n}`;
     keyOf.set(i.id, key);
-    if (i.kind === 'character') roles.push({ key, label: i.name, kind: 'character', default: i.asset!, ...(i.character ? { look: i.character.look } : {}) });
     instances.push({
       key, kind: i.kind, asset: i.kind === 'character' ? `$${key}` : i.asset!, name: i.name, x: i.transform.x, y: i.transform.y,
       ...(i.transform.scale !== 1 ? { scale: i.transform.scale } : {}), ...(i.transform.flipX ? { flipX: true } : {}), plane: i.depthPlane,
-      ...(i.character ? { view: i.character.view, posture: i.character.posture } : {}), ...(i.propState ? { propState: i.propState } : {}),
+      ...(i.character ? { view: i.character.view, posture: i.character.posture, look: i.character.look } : {}), ...(i.propState ? { propState: i.propState } : {}),
     });
   }
   const swap = (v: unknown): unknown => {
@@ -172,7 +201,7 @@ export function templateFromScene(state: ProjectState, sceneId: string): Templat
   };
   const tracks = new Map(scene.tracks.map((t) => [t.id, t]));
   const clips: TemplateClip[] = [];
-  const shots: TemplateData['scene']['shots'] = [];
+  const shots: TemplateScene['shots'] = [];
   for (const c of scene.clips) {
     const tr = tracks.get(c.track);
     if (!tr || c.line) continue;
@@ -189,5 +218,6 @@ export function templateFromScene(state: ProjectState, sceneId: string): Templat
   const cameras: TemplateCamera[] = scene.cameras.filter((c) => used.has(c.id)).map((c) => ({ key: c.id, name: c.name, ...(c.preset && c.subjects.length ? { framing: c.preset, subjects: c.subjects.map((s) => keyOf.get(s) ?? s) } : { center: c.center, width: c.width }), lens: c.lens }));
   // Lines become the suggested script (takes are made per project).
   const script = scene.clips.filter((c) => c.line).sort((a, b) => a.start - b.start).map((c) => `${scene.instances.find((i) => i.id === c.line!.speaker)?.name ?? 'Someone'}: ${c.line!.text}`).join('\n');
-  return { roles, scene: { name: scene.name, durationS: scene.duration / S, ...(scene.kit ? { kit: scene.kit } : {}), ...(script ? { notes: script } : {}), instances, cameras, shots, clips } };
+  const notes = [scene.notes, script].filter(Boolean).join('\n\n');
+  return { name: scene.name, durationS: scene.duration / S, ...(scene.kit ? { kit: scene.kit } : {}), ...(notes ? { notes } : {}), instances, cameras, shots, clips };
 }

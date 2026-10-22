@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createProjectState, evaluateFrame, ProjectSession, secondsToTicks, sequentialIds, templateFromScene, validateProject, type ProjectState } from '@frame/core';
+import { createProjectState, evaluateFrame, ProjectSession, secondsToTicks, sequentialIds, templateFromScene, templateFromScenes, validateProject, type ProjectState } from '@frame/core';
 import { bundledLibrary, loadStyles } from '@frame/assets/node';
-import { replaceCastCommands, templateCommandsForLibrary } from '@frame/io';
+import { projectFromTemplateCommands, replaceCastCommands, templateCommandsForLibrary } from '@frame/io';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const content = path.join(repo, 'content');
@@ -82,7 +82,7 @@ describe('Production templates (FR-TPL, AC-22)', () => {
     expect(tpl.roles.map((x) => x.default)).toEqual(['chr.elena-novak@1', 'chr.luc-a-ferreira@1']);
     const orig = session.state.scenes[r.sceneId]!;
     // Re-applying the saved data gives the same number of instances, clips and cameras.
-    const fake = { ...lib, manifest: (ref: string) => (ref === 'tpl.saved@1' ? { id: 'tpl.saved', version: 1, kind: 'tpl', name: 'Saved', data: { template: tpl } } : lib.manifest(ref)) } as typeof lib;
+    const fake = Object.assign(Object.create(lib) as typeof lib, { manifest: (ref: string) => (ref === 'tpl.saved@1' ? { id: 'tpl.saved', version: 1, kind: 'tpl', name: 'Saved', data: { template: tpl } } : lib.manifest(ref)) as never });
     const again = templateCommandsForLibrary(session.state, episode, 'tpl.saved@1', {}, { lib: fake, styles });
     session.apply({ commands: again.commands });
     const copy = session.state.scenes[again.sceneId]!;
@@ -90,5 +90,49 @@ describe('Production templates (FR-TPL, AC-22)', () => {
     expect(copy.clips.length).toBe(orig.clips.length);
     expect(copy.cameras.length).toBe(orig.cameras.length);
     expect(validateProject(session.state, ctx).filter((p) => p.blocksExport).map((p) => p.message)).toEqual([]);
+  });
+
+  it('FR-TPL-02/FR-PRJ-01: an episode saved as a project template shares its cast across scenes and starts a new project', () => {
+    const { session, episode } = project();
+    const a = templateCommandsForLibrary(session.state, episode, 'tpl.two-person-podcast@1', {}, o);
+    session.apply({ commands: a.commands });
+    const b = templateCommandsForLibrary(session.state, episode, 'tpl.two-person-podcast@1', { name: 'Part two' }, o);
+    session.apply({ commands: b.commands });
+    session.apply({ commands: [{ name: 'project.setSettings', params: { captions: { ...session.state.project.captions, style: 'txt.boxed-captions@1' } } }] });
+    const scenes = session.state.episodes[episode]!.scenes.filter((id) => id === a.sceneId || id === b.sceneId);
+    const tpl = templateFromScenes(session.state, scenes);
+    // Maya and Leo appear in both scenes: two roles, not four.
+    expect(tpl.roles.map((r) => r.default)).toEqual(['chr.maya-bennett@1', 'chr.leo-park@1']);
+    expect(tpl.scenes).toHaveLength(1);
+    // A fresh project from it: both scenes, the empty first scene removed, cast replaced everywhere.
+    const fresh = project();
+    const fake = Object.assign(Object.create(lib) as typeof lib, { manifest: (ref: string) => (ref === 'tpl.saved@1' ? { id: 'tpl.saved', version: 1, kind: 'tpl', name: 'Saved', data: { template: tpl } } : lib.manifest(ref)) as never });
+    const r = projectFromTemplateCommands(fresh.session.state, 'tpl.saved@1', { cast: { role1: 'chr.aiko-tanaka@1' } }, { lib: fake, styles });
+    fresh.session.apply({ commands: r.commands });
+    const ep = fresh.session.state.episodes[fresh.episode]!;
+    expect(ep.scenes).toEqual(r.sceneIds);
+    for (const id of r.sceneIds) {
+      const assetsUsed = fresh.session.state.scenes[id]!.instances.filter((i) => i.kind === 'character').map((i) => i.asset).sort();
+      expect(assetsUsed).toEqual(['chr.aiko-tanaka@1', 'chr.leo-park@1']);
+    }
+    expect(fresh.session.state.project.captions.style).toBe('txt.boxed-captions@1');
+    expect(validateProject(fresh.session.state, ctx).filter((p) => p.blocksExport).map((p) => p.message)).toEqual([]);
+  });
+
+  it('FR-FX-03: a transition on a scene\'s first shot blends from the previous scene\'s last picture', () => {
+    const { session, episode } = project();
+    const a = templateCommandsForLibrary(session.state, episode, 'tpl.news-segment@1', {}, o);
+    session.apply({ commands: a.commands });
+    const b = templateCommandsForLibrary(session.state, episode, 'tpl.bedtime-story@1', {}, o);
+    session.apply({ commands: b.commands });
+    const opts = { assets, styles, width: 320, height: 180 };
+    const before = () => evaluateFrame(session.state, a.sceneId, session.state.scenes[a.sceneId]!.duration - 1, opts).frame.items;
+    // Bedtime story's first shot irises in: with the previous scene it starts from the newsroom, not black.
+    const from = evaluateFrame(session.state, b.sceneId, s(0.05), { ...opts, before });
+    const black = evaluateFrame(session.state, b.sceneId, s(0.05), opts);
+    expect(JSON.stringify(from.frame.items)).not.toEqual(JSON.stringify(black.frame.items));
+    // After the transition the previous scene no longer matters.
+    const later = (bf?: () => unknown[]) => JSON.stringify(evaluateFrame(session.state, b.sceneId, s(3), { ...opts, ...(bf ? { before: bf as never } : {}) }).frame.items);
+    expect(later(before)).toEqual(later());
   });
 });

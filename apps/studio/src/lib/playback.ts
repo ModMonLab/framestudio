@@ -91,7 +91,13 @@ export function usePlayback() {
           queueMicrotask(() => studio.set({ playing: true }));
           return;
         } else {
-          studio.set({ time: scene.duration - 1, playing: false });
+          // Episode playback crosses into the next scene (FR-TML-05).
+          const ep = s.project!.episodes[s.project!.sceneEpisode[scene.id] ?? ''];
+          const next = studio.state.episodePlay && ep ? ep.scenes[ep.scenes.indexOf(scene.id) + 1] : undefined;
+          if (next) {
+            studio.set({ scene: next, time: 0, playing: false, selection: [] });
+            queueMicrotask(() => studio.set({ playing: true }));
+          } else studio.set({ time: scene.duration - 1, playing: false, episodePlay: false });
           return;
         }
       } else studio.set({ time: t });

@@ -31,6 +31,11 @@ export interface EvalOptions {
   background?: string;
   /** Override family (Studio style toggle previews the other family). */
   family?: StyleFamily;
+  /**
+   * The previous scene's last picture (FR-FX-03, between scenes): a transition on the scene's first shot blends from
+   * it instead of from black. Supplied by episode playback and export.
+   */
+  before?: () => Item[];
 }
 
 export interface CaptionLine {
@@ -716,7 +721,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
   if (shot && trData && trData.type !== 'cut' && t < shot.start + trDur) {
     const u = (t - shot.start) / Math.max(1, trDur);
     const prevShot = scene.clips.some((c) => c.enabled && shotTracks.has(c.track) && c.end === shot.start) || shot.start > 0;
-    const before = prevShot ? drawInstances(cameraAt(scene, Math.max(0, shot.start - 1), o.assets, o.aspect)) : [];
+    const before = prevShot ? drawInstances(cameraAt(scene, Math.max(0, shot.start - 1), o.assets, o.aspect)) : (o.before?.() ?? []);
     const after = drawInstances(cs);
     const subject = typeof shot.params.camera === 'string' ? scene.cameras.find((c) => c.id === shot.params.camera)?.subjects[0] : undefined;
     const fb = subject ? boxes[subject] : undefined;

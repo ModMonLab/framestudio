@@ -12,6 +12,7 @@ import {
 } from '@frame/core';
 import type { FamilyStyle } from '@frame/rig';
 import type { NodeRenderer } from '@frame/render/node';
+import type { Item } from '@frame/render';
 import { FrameError, type Problem, type StyleFamily } from '@frame/schema';
 import { encodeWav, master, mixPlan, MIX_RATE, type PcmAudio } from './audio.js';
 import { ffmpegPath, ffmpegVersion } from './ffmpeg.js';
@@ -244,9 +245,21 @@ export async function renderExport(o: RenderOptions): Promise<RenderReport> {
     /* ---- Rendering + Encoding (frames are piped to ffmpeg as they are rendered) */
     const tr = now();
     const caps = { burn: o.burnInCaptions };
+    const evalOpts = { assets: o.assets, styles: o.styles, width: o.width, height: o.height, ...(o.aspect ? { aspect: o.aspect } : {}), captions: false, family, ...(p.alpha ? { background: '#00000000' } : {}) };
+    // Between scenes (FR-FX-03): a transition on a scene's first shot blends from the previous scene's last picture.
+    const lastPicture = new Map<number, Item[]>();
+    const before = (seg: number) => () => {
+      if (!lastPicture.has(seg)) {
+        const prev = segs[seg - 1]!;
+        lastPicture.set(seg, evaluateFrame(o.state, prev.scene, prev.to - 1, evalOpts).frame.items);
+      }
+      return lastPicture.get(seg)!;
+    };
+    const segOf = (scene: string) => segs.findIndex((s) => s.scene === scene);
     const frameAt = (i: number) => {
       const ft = frameTimes[i]!;
-      const ev = evaluateFrame(o.state, ft.scene, ft.t, { assets: o.assets, styles: o.styles, width: o.width, height: o.height, ...(o.aspect ? { aspect: o.aspect } : {}), captions: caps.burn, family, ...(p.alpha ? { background: '#00000000' } : {}) });
+      const seg = segOf(ft.scene);
+      const ev = evaluateFrame(o.state, ft.scene, ft.t, { ...evalOpts, captions: caps.burn, ...(seg > 0 ? { before: before(seg) } : {}) });
       for (const iss of ev.issues) if (!report.warnings.includes(iss)) report.warnings.push(iss);
       return ev.frame;
     };
