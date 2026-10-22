@@ -33,9 +33,16 @@ export function interactionsFor(scene: Scene, propId: string, actionOf: ActionLo
     const [h0, h1] = action.prop?.hold ?? [0, 1];
     out.push({ clip: c, holder, action, hand, hold: { start: c.start + h0 * dur, end: action.prop ? (action.prop.returns === false ? Infinity : c.start + h1 * dur) : -Infinity } });
   }
-  out.sort((a, b) => a.clip.start - b.clip.start || a.clip.id.localeCompare(b.clip.id));
-  // A prop kept in the hand is released when its next interaction starts.
-  for (let i = 0; i < out.length - 1; i++) if (out[i]!.hold.end === Infinity) out[i]!.hold.end = out[i + 1]!.clip.start;
+  // Ordered by when each interaction takes hold of the prop (a hand-over grips before the receive does).
+  const key = (x: Interaction) => (x.action.prop ? x.hold.start : x.clip.start);
+  out.sort((a, b) => key(a) - key(b) || a.clip.id.localeCompare(b.clip.id));
+  // A prop kept in the hand is released when the next interaction takes it (hand-over → receive), or when the
+  // next interaction starts if that one does not hold it.
+  for (let i = 0; i < out.length - 1; i++) {
+    if (out[i]!.hold.end !== Infinity) continue;
+    const next = out[i + 1]!;
+    out[i]!.hold.end = next.action.prop ? Math.max(out[i]!.hold.start, next.hold.start) : next.clip.start;
+  }
   return out;
 }
 

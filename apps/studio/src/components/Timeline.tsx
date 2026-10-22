@@ -1,6 +1,6 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
 import { useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Bot, ChevronRight, Lock, SkipBack, Sparkles, Volume2 } from 'lucide-react';
+import { AlertTriangle, Bot, ChevronRight, Lock, SkipBack, Sparkles, Video, Volume2 } from 'lucide-react';
 import { conflictingClipIds, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
 import type { Clip, Scene, Track } from '@frame/schema';
 import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts } from '@frame/ui';
@@ -91,6 +91,11 @@ export function Timeline() {
           title="Add sound cues for actions and prop states as editable sound clips"
           onClick={() => api.soundCues(pid, scene.id).then((r) => toasts.show({ tone: 'success', message: r.cues ? `${r.cues} sound cues on the Sound track` : 'No actions with sounds yet.' })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}
         >Sound cues</Button>
+        <Button
+          icon={<Video size={13} />}
+          title="Generate editable shots from the dialogue: an establishing wide, speaker close-ups and reactions"
+          onClick={() => api.coverage(pid, scene.id).then((r) => toasts.show({ tone: 'success', message: `${r.shots} shots on the Shot track. Undo removes them.` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}
+        >Auto coverage</Button>
         <div style={{ width: 170 }}><SearchField label="Filter tracks" placeholder="Filter tracks" value={q} onChange={setQ} /></div>
         <Segmented label="Track filter" value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'picture', label: 'Picture' }, { value: 'audio', label: 'Audio' }]} />
         <div style={{ width: 220 }}><SliderRow inline label="Zoom" value={pxPerSec} min={10} max={300} defaultValue={60} format={(v) => `${Math.round(v)}`} onChange={(v) => setPx(v)} /></div>

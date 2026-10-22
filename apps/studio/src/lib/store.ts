@@ -34,6 +34,8 @@ export interface StudioState {
   jobs: Record<string, JobInfo>;
   lastError?: { message: string; hint?: string };
   externalNotice?: string[];
+  /** Recipe being applied (opens the recipe dialog, FR-RCP-01). */
+  recipe?: { ref: string; name: string };
 }
 
 type Listener = () => void;

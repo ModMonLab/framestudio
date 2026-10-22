@@ -2,7 +2,7 @@
 
 Generated 2026-10-22 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
 
-**Green: 0 / 1254 (0 %)** · manifests present: 480 / 1254 (38.3 %)
+**Green: 0 / 1254 (0 %)** · manifests present: 540 / 1254 (43.1 %)
 
 An item is green when it has a manifest, both families and all four views (or documented exemptions) where they apply, passes the validators (schema and, for character-attached items, the rig check), has previews in both families, is approved in visual review (CAT-06) and carries a redistributable, commercial-use licence with provenance.
 
@@ -42,8 +42,8 @@ An item is green when it has a manifest, both families and all four views (or do
 | D1 Bundled cast | `chr` | 14 | 14 | 0 |
 | E1 Expressions | `exp` | 83 | 83 | 0 |
 | E2 Facial overlays | `overlay` | 14 | 0 | 0 |
-| F1 Performance clips | `act` | 118 | 31 | 0 |
-| G1 Performance recipes | `rcp` | 24 | 0 | 0 |
+| F1 Performance clips | `act` | 118 | 33 | 0 |
+| G1 Performance recipes | `rcp` | 24 | 18 | 0 |
 | H1 Props | `prop` | 142 | 10 | 0 |
 | I1 Location kits | `kit` | 16 | 1 | 0 |
 | I2 Ready-made sets | `set` | 32 | 0 | 0 |
@@ -51,7 +51,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | J1 Scene atmosphere | `atmo` | 54 | 0 | 0 |
 | K1 Motion and visual effects | `fx` | 38 | 0 | 0 |
 | K2 Transitions | `tr` | 18 | 0 | 0 |
-| M1 Camera language | `cam` | 49 | 0 | 0 |
+| M1 Camera language | `cam` | 49 | 40 | 0 |
 | N1 Music | `music` | 20 | 0 | 0 |
 | N2 Musical cues and stings | `cue` | 12 | 0 | 0 |
 | N3 Ambience | `amb` | 20 | 0 | 0 |
@@ -723,8 +723,8 @@ An item is green when it has a manifest, both families and all four views (or do
 | `act.use-phone` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.read` | — | — | — | — | — | — (no manifest) |
 | `act.write` | — | — | — | — | — | — (no manifest) |
-| `act.hand-over` | — | — | — | — | — | — (no manifest) |
-| `act.receive` | — | — | — | — | — | — (no manifest) |
+| `act.hand-over` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.receive` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.open-door` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.close-door` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.adjust-glasses` | — | — | — | — | — | — (no manifest) |
@@ -733,30 +733,30 @@ An item is green when it has a manifest, both families and all four views (or do
 | `act.roll-forward` | — | — | — | — | — | — (no manifest) |
 | `act.sign-hello` | — | — | — | — | — | — (no manifest) |
 | `act.sign-thank-you` | — | — | — | — | — | — (no manifest) |
-| `rcp.embarrassed-reply` | — | — | — | — | — | — (no manifest) |
-| `rcp.reveal-an-object` | — | — | — | — | — | — (no manifest) |
-| `rcp.question-and-reaction` | — | — | — | — | — | — (no manifest) |
-| `rcp.interruption` | — | — | — | — | — | — (no manifest) |
-| `rcp.awkward-silence` | — | — | — | — | — | — (no manifest) |
-| `rcp.agree-and-disagree` | — | — | — | — | — | — (no manifest) |
+| `rcp.embarrassed-reply` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.reveal-an-object` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.question-and-reaction` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.interruption` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.awkward-silence` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.agree-and-disagree` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.handshake` | — | — | — | — | — | — (no manifest) |
 | `rcp.hug` | — | — | — | — | — | — (no manifest) |
 | `rcp.high-five` | — | — | — | — | — | — (no manifest) |
-| `rcp.hand-over-object` | — | — | — | — | — | — (no manifest) |
-| `rcp.comedic-beat` | — | — | — | — | — | — (no manifest) |
-| `rcp.dramatic-reveal` | — | — | — | — | — | — (no manifest) |
-| `rcp.double-take-gag` | — | — | — | — | — | — (no manifest) |
+| `rcp.hand-over-object` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.comedic-beat` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.dramatic-reveal` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.double-take-gag` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.victory-moment` | — | — | — | — | — | — (no manifest) |
-| `rcp.sad-realisation` | — | — | — | — | — | — (no manifest) |
-| `rcp.nervous-answer` | — | — | — | — | — | — (no manifest) |
-| `rcp.sarcastic-reply` | — | — | — | — | — | — (no manifest) |
-| `rcp.thinking-out-loud` | — | — | — | — | — | — (no manifest) |
+| `rcp.sad-realisation` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.nervous-answer` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.sarcastic-reply` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.thinking-out-loud` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.entrance` | — | — | — | — | — | — (no manifest) |
 | `rcp.exit-in-a-huff` | — | — | — | — | — | — (no manifest) |
-| `rcp.listen-and-nod` | — | — | — | — | — | — (no manifest) |
-| `rcp.explain-a-point` | — | — | — | — | — | — (no manifest) |
-| `rcp.phone-call` | — | — | — | — | — | — (no manifest) |
-| `rcp.coffee-break` | — | — | — | — | — | — (no manifest) |
+| `rcp.listen-and-nod` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.explain-a-point` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.phone-call` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.coffee-break` | n/a | n/a | ok | n/a | pending | ok |
 | `prop.round-table` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.desk` | — | — | — | — | — | — (no manifest) |
 | `prop.office-chair` | — | — | — | — | — | — (no manifest) |
@@ -1067,41 +1067,41 @@ An item is green when it has a manifest, both families and all four views (or do
 | `tr.glitch` | — | — | — | — | — | — (no manifest) |
 | `tr.whip-blur` | — | — | — | — | — | — (no manifest) |
 | `tr.shape-reveal` | — | — | — | — | — | — (no manifest) |
-| `cam.extreme-wide` | — | — | — | — | — | — (no manifest) |
-| `cam.wide` | — | — | — | — | — | — (no manifest) |
-| `cam.full` | — | — | — | — | — | — (no manifest) |
-| `cam.medium-wide` | — | — | — | — | — | — (no manifest) |
-| `cam.medium` | — | — | — | — | — | — (no manifest) |
-| `cam.medium-close-up` | — | — | — | — | — | — (no manifest) |
-| `cam.close-up` | — | — | — | — | — | — (no manifest) |
-| `cam.extreme-close-up` | — | — | — | — | — | — (no manifest) |
-| `cam.two-shot` | — | — | — | — | — | — (no manifest) |
-| `cam.three-shot` | — | — | — | — | — | — (no manifest) |
-| `cam.over-the-shoulder` | — | — | — | — | — | — (no manifest) |
-| `cam.insert-detail` | — | — | — | — | — | — (no manifest) |
-| `cam.eye-level` | — | — | — | — | — | — (no manifest) |
-| `cam.low-angle` | — | — | — | — | — | — (no manifest) |
-| `cam.high-angle` | — | — | — | — | — | — (no manifest) |
-| `cam.dutch-tilt` | — | — | — | — | — | — (no manifest) |
-| `cam.pan` | — | — | — | — | — | — (no manifest) |
-| `cam.tilt` | — | — | — | — | — | — (no manifest) |
-| `cam.push-in` | — | — | — | — | — | — (no manifest) |
-| `cam.pull-out` | — | — | — | — | — | — (no manifest) |
-| `cam.slow-creep` | — | — | — | — | — | — (no manifest) |
-| `cam.dolly-with-parallax` | — | — | — | — | — | — (no manifest) |
-| `cam.truck` | — | — | — | — | — | — (no manifest) |
-| `cam.follow-subject` | — | — | — | — | — | — (no manifest) |
-| `cam.reframe-between-subjects` | — | — | — | — | — | — (no manifest) |
+| `cam.extreme-wide` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.wide` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.full` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.medium-wide` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.medium` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.medium-close-up` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.close-up` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.extreme-close-up` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.two-shot` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.three-shot` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.over-the-shoulder` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.insert-detail` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.eye-level` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.low-angle` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.high-angle` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.dutch-tilt` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.pan` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.tilt` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.push-in` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.pull-out` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.slow-creep` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.dolly-with-parallax` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.truck` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.follow-subject` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.reframe-between-subjects` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.rack-focus-blur` | — | — | — | — | — | — (no manifest) |
-| `cam.crash-zoom` | — | — | — | — | — | — (no manifest) |
-| `cam.whip-pan` | — | — | — | — | — | — (no manifest) |
-| `cam.shake-light` | — | — | — | — | — | — (no manifest) |
-| `cam.shake-medium` | — | — | — | — | — | — (no manifest) |
-| `cam.shake-heavy` | — | — | — | — | — | — (no manifest) |
-| `cam.rumble` | — | — | — | — | — | — (no manifest) |
-| `cam.handheld-drift` | — | — | — | — | — | — (no manifest) |
-| `cam.snap-zoom` | — | — | — | — | — | — (no manifest) |
-| `cam.bounce-zoom` | — | — | — | — | — | — (no manifest) |
+| `cam.crash-zoom` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.whip-pan` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.shake-light` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.shake-medium` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.shake-heavy` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.rumble` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.handheld-drift` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.snap-zoom` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.bounce-zoom` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.hard-cut` | — | — | — | — | — | — (no manifest) |
 | `cam.match-cut` | — | — | — | — | — | — (no manifest) |
 | `cam.jump-cut` | — | — | — | — | — | — (no manifest) |
@@ -1110,12 +1110,12 @@ An item is green when it has a manifest, both families and all four views (or do
 | `cam.split-screen` | — | — | — | — | — | — (no manifest) |
 | `cam.picture-in-picture` | — | — | — | — | — | — (no manifest) |
 | `cam.freeze-with-title` | — | — | — | — | — | — (no manifest) |
-| `cam.dramatic-reveal-shot` | — | — | — | — | — | — (no manifest) |
-| `cam.comedic-beat-shot` | — | — | — | — | — | — (no manifest) |
-| `cam.interview-two-shot` | — | — | — | — | — | — (no manifest) |
-| `cam.reaction-ping-pong` | — | — | — | — | — | — (no manifest) |
-| `cam.establishing-pan` | — | — | — | — | — | — (no manifest) |
-| `cam.walk-and-talk-follow` | — | — | — | — | — | — (no manifest) |
+| `cam.dramatic-reveal-shot` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.comedic-beat-shot` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.interview-two-shot` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.reaction-ping-pong` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.establishing-pan` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.walk-and-talk-follow` | n/a | n/a | ok | n/a | pending | ok |
 | `music.warm-intro` | — | — | — | — | — | — (no manifest) |
 | `music.morning-coffee` | — | — | — | — | — | — (no manifest) |
 | `music.upbeat-explainer` | — | — | — | — | — | — (no manifest) |

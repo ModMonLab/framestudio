@@ -23,6 +23,8 @@ export * from './perform/locomotion.js';
 export * from './perform/seating.js';
 export * from './perform/interact.js';
 export * from './perform/cues.js';
+export * from './camera-framing.js';
+export * from './recipes.js';
 export * from './captions.js';
 export * from './audio.js';
 export * from './sync.js';

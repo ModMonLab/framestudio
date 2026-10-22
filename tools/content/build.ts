@@ -20,6 +20,8 @@ import { PROPS, propPart, kitPartsData } from './parts/props.js';
 import { CAPTION_STYLES } from './text-specs.js';
 import { OUTPUT_PRESETS } from './output-specs.js';
 import { renderSound, SR } from './sounds.js';
+import { FRAMINGS, MOVES } from './camera-specs.js';
+import { RECIPES, SHOT_RECIPES } from './recipe-specs.js';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
@@ -188,6 +190,12 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
         provenance: { method: 'authored', author: 'Frame content pipeline (procedural synthesis in tools/content/sounds.ts)', date: DATE, notes: 'Synthesised from noise, resonators and envelopes; no recordings or third-party samples. Placeholder foley awaiting listening review (CAT-06/CAT-08).' },
       };
     }
+    case 'cam':
+      if (FRAMINGS[s]) return { data: { framing: FRAMINGS[s] }, tags: ['camera', 'framing'] };
+      if (SHOT_RECIPES[s]) return { data: { recipe: SHOT_RECIPES[s] }, tags: ['camera', 'shot recipe'] };
+      if (MOVES[s]) return { data: { move: MOVES[s] }, tags: ['camera', 'move'], parameters: [{ key: 'intensity', type: 'number', default: 1, range: [0, 2], label: 'Intensity' }] };
+      return undefined;
+    case 'rcp': return RECIPES[s] ? { data: { recipe: RECIPES[s] }, tags: ['recipe'] } : undefined;
     case 'txt': return CAPTION_STYLES[s] ? { data: { caption: CAPTION_STYLES[s] }, families: ['flat', 'illustrated'], tags: ['caption'] } : undefined;
     case 'out': return OUTPUT_PRESETS[s] ? { data: { output: OUTPUT_PRESETS[s] }, tags: ['export'] } : undefined;
     default: return undefined;

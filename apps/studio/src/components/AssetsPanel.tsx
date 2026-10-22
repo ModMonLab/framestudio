@@ -38,7 +38,7 @@ const FILTERS: Record<string, { title: string; kinds?: string[]; empty: string }
 const PART_KINDS = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'feet', 'top', 'outer', 'bottom', 'dress', 'shoe', 'acc', 'skin-detail', 'makeup']);
 
 /** Kinds that can be placed or applied from this panel. */
-const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img']);
+const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img', 'rcp', 'cam', 'sfx']);
 
 export function AssetsPanel({ filter }: { filter: string }) {
   const { studio } = useCtx();
@@ -157,7 +157,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
           }} options={[...prefs.collections.map((c) => ({ value: c.id, label: `${c.items.includes(idOf(pickedHit.ref)) ? '✓ ' : ''}${c.name}` })), { value: '__new', label: 'New collection…' }]} /></span>}
           {PART_KINDS.has(pickedHit.kind) && <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/part/${encodeURIComponent(pickedHit.ref)}`)}>Open in part editor</Button>}
           {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Save to my library</Button>}
-          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' ? 'Add at playhead' : pickedHit.kind === 'txt' ? 'Use for captions' : 'Add to scene'}</Button>
+          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' ? 'Add at playhead' : pickedHit.kind === 'txt' ? 'Use for captions' : pickedHit.kind === 'rcp' ? 'Apply…' : 'Add to scene'}</Button>
         </div>
       )}
     </Panel>
@@ -206,6 +206,35 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
       const track = trackFor(scene, o.character, h.kind === 'exp' ? 'face' : 'acting');
       if (!track) return undefined;
       await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + 96000), asset: h.ref, blendIn: 4800, blendOut: 4800 } }], `${h.name}`);
+      return undefined;
+    }
+    case 'rcp':
+      studio.set({ recipe: { ref: h.ref, name: h.name } });
+      return undefined;
+    case 'sfx': {
+      // Library sounds go on the Sound FX track at the playhead (FR-SND-01).
+      const m = (await api.manifest(h.ref, s.pid)) as { data: { sound?: { media?: { durationS?: number } } } };
+      const track = scene.tracks.find((t) => t.owner === 'scene' && t.kind === 'sfx');
+      if (!track) return undefined;
+      const dur = Math.round((m.data.sound?.media?.durationS ?? 1) * 48000);
+      await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + dur), asset: h.ref } }], `Add ${h.name}`);
+      return undefined;
+    }
+    case 'cam': {
+      // Shot recipes open the recipe dialog; framings frame the selected objects; moves go on the camera track.
+      const m = (await api.manifest(h.ref, s.pid)) as { data: { recipe?: unknown; framing?: unknown; move?: unknown } };
+      if (m.data.recipe) {
+        studio.set({ recipe: { ref: h.ref, name: h.name } });
+        return undefined;
+      }
+      if (m.data.framing) {
+        const subjects = s.selection.filter((x) => x.kind === 'instance').map((x) => x.id);
+        const r = await api.frameCamera(s.pid, scene.id, { preset: h.ref, subjects, at });
+        return `Added a ${h.name.toLowerCase()} camera${subjects.length ? '' : ' on the stage'} (${r.camera}). Put it on the Shot track to cut to it.`;
+      }
+      const track = scene.tracks.find((t) => t.owner === 'scene' && t.kind === 'camera-move');
+      if (!track) return undefined;
+      await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + 96000), asset: h.ref } }], h.name);
       return undefined;
     }
     case 'txt':

@@ -172,6 +172,40 @@ test('a character uses an object from the Acting tab; the sound cue lands on the
   await previewMatchesServer(page, 96000);
 });
 
+test('applies a line-anchored recipe from the Assets panel and generates coverage; shots never overlap (FR-RCP-01..03, FR-CAM-05)', async ({ page }) => {
+  await openProject(page, sample(true));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await page.getByRole('searchbox', { name: /^Search/ }).or(page.getByRole('textbox', { name: /^Search/ })).first().fill('Listen and nod');
+  await page.getByRole('button', { name: /^Listen and nod/ }).first().click();
+  await page.getByRole('button', { name: 'Apply…' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Apply Listen and nod' });
+  await expect(dlg.getByRole('button', { name: /^Speaker/ })).toContainText('Maya Bennett');
+  await expect(dlg.getByRole('button', { name: /^Listener/ })).toContainText('Leo Park');
+  await expect(dlg.getByRole('button', { name: /^Line/ })).toContainText('Welcome back');
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await dlg.getByRole('button', { name: 'Apply', exact: true }).click();
+  await expect(page.getByText(/Listen and nod: 5 clips added as one group/)).toBeVisible();
+  let st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const group = st.scenes[sid].clips.filter((c: { source: string }) => c.source === 'recipe:rcp.listen-and-nod@1');
+  expect(group).toHaveLength(5);
+  expect(new Set(group.map((c: { group: string }) => c.group)).size).toBe(1);
+  await page.getByRole('button', { name: 'Auto coverage' }).click();
+  await expect(page.getByText(/shots on the Shot track/)).toBeVisible();
+  st = await state();
+  const shotTrack = st.scenes[sid].tracks.find((t: { kind: string }) => t.kind === 'shot').id;
+  const shots = st.scenes[sid].clips.filter((c: { track: string }) => c.track === shotTrack).sort((a: { start: number }, b: { start: number }) => a.start - b.start);
+  expect(shots.length).toBeGreaterThan(2);
+  for (let i = 1; i < shots.length; i++) expect(shots[i].start).toBeGreaterThanOrEqual(shots[i - 1].end);
+  const problems = (await (await page.request.get(`/api/projects/${pid}/validate`)).json()).problems;
+  expect(problems.filter((p: { code: string }) => p.code === 'SHOT_OVERLAP' || p.code === 'CHANNEL_CONFLICT')).toEqual([]);
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 0);
+});
+
 test('agent changes are tagged and a person reverts the agent session from Activity (FR-AGT-04/05, AC-13)', async ({ page }) => {
   await openProject(page, sample(false));
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);

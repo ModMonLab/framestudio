@@ -8,13 +8,13 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { actionFitsProp, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { actionFitsProp, recipeFromClips, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -540,6 +540,69 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
+  /* ---------------------------------------------------------------- recipes, coverage and framing (FR-RCP, FR-CAM-01/04/05) */
+  app.post<{ Params: { pid: string; sid: string }; Body: { ref: string; roles: Record<string, string>; at?: number; line?: string; dryRun?: boolean } }>('/api/projects/:pid/scenes/:sid/recipes/apply', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body ?? ({} as never);
+      if (!p.open.state.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      const ex = recipeCommandsForLibrary(p.open.state, req.params.sid, String(b.ref ?? ''), { roles: b.roles ?? {}, ...(b.at !== undefined ? { at: Math.round(Number(b.at)) } : {}), ...(b.line ? { line: b.line } : {}) }, { lib: library(p), styles });
+      if (!ex.commands.length) throw new FrameError('USAGE', `Nothing to add${ex.warnings.length ? `: ${ex.warnings.join('; ')}` : ''}`);
+      const r = p.open.session.apply({ commands: ex.commands as never, source: sourceOf(req), label: `Apply ${library(p).manifest(b.ref)?.name ?? 'recipe'}` }, { dryRun: !!b.dryRun });
+      return { revision: r.revision, group: ex.group, start: ex.start, end: ex.end, warnings: ex.warnings, clips: ex.commands.filter((c) => c.name === 'clip.add').length };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Saves selected clips as a project recipe with role placeholders (FR-RCP-04); "Save to my library" keeps it.
+  app.post<{ Params: { pid: string; sid: string }; Body: { clips: string[]; name: string } }>('/api/projects/:pid/scenes/:sid/recipes/save', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body ?? ({} as never);
+      if (!b.name?.trim()) throw new FrameError('USAGE', 'Name the recipe');
+      let data;
+      try {
+        data = recipeFromClips(p.open.state, req.params.sid, b.clips ?? []);
+      } catch (e) {
+        throw new FrameError('USAGE', (e as Error).message);
+      }
+      const id = `user.${randomUUID()}`;
+      const manifest = {
+        schemaVersion: 1, id, version: 1, kind: 'rcp', name: b.name.trim(), category: 'Performance recipes', group: 'My recipes', tags: ['recipe', 'mine'], synonyms: [], families: ['flat', 'illustrated'], views: [], viewExemptions: {}, anchors: {}, capabilities: [], parameters: [], dependencies: [], layering: {}, previews: {},
+        license: { id: 'LicenseRef-User-Owned', redistributable: true, commercialUse: true }, provenance: { method: 'authored', author: sourceOf(req), date: new Date().toISOString().slice(0, 10), notes: 'Saved from a selection of clips (FR-RCP-04).' }, data: { recipe: data },
+      };
+      const r = p.open.session.apply({ commands: [{ name: 'asset.addLocal', params: { manifest } }] as never, source: sourceOf(req), label: `Save recipe ${b.name.trim()}` });
+      return { ref: `${id}@1`, revision: r.revision, roles: data.roles };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; sid: string } }>('/api/projects/:pid/scenes/:sid/coverage', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!p.open.state.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      if (!libraryDefaults.coverage) throw new FrameError('NOT_FOUND', 'The content library defines no coverage framings');
+      const cmds = autoCoverageForLibrary(p.open.state, req.params.sid, { lib: library(p), styles, framings: libraryDefaults.coverage });
+      if (!cmds.length) throw new FrameError('USAGE', 'Nothing to cover: the scene has no lines yet');
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: 'Automatic coverage' });
+      return { revision: r.revision, shots: cmds.filter((c) => c.name === 'clip.add').length };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; sid: string }; Body: { preset: string; subjects: string[]; camera?: string; name?: string; at?: number } }>('/api/projects/:pid/scenes/:sid/cameras/frame', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body ?? ({} as never);
+      if (!p.open.state.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      const cmd = frameCameraCommand(p.open.state, req.params.sid, String(b.preset ?? ''), b.subjects ?? [], Math.round(Number(b.at ?? 0)), { lib: library(p), styles, ...(b.camera ? { camera: b.camera } : {}), ...(b.name ? { name: b.name } : {}) });
+      const r = p.open.session.apply({ commands: [cmd] as never, source: sourceOf(req), label: b.camera ? 'Reframe camera' : `Add ${String(cmd.params.name)}` });
+      return { revision: r.revision, camera: b.camera ?? r.commands[0]!.params.id };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- rigging assistant (FR-IMP-03) */
   // Reads layered artwork, stores raster layers as media and returns layers with suggested rig targets.
   app.post<{ Params: { pid: string }; Querystring: { name: string }; Body: Buffer }>('/api/projects/:pid/rigging/read', async (req, reply) => {
@@ -706,7 +769,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   // Thumbnails (FR-AST-07): the item on the library's preview character, rendered with the export renderer and cached.
   const libraryDefaults = (() => {
     try {
-      return (JSON.parse(fs.readFileSync(path.join(o.contentDir, 'library.json'), 'utf8')) as { defaults?: { previewCharacter?: string; output?: OutputSettings; frameRate?: number; styleFamily?: StyleFamily; captionStyle?: string } }).defaults ?? {};
+      return (JSON.parse(fs.readFileSync(path.join(o.contentDir, 'library.json'), 'utf8')) as { defaults?: { previewCharacter?: string; output?: OutputSettings; frameRate?: number; styleFamily?: StyleFamily; captionStyle?: string; coverage?: CoverageFramings } }).defaults ?? {};
     } catch {
       return {};
     }

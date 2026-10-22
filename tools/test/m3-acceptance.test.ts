@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { characterJointsAt, motionAt, propStateAt, scheduleSceneAudio, seatCommands, soundCueCommands, createProjectState, evaluateFrame, performAt, ProjectSession, secondsToTicks, sequentialIds, trackFor, validateProject, type ProjectState } from '@frame/core';
+import { characterJointsAt, holderAt, motionAt, propStateAt, scheduleSceneAudio, seatCommands, soundCueCommands, createProjectState, evaluateFrame, performAt, ProjectSession, secondsToTicks, sequentialIds, trackFor, validateProject, type ProjectState } from '@frame/core';
 import { bundledLibrary, loadStyles } from '@frame/assets/node';
-import { bundledMediaFile } from '@frame/io';
+import { autoCoverageForLibrary, bundledMediaFile, recipeCommandsForLibrary } from '@frame/io';
 import type { Command } from '@frame/schema';
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -12,6 +12,7 @@ const lib = bundledLibrary(content);
 const styles = loadStyles(content);
 const assets = { manifest: (r: string) => lib.manifest(r) };
 const s = secondsToTicks;
+const COVERAGE = { wide: 'cam.wide@1', single: 'cam.medium-close-up@1', two: 'cam.two-shot@1' };
 const OUTPUT = { preset: 'out.landscape-hd@1', width: 1920, height: 1080, aspectRatios: ['16:9'] };
 
 function project() {
@@ -174,5 +175,59 @@ describe('M3 acceptance paths', () => {
       const fs = await import('node:fs');
       for (const t of [0.05, 2, 6.2, 11.5]) fs.writeFileSync(`${process.env.FRAME_DEBUG_PNG}-ac07-${t}.png`, r.png(evaluateFrame(session.state, scene, s(t), { assets, styles, width: 960, height: 540, background: '#dddddd' }).frame));
     }
+  });
+
+  it('AC-06 path: three recipes (interruption, double take, hand over) and automatic coverage give a valid, conflict-free scene in two aspect ratios', () => {
+    const { session, scene, apply, sc } = project();
+    apply([{ name: 'scene.setDuration', params: { id: scene, durationS: 24 } }]);
+    const char = (asset: string, look: string, name: string, x: number, flipX = false) => apply([{ name: 'instance.add', params: { scene, kind: 'character', asset, name, transform: { x, y: 1000, flipX }, character: { look, view: 'three', posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false } } } }]).commands[0]!.params.id as string;
+    const maya = char('chr.maya-bennett@1', 'on-air', 'Maya', 500);
+    const leo = char('chr.leo-park@1', 'everyday', 'Leo', 1000, true);
+    const aiko = char('chr.aiko-tanaka@1', 'default', 'Aiko', 1450, true);
+    const props = ['prop.round-table@1', 'prop.studio-chair@1', 'prop.studio-chair@1', 'prop.potted-plant@1', 'prop.floor-lamp@1', 'prop.on-air-sign@1', 'prop.desk-microphone@1', 'prop.phone@1', 'prop.door@1', 'prop.mug@1'];
+    const ids = props.map((asset, i) => apply([{ name: 'instance.add', params: { scene, kind: 'prop', asset, name: `Prop ${i + 1}`, transform: { x: 150 + i * 170, y: asset.includes('mug') || asset.includes('phone') ? 805 : 1000 }, depthPlane: 'mid' } }]).commands[0]!.params.id as string);
+    const mug = ids[9]!;
+    const said: [string, string][] = [[maya, 'Welcome back to the show, everyone.'], [leo, 'Thanks. Great to be here today.'], [maya, 'So tell us about the new project you have been working on for months now.'], [aiko, 'Wait, can I jump in?'], [leo, 'Sure, go ahead.'], [aiko, 'I brought something for you.'], [maya, 'Oh, that is lovely.'], [leo, 'Well, that settles it then.']];
+    const lines: string[] = [];
+    let t = 0.5;
+    for (const [who, text] of said) {
+      const dur = Math.max(1.4, text.split(' ').length * 0.38);
+      lines.push(apply([{ name: 'line.add', params: { scene, speaker: who, text, start: s(t), durationS: dur } }]).commands[0]!.params.id as string);
+      t += dur + 0.4;
+    }
+    const o = { lib, styles };
+    const interruption = recipeCommandsForLibrary(session.state, scene, 'rcp.interruption@1', { roles: { speaker: maya, interrupter: aiko }, line: lines[2]! }, o);
+    expect(interruption.warnings).toEqual([]);
+    apply(interruption.commands);
+    const gag = recipeCommandsForLibrary(session.state, scene, 'rcp.double-take-gag@1', { roles: { reactor: leo, target: aiko }, at: s(t - 6) }, o);
+    expect(gag.warnings).toEqual([]);
+    apply(gag.commands);
+    const handover = recipeCommandsForLibrary(session.state, scene, 'rcp.hand-over-object@1', { roles: { giver: aiko, receiver: maya, object: mug }, at: s(t + 0.5) }, o);
+    expect(handover.warnings).toEqual([]);
+    apply(handover.commands);
+    apply(autoCoverageForLibrary(session.state, scene, { ...o, framings: COVERAGE }));
+    const shotTrack = sc().tracks.find((x) => x.kind === 'shot')!.id;
+    const shots = sc().clips.filter((c) => c.track === shotTrack).sort((a, b) => a.start - b.start);
+    expect(shots.filter((c) => c.source === 'auto').length).toBeGreaterThan(3);
+    expect(shots.filter((c) => c.source.startsWith('recipe:')).length).toBe(3);
+    const ctx = { assetExists: (r: string) => lib.has(r), manifest: (r: string) => lib.manifest(r) };
+    const problems = validateProject(session.state, ctx).filter((p) => p.blocksExport && !p.code.startsWith('TAKE_'));
+    expect(problems.map((p) => `${p.code}: ${p.message}`)).toEqual([]);
+    // Regenerating coverage keeps recipe shots and replaces only the automatic ones.
+    const before = shots.length;
+    apply(autoCoverageForLibrary(session.state, scene, { ...o, framings: COVERAGE }));
+    expect(sc().clips.filter((c) => c.track === shotTrack)).toHaveLength(before);
+    // Frames evaluate without issues in landscape and portrait.
+    for (const [w, h, aspect] of [[640, 360, '16:9'], [360, 640, '9:16']] as const) {
+      for (const tt of [1, 5, 12, t - 4, t + 1.5]) {
+        const ev = evaluateFrame(session.state, scene, s(tt), { assets, styles, width: w, height: h, aspect });
+        expect(ev.issues.filter((i) => !/missing asset/.test(i))).toEqual([]);
+      }
+    }
+    // The mug passes from the giver's hand to the receiver's and stays there.
+    const actionOf = (r: string) => (lib.manifest(r)?.data as { action?: never } | undefined)?.action;
+    expect(holderAt(sc(), mug, s(t + 0.7), actionOf)?.holder.id).toBe(aiko);
+    expect(holderAt(sc(), mug, s(t + 2), actionOf)?.holder.id).toBe(maya);
+    expect(holderAt(sc(), mug, s(t + 6), actionOf)?.holder.id).toBe(maya);
   });
 });
