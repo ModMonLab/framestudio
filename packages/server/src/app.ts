@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { CLIPBOARD_FORMAT, pasteCommands, type ClipboardData, actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
@@ -649,6 +649,30 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const cmd = frameCameraCommand(p.open.state, req.params.sid, String(b.preset ?? ''), b.subjects ?? [], Math.round(Number(b.at ?? 0)), { lib: library(p), styles, ...(b.camera ? { camera: b.camera } : {}), ...(b.name ? { name: b.name } : {}) });
       const r = p.open.session.apply({ commands: [cmd] as never, source: sourceOf(req), label: b.camera ? 'Reframe camera' : `Add ${String(cmd.params.name)}` });
       return { revision: r.revision, camera: b.camera ?? r.commands[0]!.params.id };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- clipboard (FR-PER-07) */
+  app.post<{ Params: { pid: string; sid: string }; Body: { data: ClipboardData; at?: number } }>('/api/projects/:pid/scenes/:sid/paste', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const data = req.body?.data;
+      if (!data || data.format !== CLIPBOARD_FORMAT) throw new FrameError('USAGE', 'Nothing to paste (not Frame clipboard data)');
+      // Media from another open project is copied in; media already here is kept.
+      const missingMedia: string[] = [];
+      const source = data.project !== p.id ? hub.list().find((x) => x.id === data.project) : undefined;
+      for (const h of data.media) {
+        if (p.open.store.findMedia(h)) continue;
+        const f = source?.open.store.findMedia(h);
+        if (f) p.open.store.putMedia(new Uint8Array(fs.readFileSync(f)), { ext: path.extname(f).slice(1), mime: 'application/octet-stream' });
+        else missingMedia.push(h);
+      }
+      const r = pasteCommands(p.open.state, req.params.sid, data, { newId: randomId, ...(req.body.at !== undefined ? { at: req.body.at } : {}) });
+      if (!r.commands.length) throw new FrameError('USAGE', r.warnings[0] ?? 'Nothing to paste here');
+      const applied = p.open.session.apply({ commands: r.commands, source: sourceOf(req), label: 'Paste' });
+      return { revision: applied.revision, instances: r.instances, clips: r.clips, warnings: [...r.warnings, ...(missingMedia.length ? [`${missingMedia.length} media file(s) were not found; relink them from Problems`] : [])] };
     } catch (e) {
       return sendError(reply, e);
     }

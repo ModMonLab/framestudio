@@ -882,3 +882,27 @@ test('the project browser pins, searches, duplicates and moves a project to the 
   await expect(page.getByRole('list', { name: 'Validation report' })).toContainText('INVALID_JSON');
   await new AxeBuilder({ page }).analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
 });
+
+test('copy and paste an object within a scene and into another scene (FR-PER-07)', async ({ page }) => {
+  const dir = sample(false);
+  await openProject(page, dir);
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  let st = await state();
+  const ep = st.project.episodes[0];
+  const sid = st.episodes[ep].scenes[0];
+  await page.getByRole('treeitem', { name: /Maya Bennett/ }).first().click();
+  await page.keyboard.press('ControlOrMeta+c');
+  await page.keyboard.press('ControlOrMeta+v');
+  await expect.poll(async () => (await state()).scenes[sid].instances.filter((i: { name: string }) => i.name === 'Maya Bennett copy').length).toBe(1);
+  // Another scene: the copy keeps its name.
+  await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'scene.add', params: { episode: ep, name: 'Pasted here' } }] } });
+  st = await state();
+  const other = st.episodes[ep].scenes.find((s: string) => st.scenes[s].name === 'Pasted here');
+  await page.getByRole('menuitem', { name: 'Scene' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Go to Pasted here' }).click();
+  await page.getByRole('menuitem', { name: 'Edit' }).click();
+  await page.getByRole('menuitem', { name: /^Paste/ }).click();
+  await expect.poll(async () => (await state()).scenes[other].instances.map((i: { name: string }) => i.name)).toEqual(['Maya Bennett']);
+  await expect(page.getByRole('button', { name: /^Undo Paste/ }).first()).toBeVisible();
+});

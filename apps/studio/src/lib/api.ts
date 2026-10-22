@@ -79,6 +79,7 @@ export const api = {
   importProjectPackage: (to: string, file: File, allowMissing = false) => file.arrayBuffer().then((b) => req<{ id: string; root: string; name: string; missing: string[] }>('POST', `/api/projects/import-package?path=${encodeURIComponent(to)}${allowMissing ? '&allowMissing=true' : ''}`, new Uint8Array(b), { 'content-type': 'application/zip' })),
   resolveExternal: (pid: string, keep: 'disk' | 'mine') => req<{ revision: number }>('POST', `/api/projects/${pid}/external/resolve`, { keep }),
   relinkMedia: (pid: string, hash: string, file: File) => file.arrayBuffer().then((b) => req<{ relinked: string }>('POST', `/api/projects/${pid}/media/relink?hash=${encodeURIComponent(hash)}&ext=${encodeURIComponent((file.name.split('.').pop() ?? '').toLowerCase())}`, new Uint8Array(b), { 'content-type': 'application/octet-stream' })),
+  paste: (pid: string, scene: string, data: unknown, at?: number) => req<{ revision: number; instances: string[]; clips: string[]; warnings: string[] }>('POST', `/api/projects/${pid}/scenes/${scene}/paste`, { data, ...(at !== undefined ? { at } : {}) }),
   projects: () => req<{ projects: { id: string; name: string; root: string; revision: number }[] }>('GET', '/api/projects'),
   open: (path: string, migrate = false) => req<{ id: string; root: string; revision: number; problems: Problem[] }>('POST', '/api/projects/open', { path, migrate }),
   state: (pid: string) => req<Snapshot>('GET', `/api/projects/${pid}/state`),
