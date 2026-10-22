@@ -27,7 +27,7 @@ export function PropertiesPanel({ mode }: { mode: Mode }) {
   const owner = inst ?? (clip ? scene?.instances.find((i) => i.id === scene.tracks.find((t) => t.id === clip.track)?.owner) : undefined);
 
   return (
-    <Panel label="Properties" className="st-right">
+    <Panel label="Properties" className="st-right" help="#/help/modes">
       <Tabs label="Properties tabs" value={tab} onChange={setTab} tabs={[{ value: 'properties', label: 'Properties' }, { value: 'acting', label: 'Acting' }, { value: 'audio', label: 'Audio' }]} style={{ padding: '0 8px' }} />
       <div className="st-props-body">
         {!scene ? <EmptyState title="No scene">Add a scene from the Layers panel.</EmptyState>

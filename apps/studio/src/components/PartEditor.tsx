@@ -295,7 +295,7 @@ export function PartEditor({ partRef }: { partRef: string }) {
         </>}
       />
       <div className="st-main">
-        <Panel title="Part" label="Part layers" search={<SearchField label="Search layers" placeholder="Search layers" value={q} onChange={setQ} />} className="st-left">
+        <Panel title="Part" label="Part layers" help="#/help/builder" search={<SearchField label="Search layers" placeholder="Search layers" value={q} onChange={setQ} />} className="st-left">
           <Tree label="Views and layers" nodes={nodes} expanded={expanded} onExpandedChange={setExpanded} selected={sel} query={q} emptyText="No layers" onSelect={(id) => {
             const [kind, v, l, s] = id.split(':');
             if (kind === 'view') setView(v as View);
@@ -366,7 +366,7 @@ export function PartEditor({ partRef }: { partRef: string }) {
             <Button onClick={() => edit((d) => { d.families[family] = convertFamily(d.families[other]!, family); })} disabled={!data.families[other]} disabledReason={`No ${other} artwork to draft from`}>Draft {family} from {other}</Button>
           </Toolbar>
         </div>
-        <Panel title={layer ? `Layer · ${layer.slot}` : 'Part'} label="Part properties" className="st-right">
+        <Panel title={layer ? `Layer · ${layer.slot}` : 'Part'} label="Part properties" help="#/help/builder" className="st-right">
           <div className="st-props">
             <Section title="Part" open={sec('part')} onToggle={(o) => tog('part', o)}>
               <TextField label="Part name" value={name} onChange={setName} />

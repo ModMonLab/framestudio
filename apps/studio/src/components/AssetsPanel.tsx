@@ -109,7 +109,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
 
   const pickedHit = all?.find((h) => h.ref === picked);
   return (
-    <Panel title={f.title} label={f.title} actions={<><IconButton label="Open the full library" icon={<Maximize2 size={16} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/library`)} /><IconButton label="Import a file…" icon={<Upload size={16} />} onClick={() => fileInput.current?.click()} /></>} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
+    <Panel title={f.title} label={f.title} help="#/help/assets" actions={<><IconButton label="Open the full library" icon={<Maximize2 size={16} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/library`)} /><IconButton label="Import a file…" icon={<Upload size={16} />} onClick={() => fileInput.current?.click()} /></>} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
       {all === undefined ? <p className="fr-faint" style={{ padding: 12 }}>Loading library…</p> : groups.length === 0 ? (
         <EmptyState title={q ? 'No matches' : f.title}>{q ? `Nothing matches “${q}”.` : f.empty}</EmptyState>
       ) : groups.map(([cat, hits]) => (

@@ -248,4 +248,32 @@ describe('Frame Server (FR-ARC-01..05)', () => {
       await slow.close();
     }
   });
+
+  it('keeps app settings beside the user library, never echoes the worker token, and applies autosave (FR-SET-01)', async () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'frame-settings-'));
+    const s2 = await createServer({ contentDir: path.join(repo, 'content'), userDir: path.join(home, 'library') });
+    try {
+      const call = async (method: string, url: string, body?: unknown) => (await s2.app.inject({ method: method as 'GET', url, ...(body !== undefined ? { payload: body as object } : {}) })).json() as any;
+      expect((await call('POST', '/api/settings', { autosaveMs: 5 })).error.code).toBe('USAGE');
+      const r = await call('POST', '/api/settings', { workerUrl: 'http://127.0.0.1:9', workerToken: 'secret-token', autosaveMs: 900, defaultFrameRate: 25 });
+      expect(r.settings).toEqual({ workerUrl: 'http://127.0.0.1:9', autosaveMs: 900, defaultFrameRate: 25, workerTokenSet: true });
+      const g = await call('GET', '/api/settings');
+      expect(JSON.stringify(g)).not.toContain('secret-token');
+      expect(g.effective).toEqual({ workerUrl: 'http://127.0.0.1:9', autosaveMs: 900 });
+      expect(g.telemetry).toBe('none');
+      const file = path.join(home, 'settings.json');
+      expect(JSON.parse(fs.readFileSync(file, 'utf8')).workerToken).toBe('secret-token');
+      if (process.platform !== 'win32') expect(fs.statSync(file).mode & 0o077).toBe(0);
+      // The worker status uses the configured URL (nothing listens there).
+      expect((await call('GET', '/api/worker/status')).url).toBe('http://127.0.0.1:9');
+      // New projects take the default frame rate.
+      const dir = path.join(home, 'New.frame');
+      const pid = (await call('POST', '/api/projects/create', { path: dir })).id;
+      expect((await call('GET', `/api/projects/${pid}/state`)).state.project.frameRate).toBe(25);
+      expect((await call('POST', '/api/settings', { clearToken: true })).settings.workerTokenSet).toBe(false);
+      expect((await call('POST', '/api/settings/clear-cache')).cleared).toBe(true);
+    } finally {
+      await s2.close();
+    }
+  });
 });

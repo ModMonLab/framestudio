@@ -4,10 +4,11 @@
  */
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Bold, Eye, Heading2, Italic, List, ListOrdered, Pencil } from 'lucide-react';
-import { parseNotes, type NoteSpan } from '@frame/core';
+import { parseNotes, type NoteBlock, type NoteSpan } from '@frame/core';
 import { IconButton } from '@frame/ui';
 
-export function NotesView({ value, empty = 'No notes yet.' }: { value: string; empty?: string }) {
+/** `offset` maps note heading levels to HTML levels (# → h(1 + offset)) so pages keep a valid outline. */
+export function NotesView({ value, empty = 'No notes yet.', offset = 2 }: { value: string; empty?: string; offset?: number }) {
   const blocks = parseNotes(value);
   if (!blocks.length) return <p className="fr-faint st-notes-empty">{empty}</p>;
   const spans = (ss: NoteSpan[]) => ss.map((s, i) => {
@@ -16,15 +17,15 @@ export function NotesView({ value, empty = 'No notes yet.' }: { value: string; e
     if (s.bold) el = <strong key={i}>{el}</strong>;
     return el;
   });
-  return (
-    <div className="st-notes-view">
-      {blocks.map((b, i) => b.kind === 'heading'
-        ? b.level === 1 ? <h3 key={i}>{spans(b.spans)}</h3> : b.level === 2 ? <h4 key={i}>{spans(b.spans)}</h4> : <h5 key={i}>{spans(b.spans)}</h5>
-        : b.kind === 'list'
-          ? b.ordered ? <ol key={i}>{b.items.map((it, j) => <li key={j}>{spans(it)}</li>)}</ol> : <ul key={i}>{b.items.map((it, j) => <li key={j}>{spans(it)}</li>)}</ul>
-          : <p key={i}>{spans(b.spans)}</p>)}
-    </div>
-  );
+  const block = (b: NoteBlock, i: number) => {
+    if (b.kind === 'heading') {
+      const H = `h${Math.min(6, b.level + offset)}` as 'h2';
+      return <H key={i}>{spans(b.spans)}</H>;
+    }
+    if (b.kind === 'list') return b.ordered ? <ol key={i}>{b.items.map((it, j) => <li key={j}>{spans(it)}</li>)}</ol> : <ul key={i}>{b.items.map((it, j) => <li key={j}>{spans(it)}</li>)}</ul>;
+    return <p key={i}>{spans(b.spans)}</p>;
+  };
+  return <div className="st-notes-view">{blocks.map(block)}</div>;
 }
 
 export function NotesEditor({ label, value, onCommit, rows = 5, placeholder }: { label: string; value: string; onCommit: (v: string) => void; rows?: number; placeholder?: string }) {

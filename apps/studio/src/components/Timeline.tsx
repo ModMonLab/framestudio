@@ -1,6 +1,6 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
 import { useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Bot, ChevronRight, Eye, EyeOff, Lock, Maximize, Scan, SkipBack, Sparkles, SplitSquareHorizontal, Video, Volume2 } from 'lucide-react';
+import { AlertTriangle, Bot, ChevronRight, HelpCircle, Eye, EyeOff, Lock, Maximize, Scan, SkipBack, Sparkles, SplitSquareHorizontal, Video, Volume2 } from 'lucide-react';
 import { applyOverrides, conflictingClipIds, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
 import type { Clip, MouthBlock, MouthShape, Scene, Track } from '@frame/schema';
 import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts } from '@frame/ui';
@@ -126,6 +126,7 @@ export function Timeline() {
         <IconButton label="Zoom to selection" icon={<Scan size={14} />} disabled={!selClips.length} disabledReason="Select clips first" onClick={() => zoomTo(Math.min(...selClips.map((c) => c.start)), Math.max(...selClips.map((c) => c.end)))} />
         <IconButton label="Zoom to fit" icon={<Maximize size={14} />} onClick={() => { const w = (scroller.current?.clientWidth ?? 800) - HEADER - 40; setPx(Math.max(10, Math.min(300, w / Math.max(1, scene.duration / 48000)))); }} />
         <div style={{ width: 220 }}><SliderRow inline label="Zoom" value={pxPerSec} min={10} max={300} defaultValue={60} format={(v) => `${Math.round(v)}`} onChange={(v) => setPx(v)} /></div>
+        <IconButton size="sm" label="Help: Timeline" icon={<HelpCircle size={14} />} onClick={() => (location.hash = '#/help/timeline')} />
       </div>
       {longScene && <MiniMap scene={scene} pxPerSec={pxPerSec} scroller={scroller} />}
       <div className="st-tl-body" ref={scroller}>

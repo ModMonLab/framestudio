@@ -30,8 +30,14 @@ export class ProjectHub {
   private listeners = new Set<(e: HubEvent) => void>();
   private watchTimer?: NodeJS.Timeout;
 
-  constructor(private readonly opts: { watchMs?: number; debounceMs?: number; onAttach?: (open: OpenProject) => void } = {}) {
+  constructor(private opts: { watchMs?: number; debounceMs?: number; onAttach?: (open: OpenProject) => void } = {}) {
     if (opts.watchMs) this.watchTimer = setInterval(() => this.checkExternal(), opts.watchMs);
+  }
+
+  /** Autosave delay for open and future projects (FR-SET-01). */
+  setDebounce(ms: number): void {
+    this.opts.debounceMs = ms;
+    for (const p of this.list()) p.open.setDebounce(ms);
   }
 
   onEvent(fn: (e: HubEvent) => void): () => void {

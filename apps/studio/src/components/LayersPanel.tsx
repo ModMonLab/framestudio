@@ -73,7 +73,7 @@ export function LayersPanel() {
   };
 
   return (
-    <Panel title="Layers" label="Layers" actions={<IconButton size="sm" label="Add scene" icon={<Plus size={14} />} onClick={() => void addScene()} />} search={<SearchField label="Search layers" placeholder="Search layers" value={q} onChange={setQ} />} className="st-left">
+    <Panel title="Layers" label="Layers" help="#/help/layers" actions={<IconButton size="sm" label="Add scene" icon={<Plus size={14} />} onClick={() => void addScene()} />} search={<SearchField label="Search layers" placeholder="Search layers" value={q} onChange={setQ} />} className="st-left">
       <Tree
         label="Layers"
         nodes={nodes}

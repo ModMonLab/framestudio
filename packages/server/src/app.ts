@@ -15,7 +15,7 @@ import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
   projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, templateCommandsForLibrary, replaceCastCommands, projectFromTemplateCommands, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
-  scriptPdf, styleFamilyBlockers, ProjectStore, RecentProjects, duplicateProject, moveToTrash, revealInFileManager,
+  scriptPdf, styleFamilyBlockers, ProjectStore, AppSettingsStore, type AppSettings, RecentProjects, duplicateProject, moveToTrash, revealInFileManager,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -65,6 +65,8 @@ export interface ServerOptions {
   cacheDir?: string;
   /** Recent projects registry (FR-PRJ-06); defaults to <userDir>/../recent.json. */
   recentFile?: string;
+  /** App settings (FR-SET-01); defaults to <userDir>/../settings.json. */
+  settingsFile?: string;
 }
 
 const STATUS: Partial<Record<ErrorCode, number>> = {
@@ -100,8 +102,11 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   // Recent projects (FR-PRJ-06) live next to the user library, like the thumbnail cache.
   const recentFile = o.recentFile ?? (o.userDir ? path.join(path.dirname(o.userDir), 'recent.json') : undefined);
   const recent = recentFile ? new RecentProjects(recentFile) : undefined;
+  // App settings (FR-SET-01) beside the user library; the worker token lives here, never in projects (NFR-09).
+  const appSettings = new AppSettingsStore(o.settingsFile ?? (o.userDir ? path.join(path.dirname(o.userDir), 'settings.json') : undefined));
+  const startSettings = appSettings.read();
   const hub = new ProjectHub({
-    ...(o.watchMs ? { watchMs: o.watchMs } : {}), ...(o.debounceMs !== undefined ? { debounceMs: o.debounceMs } : {}),
+    ...(o.watchMs ? { watchMs: o.watchMs } : {}), ...(startSettings.autosaveMs !== undefined ? { debounceMs: startSettings.autosaveMs } : o.debounceMs !== undefined ? { debounceMs: o.debounceMs } : {}),
     onAttach: (open) => {
       open.locksFor = (state) => computeLocks(state, lockLookup());
       try {
@@ -192,13 +197,17 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const dir = path.resolve(b.path);
       const d = libraryDefaults;
       const family = b.styleFamily ?? d.styleFamily;
-      const fps = b.frameRate ?? d.frameRate;
+      const prefs = appSettings.read();
+      const fps = b.frameRate ?? prefs.defaultFrameRate ?? d.frameRate;
       if (family !== 'flat' && family !== 'illustrated') throw new FrameError('USAGE', 'styleFamily must be flat or illustrated');
       if (!fps || ![24, 25, 30].includes(fps)) throw new FrameError('USAGE', 'frameRate must be 24, 25 or 30');
       if (!d.output) throw new FrameError('INTERNAL', 'The content library has no default output preset');
       if (fs.existsSync(dir) && fs.readdirSync(dir).length > 0) throw new FrameError('CONFLICT', `${dir} is not empty`, undefined, 'Choose a new folder name.');
       const name = b.name ?? path.basename(dir).replace(/\.frame$/, '');
-      OpenProject.create(dir, { name, styleFamily: family, frameRate: fps as 24, output: d.output, appVersion: SERVER_VERSION, newId: randomId, ...(d.captionStyle ? { captionStyle: d.captionStyle } : {}) }).close();
+      // A default output chosen in Settings (FR-SET-01) when it is a picture preset.
+      const pref = prefs.defaultOutput ? (library().manifest(prefs.defaultOutput)?.data as { output?: { width?: number; height?: number; aspect?: string } } | undefined)?.output : undefined;
+      const output = pref?.width && pref.height ? { preset: prefs.defaultOutput!, width: pref.width, height: pref.height, aspectRatios: [pref.aspect ?? `${pref.width}:${pref.height}`] } : d.output;
+      OpenProject.create(dir, { name, styleFamily: family, frameRate: fps as 24, output, appVersion: SERVER_VERSION, newId: randomId, ...(d.captionStyle ? { captionStyle: d.captionStyle } : {}) }).close();
       const p = hub.open(dir);
       // From a production template (FR-PRJ-01): its scenes replace the empty first scene; one undo step.
       if (b.template) {
@@ -947,6 +956,57 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   app.get('/api/library/defaults', async () => libraryDefaults);
   const thumbs = new Map<string, Buffer>();
   const thumbDir = o.cacheDir ? path.join(o.cacheDir, 'thumbnails') : o.userDir ? path.join(path.dirname(o.userDir), 'cache', 'thumbnails') : undefined;
+  /* ---------------------------------------------------------------- app settings (FR-SET-01) */
+  app.get('/api/settings', async () => {
+    const s = appSettings.read();
+    const { workerToken, ...rest } = s;
+    const size = (dir?: string): number => {
+      if (!dir || !fs.existsSync(dir)) return 0;
+      let n = 0;
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) n += e.isDirectory() ? size(path.join(dir, e.name)) : fs.statSync(path.join(dir, e.name)).size;
+      return n;
+    };
+    return {
+      settings: { ...rest, workerTokenSet: !!workerToken },
+      effective: { workerUrl: s.workerUrl || o.workerUrl || null, autosaveMs: s.autosaveMs ?? o.debounceMs ?? 400 },
+      paths: { content: o.contentDir, userLibrary: o.userDir ?? null, cache: thumbDir ?? null, settings: appSettings.file ?? null },
+      storage: { cacheBytes: size(thumbDir), userLibraryBytes: size(o.userDir) },
+      telemetry: 'none',
+    };
+  });
+  app.post<{ Body: Partial<AppSettings> & { clearToken?: boolean } }>('/api/settings', async (req, reply) => {
+    try {
+      if (req.headers['x-frame-agent']) throw new FrameError('PERMISSION_REQUIRED', 'Agents cannot change app settings');
+      const b = req.body ?? {};
+      if (b.autosaveMs !== undefined && (!Number.isFinite(b.autosaveMs) || b.autosaveMs < 100 || b.autosaveMs > 60_000)) throw new FrameError('USAGE', 'autosaveMs must be between 100 and 60000');
+      if (b.defaultFrameRate !== undefined && ![24, 25, 30].includes(b.defaultFrameRate)) throw new FrameError('USAGE', 'defaultFrameRate must be 24, 25 or 30');
+      if (b.workerUrl && !/^https?:\/\//.test(b.workerUrl)) throw new FrameError('USAGE', 'The worker URL must start with http:// or https://');
+      const next = appSettings.update({
+        ...(b.workerUrl !== undefined ? { workerUrl: b.workerUrl.trim() } : {}),
+        ...(b.workerToken ? { workerToken: b.workerToken } : {}),
+        ...(b.clearToken ? { workerToken: '' } : {}),
+        ...(b.autosaveMs !== undefined ? { autosaveMs: Math.round(b.autosaveMs) } : {}),
+        ...(b.defaultFrameRate !== undefined ? { defaultFrameRate: b.defaultFrameRate } : {}),
+        ...(b.defaultOutput !== undefined ? { defaultOutput: b.defaultOutput } : {}),
+      });
+      if (next.autosaveMs) hub.setDebounce(next.autosaveMs);
+      const { workerToken, ...rest } = next;
+      return { settings: { ...rest, workerTokenSet: !!workerToken } };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post('/api/settings/clear-cache', async (req, reply) => {
+    try {
+      if (req.headers['x-frame-agent']) throw new FrameError('PERMISSION_REQUIRED', 'Agents cannot clear caches');
+      thumbs.clear();
+      if (thumbDir) fs.rmSync(thumbDir, { recursive: true, force: true });
+      return { cleared: true };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- project browser (FR-PRJ-06) */
   const needRecent = () => {
     if (!recent) throw new FrameError('UNSUPPORTED', 'This server keeps no recent-projects list', undefined, 'Start it with `frame server start` (uses ~/.frame).');
@@ -1121,9 +1181,11 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
 
   /* ---------------------------------------------------------------- voice (FR-VOI, FR-VWK-05, FR-VOI-12) */
   const workerFor = (p?: HubProject) => {
-    const url = p?.open.state.project.voiceWorkerUrl ?? o.workerUrl;
-    if (!url) throw new FrameError('WORKER_UNAVAILABLE', 'No voice worker is configured', undefined, 'Set FRAME_WORKER_URL for the server or a worker URL in project settings.');
-    return new VoiceClient({ url, ...(o.workerToken ? { token: o.workerToken } : {}) });
+    const s = appSettings.read();
+    const url = p?.open.state.project.voiceWorkerUrl || s.workerUrl || o.workerUrl;
+    if (!url) throw new FrameError('WORKER_UNAVAILABLE', 'No voice worker is configured', undefined, 'Set the worker URL in Settings, FRAME_WORKER_URL for the server, or a worker URL in project settings.');
+    const token = s.workerToken || o.workerToken;
+    return new VoiceClient({ url, ...(token ? { token } : {}) });
   };
   const access = (p: HubProject, source = 'user'): ProjectAccess => ({
     state: () => p.open.state as never,

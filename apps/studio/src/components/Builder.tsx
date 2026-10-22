@@ -326,7 +326,7 @@ export function Builder({ scene: sceneId, instance }: { scene: string; instance:
         </>}
       />
       <div className="st-main">
-        <Panel title="Parts" label="Parts" search={<SearchField label="Search parts and settings" placeholder="Search parts and settings" value={q} onChange={setQ} />} className="st-left">
+        <Panel title="Parts" label="Parts" help="#/help/builder" search={<SearchField label="Search parts and settings" placeholder="Search parts and settings" value={q} onChange={setQ} />} className="st-left">
           <Tree label="Character parts" nodes={nodes} expanded={expanded} onExpandedChange={setExpanded} selected={node} onSelect={(id) => setNode(id)} query={q} emptyText={`Nothing matches “${q}”.`} />
           <div className="st-panel-foot st-rigcheck">
             {check ? (
@@ -373,7 +373,7 @@ export function Builder({ scene: sceneId, instance }: { scene: string; instance:
             <span className="st-tb-select st-tb-select--more"><Select label="Any gesture" placeholder="More" value={undefined} onChange={setGesture} options={(acts ?? []).map((a) => ({ value: a.ref, label: a.name }))} /></span>
           </Toolbar>
         </div>
-        <Panel title={nodeRow?.label ?? 'Identity'} label="Properties" className="st-right">
+        <Panel title={nodeRow?.label ?? 'Identity'} label="Properties" help="#/help/builder" className="st-right">
           <div className="st-crumb fr-faint">{parentRow ? `${draft?.name ?? ''} / ${parentRow.label}` : draft?.name}</div>
           <div className="st-props">{ctx ? <BuilderProperties node={node === 'char' ? 'identity' : node} c={ctx} /> : <EmptyState title="Loading…" />}</div>
         </Panel>

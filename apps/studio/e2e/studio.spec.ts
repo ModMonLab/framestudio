@@ -52,6 +52,12 @@ async function previewMatchesServer(page: Page, t: number, sceneId?: string) {
   expect(diff / (ref.length / 4)).toBe(0);
 }
 
+// Onboarding has its own test; every other test starts as a returning user.
+test.beforeEach(async ({ page }, info) => {
+  if (info.title.includes('first run')) return;
+  await page.addInitScript(() => localStorage.setItem('frame.prefs', JSON.stringify({ onboarded: true, tourDone: true })));
+});
+
 test('workspace opens a project, previews with the export renderer, edits through commands, and passes axe (UI-01, FR-RND-01)', async ({ page }) => {
   await openProject(page, sample(true));
   await page.waitForTimeout(1500);
@@ -905,4 +911,67 @@ test('copy and paste an object within a scene and into another scene (FR-PER-07)
   await page.getByRole('menuitem', { name: /^Paste/ }).click();
   await expect.poll(async () => (await state()).scenes[other].instances.map((i: { name: string }) => i.name)).toEqual(['Maya Bennett']);
   await expect(page.getByRole('button', { name: /^Undo Paste/ }).first()).toBeVisible();
+});
+
+test('first run sets the theme, checks the worker and picks a template; the tour walks the workspace (FR-ONB-01)', async ({ page }) => {
+  await page.goto('/');
+  const dlg = page.getByRole('dialog', { name: 'Welcome to Frame' });
+  await expect(dlg).toBeVisible();
+  await dlg.getByRole('radio', { name: 'Light' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await dlg.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Check connection' }).click();
+  await expect(page.getByRole('dialog', { name: 'Voice worker' }).getByText(/Connected|Offline|Not set up/)).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('dialog', { name: 'Start a project' }).getByRole('button', { name: 'Comedy exchange' }).click();
+  await expect(page.getByRole('button', { name: 'Start from: Comedy exchange' })).toBeVisible();
+  // The tour runs once, on the first workspace.
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-e2e-onb-')), 'Tour.frame');
+  await page.getByRole('textbox', { name: 'Folder', exact: true }).fill(dir);
+  await page.getByRole('button', { name: 'Create project' }).click();
+  const tour = page.getByRole('dialog', { name: 'Stage, Direct and Edit' });
+  await expect(tour).toBeVisible();
+  for (let i = 0; i < 7; i++) await page.locator('.st-tour-card').getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByRole('dialog', { name: 'Find anything' })).toBeVisible();
+  await page.locator('.st-tour-card').getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('.st-tour-card')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('tab', { name: 'Direct' })).toBeVisible();
+  await expect(page.locator('.st-tour-card')).toHaveCount(0);
+});
+
+test('command palette, settings and help (FR-ONB-02, FR-ONB-03, FR-SET-01)', async ({ page }) => {
+  const dir = sample(false);
+  await openProject(page, dir);
+  // Palette: a scene, a layer and a command.
+  await page.keyboard.press('ControlOrMeta+k');
+  const pal = page.getByRole('dialog', { name: 'Command palette' });
+  await pal.getByRole('combobox').fill('type:layer maya');
+  await expect(pal.getByRole('option', { name: /Layers.*Maya Bennett/ })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('toolbar', { name: 'Selection' })).toContainText('Maya Bennett');
+  await page.keyboard.press('ControlOrMeta+k');
+  await pal.getByRole('combobox').fill('script view');
+  await new AxeBuilder({ page }).include('[role="dialog"]').analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
+  await pal.getByRole('option', { name: /Commands.*Script view/ }).click();
+  await expect(page.getByRole('region', { name: 'Script' })).toBeVisible();
+  // Help from a panel's help link.
+  await page.getByRole('button', { name: 'Help: Layers' }).click();
+  await expect(page.getByRole('navigation', { name: 'Help topics' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Layers' })).toContainText('The Layers tree');
+  await new AxeBuilder({ page }).analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
+  // Settings: density, a rebound shortcut, autosave.
+  await page.goto('/#/settings');
+  await page.getByRole('radio', { name: 'Compact' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-density', 'compact');
+  await page.getByRole('button', { name: 'Change shortcut for Command palette' }).click();
+  await page.keyboard.press('ControlOrMeta+Shift+P');
+  await expect(page.getByRole('complementary', { name: 'Keyboard shortcuts' })).toContainText(/(Ctrl|⌘) Shift P/);
+  await page.getByRole('spinbutton', { name: 'Autosave delay' }).fill('1500');
+  await page.getByRole('spinbutton', { name: 'Autosave delay' }).press('Enter');
+  await expect.poll(async () => (await (await page.request.get('/api/settings')).json()).effective.autosaveMs).toBe(1500);
+  await new AxeBuilder({ page }).analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
+  await page.keyboard.press('ControlOrMeta+Shift+P');
+  await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeVisible();
+  await page.request.post('/api/settings', { data: { autosaveMs: 400 } });
 });

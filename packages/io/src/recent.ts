@@ -134,3 +134,44 @@ export function revealInFileManager(target: string, platform: NodeJS.Platform = 
   const r = spawnSync(cmd, args as string[], { stdio: 'ignore', timeout: 5000 });
   if (r.error || (r.status !== 0 && platform !== 'win32')) throw new FrameError('UNSUPPORTED', 'No file manager is available on the server machine', undefined, `The project is at ${abs}.`);
 }
+
+/** App settings kept by the server (FR-SET-01). Client-only preferences (theme, density, shortcuts) stay in the browser. */
+export interface AppSettings {
+  workerUrl?: string;
+  /** Stored with owner-only permissions; never written into projects or logs (NFR-09). */
+  workerToken?: string;
+  autosaveMs?: number;
+  defaultFrameRate?: 24 | 25 | 30;
+  defaultOutput?: string;
+}
+
+export class AppSettingsStore {
+  private mem: AppSettings = {};
+  constructor(readonly file: string | undefined) {}
+
+  read(): AppSettings {
+    if (!this.file) return { ...this.mem };
+    try {
+      return fs.existsSync(this.file) ? readJson<AppSettings>(this.file) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  update(patch: AppSettings): AppSettings {
+    const next: AppSettings = { ...this.read(), ...patch };
+    for (const k of Object.keys(next) as (keyof AppSettings)[]) if (next[k] === '' || next[k] === undefined) delete next[k];
+    if (!this.file) {
+      this.mem = next;
+      return next;
+    }
+    fs.mkdirSync(path.dirname(this.file), { recursive: true });
+    writeJsonAtomic(this.file, next);
+    try {
+      fs.chmodSync(this.file, 0o600);
+    } catch {
+      /* permissions are best effort on file systems without modes */
+    }
+    return next;
+  }
+}

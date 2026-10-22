@@ -4,6 +4,14 @@ import type { ProjectState } from '@frame/core';
 
 export interface RecentProject { root: string; name: string; openedAt: string; pinned?: boolean; episodes: number; scenes: number; exists: boolean; open: string | null }
 
+export interface AppSettingsInfo {
+  settings: { workerUrl?: string; workerTokenSet: boolean; autosaveMs?: number; defaultFrameRate?: 24 | 25 | 30; defaultOutput?: string };
+  effective: { workerUrl: string | null; autosaveMs: number };
+  paths: { content: string; userLibrary: string | null; cache: string | null; settings: string | null };
+  storage: { cacheBytes: number; userLibraryBytes: number };
+  telemetry: 'none';
+}
+
 export class ApiError extends Error {
   constructor(public readonly code: string, message: string, public readonly hint?: string, public readonly details?: unknown) {
     super(message);
@@ -80,6 +88,9 @@ export const api = {
   resolveExternal: (pid: string, keep: 'disk' | 'mine') => req<{ revision: number }>('POST', `/api/projects/${pid}/external/resolve`, { keep }),
   relinkMedia: (pid: string, hash: string, file: File) => file.arrayBuffer().then((b) => req<{ relinked: string }>('POST', `/api/projects/${pid}/media/relink?hash=${encodeURIComponent(hash)}&ext=${encodeURIComponent((file.name.split('.').pop() ?? '').toLowerCase())}`, new Uint8Array(b), { 'content-type': 'application/octet-stream' })),
   paste: (pid: string, scene: string, data: unknown, at?: number) => req<{ revision: number; instances: string[]; clips: string[]; warnings: string[] }>('POST', `/api/projects/${pid}/scenes/${scene}/paste`, { data, ...(at !== undefined ? { at } : {}) }),
+  settings: () => req<AppSettingsInfo>('GET', '/api/settings'),
+  saveSettings: (patch: Record<string, unknown>) => req<{ settings: AppSettingsInfo['settings'] }>('POST', '/api/settings', patch),
+  clearCache: () => req<{ cleared: boolean }>('POST', '/api/settings/clear-cache'),
   projects: () => req<{ projects: { id: string; name: string; root: string; revision: number }[] }>('GET', '/api/projects'),
   open: (path: string, migrate = false) => req<{ id: string; root: string; revision: number; problems: Problem[] }>('POST', '/api/projects/open', { path, migrate }),
   state: (pid: string) => req<Snapshot>('GET', `/api/projects/${pid}/state`),

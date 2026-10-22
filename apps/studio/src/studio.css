@@ -262,3 +262,48 @@
 .st-settings-alert p, .st-settings-alert ul { margin: 0 0 var(--space-2); }
 .st-settings-alert ul { padding-left: 1.2em; max-height: 160px; overflow: auto; }
 .st-problem-h { margin: var(--space-3) var(--space-4) var(--space-2); font-size: inherit; font-weight: 600; color: var(--color-text2); }
+
+/* Compact density (FR-SET-01): tighter rows; spacing scale unchanged so alignment holds. */
+:root[data-density='compact'] { --size-row: 24px; --size-row-lg: 28px; --size-toolbar: 34px; }
+
+/* Help (FR-ONB-02) */
+.st-help { flex: 1; overflow: auto; display: flex; gap: var(--space-6); padding: var(--space-8) var(--space-6); justify-content: center; align-items: flex-start; }
+.st-help-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; width: 220px; }
+.st-help-nav a { display: block; padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); color: var(--color-text); text-decoration: none; }
+.st-help-nav a:hover { background: var(--color-hover); }
+.st-help-nav a[aria-current='page'] { background: var(--color-selected); font-weight: 600; }
+.st-help-nav a:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
+.st-help-body { width: min(640px, 100%); }
+.st-help-body .st-notes-view { border: 0; max-height: none; padding: 0; }
+
+/* Settings (FR-SET-01) */
+.st-settings-page { flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: var(--space-6); padding: var(--space-8) var(--space-6); }
+.st-settings-page > .fr-panel { width: min(640px, 100%); flex: none; }
+.st-settings-title { margin: 0; width: min(640px, 100%); font-size: var(--type-title-size, 18px); }
+.st-settings-body { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); }
+.st-settings-row { display: flex; align-items: center; gap: var(--space-3); }
+.st-settings-list { list-style: none; margin: 0; padding: var(--space-2) var(--space-4); }
+.st-settings-keys li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: var(--space-4); min-height: var(--size-row); }
+.st-settings-keys kbd { color: var(--color-text2); }
+.st-settings-dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-2) var(--space-4); margin: 0; }
+.st-settings-dl dt { color: var(--color-text2); }
+.st-settings-dl dd { margin: 0; overflow-wrap: anywhere; }
+
+/* Command palette (FR-ONB-03) */
+.st-palette { display: flex; flex-direction: column; gap: var(--space-3); width: min(560px, 80vw); }
+.st-palette-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow: auto; }
+.st-palette-item { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: var(--space-3); min-height: var(--size-row); padding: 0 var(--space-3); border-radius: var(--radius-sm); cursor: pointer; }
+.st-palette-item[aria-selected='true'] { background: var(--color-selected); }
+.st-palette-item[aria-disabled='true'] { color: var(--color-text3); cursor: default; }
+.st-palette-group { color: var(--color-text2); }
+.st-palette-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-palette-empty { padding: var(--space-3); }
+
+/* Onboarding (FR-ONB-01) */
+.st-onb-templates { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.st-tour { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
+.st-tour-ring { position: fixed; border: 2px solid var(--color-focus); border-radius: var(--radius-md); box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35); }
+.st-tour-card { position: fixed; width: 320px; pointer-events: auto; background: var(--color-panel); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; gap: var(--space-2); }
+.st-tour-card h2 { margin: 0; font-size: inherit; font-weight: 600; }
+.st-tour-card p { margin: 0; }
+.st-palette-detail { color: var(--color-text2); }
