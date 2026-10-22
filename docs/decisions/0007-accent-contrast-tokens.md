@@ -7,3 +7,5 @@
 The light theme is visually unchanged; the dark primary button is slightly deeper blue. The Design System §2.1 and §2.7 were updated in the same change (governance §11). Token tests assert the ratios.
 
 **Owner review requested.** If the owner prefers the original look, the alternative is a semibold 14 px label (AA large text needs only 3:1), which conflicts with the 28 px button spec. Reverting is a token edit.
+
+**Owner decision (2026-10-22):** keep the added accent tokens (`accent.fill`, `accent.fill-hover`, `accent.text`). Closed.

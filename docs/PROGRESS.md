@@ -298,13 +298,10 @@ H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output p
    bundled cast references some of these and the builder's rig check reports the gaps.
 
 ## Open decisions and blockers
-- Decision 0007 (extra accent tokens for WCAG AA contrast) — owner review requested.
 - Decision 0006: FR-VOI-03 interpretation (range bank via VoiceDesign + similarity check) — validated only by AC-03 on the reference machine.
-- Decision 0013: bundling a static ffmpeg build is deferred to packaging (GPL obligations to be recorded then).
+- Decision 0013 (owner, 2026-10-22): ffmpeg is downloaded on first use (pinned, hash-checked, GPL notice in the profile); to implement in M6.
 - No GPU in the cloud implementation container: live Voice Worker checks (NFR-06, AC-03, AC-17, AC-24) are
   **Not verified — requires reference machine**; steps in docs/acceptance/owner-checklist.md.
-- Decision 0019: additive part-contract change after the M1 freeze (placed artwork, limb-segment fit spaces) and
-  imported artwork used for both style families — owner review requested.
 - Content gaps visible in the builder rig check: four bundled cast members reference accessories, skin details or a
   prop that are not authored yet; the cast's starter voices (Q1) are not authored, so exports of derived characters
   list them as unresolved references.
