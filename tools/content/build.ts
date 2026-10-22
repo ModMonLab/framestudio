@@ -24,6 +24,19 @@ import { MUSIC, normalise, renderAmbience, renderCue, renderMusic, wav16 } from 
 import { FRAMINGS, MOVES } from './camera-specs.js';
 import { RECIPES, SHOT_RECIPES } from './recipe-specs.js';
 import { ATMOSPHERE, EFFECTS, TRANSITIONS } from './fx-specs.js';
+import { TEMPLATES } from './template-specs.js';
+import { BEDROOM_KIT, CLASSROOM_KIT, LIVING_ROOM_KIT, NEWSROOM_KIT, OFFICE_KIT, PARK_KIT } from './parts/kits.js';
+import type { KitParts } from './parts/props.js';
+
+type Mark = { name: string; x: number; y: number; facing: 'left' | 'right' | 'front' };
+const MORE_KITS: Record<string, { parts: KitParts; marks: Mark[]; ambience?: string; props: string[] }> = {
+  'living-room': { parts: LIVING_ROOM_KIT, marks: [{ name: 'Sofa', x: 760, y: 1000, facing: 'front' }, { name: 'Window', x: 1500, y: 1000, facing: 'left' }], ambience: 'amb.living-room-hum@1', props: ['prop.floor-lamp@1', 'prop.potted-plant@1', 'prop.mug@1', 'prop.door@1'] },
+  classroom: { parts: CLASSROOM_KIT, marks: [{ name: 'Board', x: 760, y: 1000, facing: 'right' }, { name: 'Desk', x: 1400, y: 1000, facing: 'left' }], ambience: 'amb.classroom-chatter@1', props: ['prop.round-table@1', 'prop.studio-chair@1'] },
+  office: { parts: OFFICE_KIT, marks: [{ name: 'Left', x: 700, y: 1000, facing: 'right' }, { name: 'Right', x: 1200, y: 1000, facing: 'left' }], ambience: 'amb.office-murmur@1', props: ['prop.phone@1', 'prop.mug@1', 'prop.potted-plant@1', 'prop.studio-chair@1'] },
+  newsroom: { parts: NEWSROOM_KIT, marks: [{ name: 'Anchor', x: 960, y: 1000, facing: 'front' }], ambience: 'amb.newsroom-bustle@1', props: ['prop.desk-microphone@1'] },
+  park: { parts: PARK_KIT, marks: [{ name: 'Path left', x: 700, y: 1000, facing: 'right' }, { name: 'Bench', x: 1540, y: 1000, facing: 'left' }], ambience: 'amb.park-birds@1', props: ['prop.potted-plant@1'] },
+  bedroom: { parts: BEDROOM_KIT, marks: [{ name: 'Bedside', x: 1180, y: 1000, facing: 'left' }], ambience: 'amb.bedroom-quiet@1', props: ['prop.floor-lamp@1'] },
+};
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
@@ -191,6 +204,7 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
       return p ? { data: propPart(p), families: ['flat', 'illustrated'], views: ['front'], viewExemptions: { three: 'Props are drawn from the camera.', side: 'Props are drawn from the camera.', back: 'Props are drawn from the camera.' }, anchors: { ...(p.anchors ?? {}), bounds: p.bounds }, capabilities: p.capabilities ?? [], ...(p.states ? { parameters: [{ key: 'state', type: 'enum' as const, default: p.states[0], options: p.states, label: 'State' }] } : {}) } : undefined;
     }
     case 'kit':
+      if (MORE_KITS[s]) return { data: { kit: { parts: kitPartsData(MORE_KITS[s]!.parts), marks: MORE_KITS[s]!.marks, ...(MORE_KITS[s]!.ambience ? { ambience: MORE_KITS[s]!.ambience } : {}), props: MORE_KITS[s]!.props } }, families: ['flat', 'illustrated'], views: ['front'] };
       if (s === 'coffee-shop') return { data: { kit: { parts: kitPartsData(COFFEE_KIT_PARTS), marks: [{ name: 'Counter', x: 560, y: 1000, facing: 'right' }, { name: 'Table left', x: 1050, y: 1000, facing: 'right' }, { name: 'Table right', x: 1500, y: 1000, facing: 'left' }, { name: 'Door', x: 1800, y: 1000, facing: 'left' }], ambience: 'amb.coffee-shop@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.mug@1', 'prop.phone@1', 'prop.potted-plant@1', 'prop.door@1'] } }, families: ['flat', 'illustrated'], views: ['front'] };
       return s === 'podcast-studio' ? { data: { kit: { parts: kitPartsData(), marks: [{ name: 'Seat A', x: 640, y: 960, facing: 'right' }, { name: 'Seat B', x: 1280, y: 960, facing: 'left' }, { name: 'Seat C', x: 420, y: 980, facing: 'right' }, { name: 'Seat D', x: 1500, y: 980, facing: 'left' }], ambience: 'amb.studio-room-tone@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.desk-microphone@1', 'prop.on-air-sign@1', 'prop.floor-lamp@1', 'prop.potted-plant@1', 'prop.mug@1'] } }, families: ['flat', 'illustrated'], views: ['front'] } : undefined;
     case 'music':
@@ -235,6 +249,7 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
       if (GRAPHICS[s]) return { data: { graphic: GRAPHICS[s] }, tags: ['graphic'], parameters: [{ key: 'text', type: 'string', default: '', label: 'Text' }, { key: 'subtitle', type: 'string', default: '', label: 'Second line' }] };
       if (WORLD_TEXT[s]) return { data: { world: WORLD_TEXT[s] }, tags: ['world text'], parameters: [{ key: 'text', type: 'string', default: '', label: 'Text' }] };
       return undefined;
+    case 'tpl': return TEMPLATES[s] ? { data: { template: TEMPLATES[s] }, tags: ['template', ...TEMPLATES[s]!.roles.map((r) => r.label.toLowerCase())] } : undefined;
     case 'out': return OUTPUT_PRESETS[s] ? { data: { output: OUTPUT_PRESETS[s] }, tags: ['export'] } : undefined;
     default: return undefined;
   }

@@ -1,7 +1,7 @@
-/** `frame recipe apply|save|list`, `frame scene coverage`, `frame camera frame` (FR-RCP, FR-CAM-01/04/05, FR-CLI-05). */
+/** `frame recipe apply|save|list`, `frame scene coverage`, `frame camera frame`, `frame template list|apply|save`, `frame cast replace` (FR-RCP, FR-CAM-01/04/05, FR-TPL, FR-CLI-05). */
 import { FrameError } from '@frame/schema';
-import { recipeFromClips, secondsToTicks } from '@frame/core';
-import { autoCoverageForLibrary, frameCameraCommand, recipeCommandsForLibrary } from '@frame/io';
+import { recipeFromClips, secondsToTicks, templateFromScene, type TemplateData } from '@frame/core';
+import { autoCoverageForLibrary, frameCameraCommand, recipeCommandsForLibrary, replaceCastCommands, templateCommandsForLibrary } from '@frame/io';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { randomUUID } from 'node:crypto';
 import { command } from './framework.js';
@@ -109,6 +109,73 @@ command({
     const { state, sceneId, o } = await setup(ctx);
     const cmd = frameCameraCommand(state, sceneId, String(ctx.args.preset), String(ctx.args.subjects ?? '').split(',').filter(Boolean), secondsToTicks(Number(ctx.args.at ?? 0)), { ...o, ...(ctx.args.camera ? { camera: String(ctx.args.camera) } : {}) });
     return out(await mutate(ctx, [cmd], ctx.args.camera ? 'Reframe camera' : `Add ${String(cmd.params.name)}`));
+  },
+  human,
+});
+
+command({
+  path: ['template', 'list'], summary: 'List production templates with their cast roles (FR-TPL-01).', args: [],
+  run: async (ctx) => {
+    const lib = libraryFor({ contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env) });
+    return {
+      templates: lib.byKind('tpl').map((e) => {
+        const t = (e.manifest.data as { template: TemplateData }).template;
+        return { ref: `${e.manifest.id}@${e.manifest.version}`, name: e.manifest.name, durationS: t.scene.durationS, roles: t.roles.map((r) => ({ key: r.key, label: r.label, default: r.default })) };
+      }),
+    };
+  },
+  human: (r) => r.templates.map((x: any) => `${x.ref}  ${x.name}  ${x.durationS} s  cast: ${x.roles.map((y: any) => `${y.key}=${y.default}`).join(', ')}`).join('\n'),
+});
+
+command({
+  path: ['template', 'apply'], summary: 'Add a scene from a template, with any characters in its cast roles (FR-TPL-01).', mutating: true,
+  args: [
+    { name: 'ref', description: 'Template ref (see `frame template list`)', positional: true, required: true },
+    { name: 'cast', description: 'Cast: role=chr.…@1,role=chr.…@1 (defaults from the template)' },
+    { name: 'episode', description: 'Episode id (default: the first episode)' },
+    { name: 'name', description: 'Scene name' },
+  ],
+  run: async (ctx) => {
+    const { state } = await readProject(ctx);
+    const lib = libraryFor({ contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), projectAssets: state.assets });
+    const episode = String(ctx.args.episode ?? state.project.episodes[0] ?? '');
+    const ex = templateCommandsForLibrary(state, episode, String(ctx.args.ref), { cast: pairs(ctx.args.cast), ...(ctx.args.name ? { name: String(ctx.args.name) } : {}) }, { lib, styles: loadStyles(contentDir()) });
+    return { ...out(await mutate(ctx, ex.commands, `New scene from ${lib.manifest(String(ctx.args.ref))?.name ?? 'template'}`)), scene: ex.sceneId, instances: ex.ids };
+  },
+  human: (r) => `${human(r)}\n  scene ${r.scene}`,
+});
+
+command({
+  path: ['template', 'save'], summary: 'Save a scene as a project template; its characters become cast roles (FR-TPL-02).', mutating: true,
+  args: [
+    { name: 'scene', description: 'Scene id', positional: true, required: true },
+    { name: 'name', description: 'Template name', required: true },
+  ],
+  run: async (ctx) => {
+    const { state, sceneId } = await setup(ctx);
+    const data = templateFromScene(state, sceneId);
+    const id = `user.${randomUUID()}`;
+    const manifest = {
+      schemaVersion: 1, id, version: 1, kind: 'tpl', name: String(ctx.args.name), category: 'Production templates', group: 'My templates', tags: ['template', 'mine'], synonyms: [], families: ['flat', 'illustrated'], views: [], viewExemptions: {}, anchors: {}, capabilities: [], parameters: [], dependencies: [], layering: {}, previews: {},
+      license: { id: 'LicenseRef-User-Owned', redistributable: true, commercialUse: true }, provenance: { method: 'authored', author: 'cli', date: new Date().toISOString().slice(0, 10), notes: 'Saved from a scene (FR-TPL-02).' }, data: { template: data },
+    };
+    return { ...out(await mutate(ctx, [{ name: 'asset.addLocal', params: { manifest } }], `Save template ${String(ctx.args.name)}`)), ref: `${id}@1`, roles: data.roles.map((r) => r.key) };
+  },
+  human: (r) => `${human(r)}\n  ${r.ref}  roles: ${r.roles.join(', ')}`,
+});
+
+command({
+  path: ['cast', 'replace'], summary: 'Recast a character: keeps its clips, gaze and shots; reframes its cameras (FR-TPL-03).', mutating: true,
+  args: [
+    { name: 'scene', description: 'Scene id', positional: true, required: true },
+    { name: 'instance', description: 'Character instance id', positional: true, required: true },
+    { name: 'character', description: 'Character ref (chr.…@1)', positional: true, required: true },
+    { name: 'look', description: 'Look id (default: same look if it has one, else its first)' },
+  ],
+  run: async (ctx) => {
+    const { state, sceneId, o } = await setup(ctx);
+    const cmds = replaceCastCommands(state, sceneId, String(ctx.args.instance), String(ctx.args.character), { ...o, ...(ctx.args.look ? { look: String(ctx.args.look) } : {}) });
+    return out(await mutate(ctx, cmds, `Recast as ${o.lib.manifest(String(ctx.args.character))?.name ?? 'character'}`));
   },
   human,
 });

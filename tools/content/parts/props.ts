@@ -237,7 +237,7 @@ export const PODCAST_KIT_PARTS: Record<string, { name: string; plane: string; or
   },
 };
 
-type KitParts = Record<string, { name: string; plane: string; order: number; at: [number, number]; spec: PropSpec; parallax?: number }>;
+export type KitParts = Record<string, { name: string; plane: string; order: number; at: [number, number]; spec: PropSpec; parallax?: number }>;
 
 /* ------------------------------------------------------------------ coffee shop kit set pieces (I1) */
 

@@ -38,7 +38,7 @@ const FILTERS: Record<string, { title: string; kinds?: string[]; empty: string }
 const PART_KINDS = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'feet', 'top', 'outer', 'bottom', 'dress', 'shoe', 'acc', 'skin-detail', 'makeup']);
 
 /** Kinds that can be placed or applied from this panel. */
-const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img', 'rcp', 'cam', 'sfx', 'atmo', 'fx', 'tr', 'music', 'amb', 'cue']);
+const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img', 'rcp', 'cam', 'sfx', 'atmo', 'fx', 'tr', 'music', 'amb', 'cue', 'tpl']);
 
 export function AssetsPanel({ filter }: { filter: string }) {
   const { studio } = useCtx();
@@ -157,7 +157,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
           }} options={[...prefs.collections.map((c) => ({ value: c.id, label: `${c.items.includes(idOf(pickedHit.ref)) ? '✓ ' : ''}${c.name}` })), { value: '__new', label: 'New collection…' }]} /></span>}
           {PART_KINDS.has(pickedHit.kind) && <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/part/${encodeURIComponent(pickedHit.ref)}`)}>Open in part editor</Button>}
           {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Save to my library</Button>}
-          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'music' || pickedHit.kind === 'amb' || pickedHit.kind === 'cue' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' && pickedHit.tags.includes('caption') ? 'Use for captions' : pickedHit.kind === 'txt' ? 'Add at playhead' : pickedHit.kind === 'rcp' ? 'Apply…' : 'Add to scene'}</Button>
+          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'music' || pickedHit.kind === 'amb' || pickedHit.kind === 'cue' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' && pickedHit.tags.includes('caption') ? 'Use for captions' : pickedHit.kind === 'txt' ? 'Add at playhead' : pickedHit.kind === 'rcp' ? 'Apply…' : pickedHit.kind === 'tpl' ? 'New scene…' : 'Add to scene'}</Button>
         </div>
       )}
     </Panel>
@@ -212,6 +212,9 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
     }
     case 'rcp':
       studio.set({ recipe: { ref: h.ref, name: h.name } });
+      return undefined;
+    case 'tpl':
+      studio.set({ template: { ref: h.ref, name: h.name } });
       return undefined;
     case 'atmo':
     case 'fx': {

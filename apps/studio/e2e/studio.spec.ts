@@ -24,7 +24,7 @@ async function openProject(page: Page, dir: string) {
 }
 
 /** Compares the preview canvas with the server's export renderer at the same time and size (FR-RND-01, NFR-03). */
-async function previewMatchesServer(page: Page, t: number) {
+async function previewMatchesServer(page: Page, t: number, sceneId?: string) {
   const info = await page.evaluate(() => {
     const c = document.querySelector('[data-testid="stage-canvas"]') as HTMLCanvasElement;
     const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
@@ -32,7 +32,7 @@ async function previewMatchesServer(page: Page, t: number) {
   });
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
   const scene = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
-  const sid = scene.episodes[scene.project.episodes[0]].scenes[0];
+  const sid = sceneId ?? scene.episodes[scene.project.episodes[0]].scenes[0];
   const png = await page.request.get(`/api/projects/${pid}/frame?scene=${sid}&t=${t}&width=${info.w}&height=${info.h}&captions=true`);
   const ref = await page.evaluate(async (b64) => {
     const img = new Image();
@@ -620,4 +620,41 @@ test('full-page library: filters, details with versions and usages, explicit upd
   await details.getByRole('button', { name: 'Update to v2' }).first().click();
   await expect(page.getByText(/Updated .* to version 2/)).toBeVisible();
   await expect.poll(async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id).asset).toBe(v1.replace(/@1$/, '@2'));
+});
+
+test('a template starts a new scene with the chosen cast; Replace cast keeps its clips and the preview matches the export (FR-TPL-01/03)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const before = Object.keys((await state()).scenes).length;
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await page.getByRole('searchbox', { name: /^Search/ }).or(page.getByRole('textbox', { name: /^Search/ })).first().fill('Comedy exchange');
+  await page.getByRole('button', { name: /^Comedy exchange/ }).first().click();
+  await page.getByRole('button', { name: 'New scene…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New scene from Comedy exchange' });
+  await dialog.getByRole('button', { name: /^Customer: / }).click();
+  await page.getByRole('option', { name: 'Maya Bennett' }).click();
+  await dialog.getByRole('button', { name: 'Create scene' }).click();
+  await expect.poll(async () => Object.keys((await state()).scenes).length).toBe(before + 1);
+  let st = await state();
+  const sid = Object.keys(st.scenes).find((k) => st.scenes[k].name === 'Comedy exchange')!;
+  const chars = st.scenes[sid].instances.filter((i: { kind: string }) => i.kind === 'character');
+  expect(chars.map((i: { asset: string }) => i.asset).sort()).toEqual(['chr.maya-bennett@1', 'chr.theo-lambert@1']);
+  const clips = st.scenes[sid].clips.length;
+  // The new scene is open; recast the barista from the Layers context menu.
+  await page.getByRole('button', { name: 'Layers', exact: true }).click();
+  await page.getByRole('treeitem', { name: /Barista/ }).first().click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Replace cast…' }).click();
+  const recast = page.getByRole('dialog', { name: 'Replace Barista' });
+  await recast.getByRole('button', { name: /^Character: / }).click();
+  await page.getByRole('option', { name: 'Leo Park' }).click();
+  await recast.getByRole('button', { name: 'Replace' }).click();
+  await expect.poll(async () => (await state()).scenes[sid].instances.find((i: { id: string }) => i.id === chars.find((c: { asset: string }) => c.asset === 'chr.theo-lambert@1').id).asset).toBe('chr.leo-park@1');
+  st = await state();
+  expect(st.scenes[sid].clips.length).toBe(clips);
+  // Seek to 5 s (the barista's close-up) and compare with the export renderer.
+  await page.locator('body').click({ position: { x: 5, y: 895 } });
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 5 * 48000, sid);
 });

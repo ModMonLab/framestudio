@@ -20,6 +20,7 @@ import { PartEditor } from './PartEditor.js';
 import { LibraryScreen } from './LibraryScreen.js';
 import { VersionsDialog } from './VersionsDialog.js';
 import { RecipeDialog } from './RecipeDialog.js';
+import { TemplateDialog, saveSceneAsTemplate } from './TemplateDialog.js';
 import { api } from '../lib/api.js';
 import { usePlayback } from '../lib/playback.js';
 import { ResizeHandle, usePanelSize } from './Resize.js';
@@ -99,6 +100,7 @@ export function Workspace({ pid, builder, part, screen }: { pid: string; builder
       <VoiceDesigner open={voiceFor !== null} instance={voiceFor ?? undefined} onClose={() => setVoiceFor(null)} />
       <VersionsDialog pid={pid} open={versionsOpen} onClose={() => setVersionsOpen(false)} />
       <RecipeDialog />
+      <TemplateDialog />
       <input ref={pkgInput} type="file" accept=".framechar,.frameasset,.framevoice" hidden aria-label="Import package" onChange={(e) => { void onPackage(e.target.files?.[0]); e.target.value = ''; }} />
     </StudioCtx.Provider>
   );
@@ -147,6 +149,7 @@ function Shell() {
 function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right' | 'timeline') => void; panels: { left: boolean; right: boolean; timeline: boolean } }) {
   const { studio, openExport, openVoiceDesigner, openVersions, importPackage } = useCtx();
   const { resolved, setTheme } = useTheme();
+  const toasts = useToasts();
   const project = useStudio(studio, (s) => s.project)!;
   const save = useStudio(studio, (s) => s.save);
   const mode = useStudio(studio, (s) => s.mode);
@@ -190,6 +193,8 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
     ] },
     { id: 'scene', label: 'Scene', items: [
       { id: 'voice', label: 'Design a voice…', onSelect: () => openVoiceDesigner(undefined) },
+      { id: 'tpl-save', label: 'Save scene as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message })) },
+      { kind: 'separator', id: 's-go' },
       ...project.project.episodes.flatMap((e) => (project.episodes[e]?.scenes ?? []).map((s) => ({ id: `go-${s}`, label: `Go to ${project.scenes[s]?.name ?? s}`, checked: s === sceneId, onSelect: () => studio.set({ scene: s, selection: [], time: 0 }) }))),
     ] },
   ];

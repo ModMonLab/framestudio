@@ -1,6 +1,6 @@
 import { Type, AssetRef, FrameRate, StyleFamily, OutputSettings, AgentPermissions, CaptionSettings, type Scene, type Clip } from '@frame/schema';
 import { defineCommand, fail } from '../command.js';
-import { makeEpisode, makeScene } from '../defaults.js';
+import { makeEpisode, makeScene, sceneTrackKinds } from '../defaults.js';
 import { episodeOf, moveInArray, sceneOf } from '../lookup.js';
 import { secondsToTicks, snapToFrame, ticksPerFrame } from '../time.js';
 import type { IdSource } from '../ids.js';
@@ -201,14 +201,16 @@ defineCommand({
   params: Type.Object({
     episode: Id, id: OptId, name: Type.String({ minLength: 1 }), index: Type.Optional(Type.Integer({ minimum: 0 })),
     durationS: Type.Optional(Type.Number({ exclusiveMinimum: 0, maximum: 7200 })), kit: Type.Optional(AssetRef),
+    newIds: Type.Optional(Type.Array(Type.String(), { description: 'Ids for the default camera, ground line and scene tracks (set when prepared, so replays and dry runs agree).' })),
   }, { additionalProperties: false }),
   examples: [{ episode: 'ep_00000001', name: 'Cold open', durationS: 20 }],
-  prepare: (p, _s, ctx) => ({ ...p, id: p.id ?? ctx.newId('scn') }),
+  prepare: (p, _s, ctx) => ({ ...p, id: p.id ?? ctx.newId('scn'), newIds: p.newIds ?? [ctx.newId('cam'), ctx.newId('gl'), ...sceneTrackKinds.map(() => ctx.newId('trk'))] }),
   label: (p) => `Add scene ${p.name}`,
   apply: (d, p, ctx) => {
     const ep = episodeOf(d, p.episode);
     if (d.scenes[p.id!]) fail('CONFLICT', `Scene ${p.id} exists`);
-    const scene = makeScene(ctx.newId, { id: p.id, name: p.name, durationS: p.durationS, seed: seedFor(d as ProjectState, p.id!) });
+    const reserved = [...(p.newIds ?? [])];
+    const scene = makeScene((prefix) => reserved.shift() ?? ctx.newId(prefix), { id: p.id, name: p.name, durationS: p.durationS, seed: seedFor(d as ProjectState, p.id!) });
     scene.duration = snapToFrame(scene.duration, d.project.frameRate);
     if (p.kit) scene.kit = p.kit;
     d.scenes[scene.id] = scene;

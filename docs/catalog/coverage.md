@@ -2,7 +2,7 @@
 
 Generated 2026-10-22 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
 
-**Green: 0 / 1254 (0 %)** · manifests present: 698 / 1254 (55.7 %)
+**Green: 0 / 1254 (0 %)** · manifests present: 720 / 1254 (57.4 %)
 
 An item is green when it has a manifest, both families and all four views (or documented exemptions) where they apply, passes the validators (schema and, for character-attached items, the rig check), has previews in both families, is approved in visual review (CAT-06) and carries a redistributable, commercial-use licence with provenance.
 
@@ -45,7 +45,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | F1 Performance clips | `act` | 118 | 33 | 0 |
 | G1 Performance recipes | `rcp` | 24 | 18 | 0 |
 | H1 Props | `prop` | 142 | 10 | 0 |
-| I1 Location kits | `kit` | 16 | 2 | 0 |
+| I1 Location kits | `kit` | 16 | 8 | 0 |
 | I2 Ready-made sets | `set` | 32 | 0 | 0 |
 | I3 Environment layers | `layer` | 10 | 0 | 0 |
 | J1 Scene atmosphere | `atmo` | 54 | 42 | 0 |
@@ -57,7 +57,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | N3 Ambience | `amb` | 20 | 20 | 0 |
 | N4 Sound effects | `sfx` | 60 | 20 | 0 |
 | O1 Text, graphics and finishing | `txt` | 36 | 36 | 0 |
-| P1 Production templates | `tpl` | 16 | 0 | 0 |
+| P1 Production templates | `tpl` | 16 | 16 | 0 |
 | Q1 Starter voices | `voice` | 16 | 0 | 0 |
 | Q2 Delivery presets | `delivery` | 12 | 0 | 0 |
 | R1 Output presets | `out` | 12 | 12 | 0 |
@@ -900,15 +900,15 @@ An item is green when it has a manifest, both families and all four views (or do
 | `prop.stage-spotlight` | — | — | — | — | — | — (no manifest) |
 | `prop.red-carpet` | — | — | — | — | — | — (no manifest) |
 | `kit.podcast-studio` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `kit.living-room` | — | — | — | — | — | — (no manifest) |
+| `kit.living-room` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.kitchen` | — | — | — | — | — | — (no manifest) |
-| `kit.office` | — | — | — | — | — | — (no manifest) |
-| `kit.classroom` | — | — | — | — | — | — (no manifest) |
+| `kit.office` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `kit.classroom` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.coffee-shop` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `kit.newsroom` | — | — | — | — | — | — (no manifest) |
+| `kit.newsroom` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.city-street` | — | — | — | — | — | — (no manifest) |
-| `kit.park` | — | — | — | — | — | — (no manifest) |
-| `kit.bedroom` | — | — | — | — | — | — (no manifest) |
+| `kit.park` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `kit.bedroom` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.hospital` | — | — | — | — | — | — (no manifest) |
 | `kit.stage-and-auditorium` | — | — | — | — | — | — (no manifest) |
 | `kit.library` | — | — | — | — | — | — (no manifest) |
@@ -1264,22 +1264,22 @@ An item is green when it has a manifest, both families and all four views (or do
 | `txt.sign-text` | missing (—) | n/a | ok | invalid | pending | ok |
 | `txt.screen-text` | missing (—) | n/a | ok | invalid | pending | ok |
 | `txt.chalkboard-text` | missing (—) | n/a | ok | invalid | pending | ok |
-| `tpl.two-person-podcast` | — | — | — | — | — | — (no manifest) |
-| `tpl.solo-podcast` | — | — | — | — | — | — (no manifest) |
-| `tpl.panel-discussion` | — | — | — | — | — | — (no manifest) |
-| `tpl.interview` | — | — | — | — | — | — (no manifest) |
-| `tpl.classroom-explainer` | — | — | — | — | — | — (no manifest) |
-| `tpl.product-explainer` | — | — | — | — | — | — (no manifest) |
-| `tpl.comedy-exchange` | — | — | — | — | — | — (no manifest) |
-| `tpl.sitcom-scene` | — | — | — | — | — | — (no manifest) |
-| `tpl.news-segment` | — | — | — | — | — | — (no manifest) |
-| `tpl.character-introduction` | — | — | — | — | — | — (no manifest) |
-| `tpl.social-short-portrait` | — | — | — | — | — | — (no manifest) |
-| `tpl.story-scene` | — | — | — | — | — | — (no manifest) |
-| `tpl.mystery-scene` | — | — | — | — | — | — (no manifest) |
-| `tpl.customer-support-demo` | — | — | — | — | — | — (no manifest) |
-| `tpl.announcement` | — | — | — | — | — | — (no manifest) |
-| `tpl.bedtime-story` | — | — | — | — | — | — (no manifest) |
+| `tpl.two-person-podcast` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.solo-podcast` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.panel-discussion` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.interview` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.classroom-explainer` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.product-explainer` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.comedy-exchange` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.sitcom-scene` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.news-segment` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.character-introduction` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.social-short-portrait` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.story-scene` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.mystery-scene` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.customer-support-demo` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.announcement` | missing (—) | n/a | ok | missing | pending | ok |
+| `tpl.bedtime-story` | missing (—) | n/a | ok | missing | pending | ok |
 | `voice.warm-host` | — | — | — | — | — | — (no manifest) |
 | `voice.dry-wit` | — | — | — | — | — | — (no manifest) |
 | `voice.calm-presenter` | — | — | — | — | — | — (no manifest) |

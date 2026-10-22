@@ -48,7 +48,7 @@ export function instanceMenu(studio: Studio, id: string): MenuEntry[] {
   const idx = same.findIndex((i) => i.id === id);
   const set = (patch: Record<string, unknown>, label: string) => void studio.exec([{ name: 'instance.update', params: { scene: scene.id, id, set: patch } }], label);
   return [
-    ...(inst.kind === 'character' ? [{ id: 'builder', label: 'Open in builder', onSelect: () => (location.hash = `#/p/${encodeURIComponent(s.pid)}/builder/${scene.id}/${id}`) }, { kind: 'separator' as const, id: 's0' }] : []),
+    ...(inst.kind === 'character' ? [{ id: 'builder', label: 'Open in builder', onSelect: () => (location.hash = `#/p/${encodeURIComponent(s.pid)}/builder/${scene.id}/${id}`) }, { id: 'recast', label: 'Replace cast…', onSelect: () => studio.set({ recast: { instance: id } }) }, { kind: 'separator' as const, id: 's0' }] : []),
     { id: 'dup', label: 'Duplicate', shortcut: 'Ctrl D', onSelect: () => void duplicateSelection(studio) },
     { id: 'flip', label: 'Flip horizontally', onSelect: () => set({ transform: { ...inst.transform, flipX: !inst.transform.flipX } }, `Flip ${inst.name}`) },
     { id: 'fwd', label: 'Bring forward', disabled: idx >= same.length - 1, disabledReason: 'Already in front in its depth plane', onSelect: () => set({ order: same[idx + 1]!.order + 1 }, `Bring ${inst.name} forward`) },
