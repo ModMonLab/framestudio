@@ -36,6 +36,9 @@ export interface StudioState {
   externalNotice?: string[];
   /** Recipe being applied (opens the recipe dialog, FR-RCP-01). */
   recipe?: { ref: string; name: string };
+  /** Template being applied as a new scene (FR-TPL-01), or a character being recast (FR-TPL-03). */
+  template?: { ref: string; name: string };
+  recast?: { instance: string };
 }
 
 type Listener = () => void;

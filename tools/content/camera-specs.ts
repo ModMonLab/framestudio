@@ -32,7 +32,7 @@ export const MOVES: Record<string, CameraMove> = {
   'slow-creep': { zoom: 1.1, ease: 'linear' },
   'dolly-with-parallax': { dx: 300, ease: 'inOut' },
   truck: { dx: -360, ease: 'inOut' },
-  'follow-subject': { target: true, ease: 'inOut' },
+  'follow-subject': { follow: true, ease: 'linear' },
   'reframe-between-subjects': { target: true, ease: 'inOut' },
   'crash-zoom': { zoom: 2, ease: 'snap' },
   'whip-pan': { dx: 900, ease: 'snap' },

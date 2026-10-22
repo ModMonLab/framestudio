@@ -8,13 +8,13 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { actionFitsProp, recipeFromClips, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { actionFitsProp, recipeFromClips, templateFromScene, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, templateCommandsForLibrary, replaceCastCommands, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -42,7 +42,7 @@ interface RigBuildBody {
 
 export const SERVER_VERSION = '0.1.0';
 /** Bump when thumbnail framing or rendering changes so cached thumbnails are rebuilt. */
-const THUMB_VERSION = 1;
+const THUMB_VERSION = 2; // 2: kit parts keep their declared order
 
 export interface ServerOptions {
   contentDir: string;
@@ -598,6 +598,51 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const cmd = frameCameraCommand(p.open.state, req.params.sid, String(b.preset ?? ''), b.subjects ?? [], Math.round(Number(b.at ?? 0)), { lib: library(p), styles, ...(b.camera ? { camera: b.camera } : {}), ...(b.name ? { name: b.name } : {}) });
       const r = p.open.session.apply({ commands: [cmd] as never, source: sourceOf(req), label: b.camera ? 'Reframe camera' : `Add ${String(cmd.params.name)}` });
       return { revision: r.revision, camera: b.camera ?? r.commands[0]!.params.id };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- production templates (FR-TPL-01..03) */
+  app.post<{ Params: { pid: string }; Body: { ref: string; episode?: string; cast?: Record<string, string>; looks?: Record<string, string>; name?: string } }>('/api/projects/:pid/templates/apply', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body ?? ({} as never);
+      const episode = b.episode ?? p.open.state.project.episodes[0];
+      if (!episode || !p.open.state.episodes[episode]) throw new FrameError('NOT_FOUND', `Episode ${episode} not found`);
+      const ex = templateCommandsForLibrary(p.open.state, episode, String(b.ref ?? ''), { ...(b.cast ? { cast: b.cast } : {}), ...(b.looks ? { looks: b.looks } : {}), ...(b.name ? { name: b.name } : {}) }, { lib: library(p), styles });
+      const r = p.open.session.apply({ commands: ex.commands as never, source: sourceOf(req), label: `New scene from ${library(p).manifest(b.ref)?.name ?? 'template'}` });
+      return { revision: r.revision, scene: ex.sceneId, instances: ex.ids };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Saves a scene as a project template (FR-TPL-02); "Save to my library" keeps it for other projects.
+  app.post<{ Params: { pid: string; sid: string }; Body: { name: string } }>('/api/projects/:pid/scenes/:sid/templates/save', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body ?? ({} as never);
+      if (!b.name?.trim()) throw new FrameError('USAGE', 'Name the template');
+      if (!p.open.state.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      const data = templateFromScene(p.open.state, req.params.sid);
+      const id = `user.${randomUUID()}`;
+      const manifest = {
+        schemaVersion: 1, id, version: 1, kind: 'tpl', name: b.name.trim(), category: 'Production templates', group: 'My templates', tags: ['template', 'mine'], synonyms: [], families: ['flat', 'illustrated'], views: [], viewExemptions: {}, anchors: {}, capabilities: [], parameters: [], dependencies: [], layering: {}, previews: {},
+        license: { id: 'LicenseRef-User-Owned', redistributable: true, commercialUse: true }, provenance: { method: 'authored', author: sourceOf(req), date: new Date().toISOString().slice(0, 10), notes: 'Saved from a scene (FR-TPL-02).' }, data: { template: data },
+      };
+      const r = p.open.session.apply({ commands: [{ name: 'asset.addLocal', params: { manifest } }] as never, source: sourceOf(req), label: `Save template ${b.name.trim()}` });
+      return { ref: `${id}@1`, revision: r.revision, roles: data.roles.map((x) => ({ key: x.key, label: x.label })) };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; sid: string }; Body: { instance: string; character: string; look?: string } }>('/api/projects/:pid/scenes/:sid/cast/replace', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body ?? ({} as never);
+      const cmds = replaceCastCommands(p.open.state, req.params.sid, String(b.instance ?? ''), String(b.character ?? ''), { lib: library(p), styles, ...(b.look ? { look: b.look } : {}) });
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: `Recast as ${library(p).manifest(b.character)?.name ?? 'character'}` });
+      return { revision: r.revision, reframed: cmds.filter((c) => c.name === 'camera.update').length };
     } catch (e) {
       return sendError(reply, e);
     }

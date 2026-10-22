@@ -52,6 +52,12 @@ export function frameBoxes(boxes: Box[], framing: FramingData, aspect: number, s
   // Several subjects: wide enough for all of them with margins.
   V = Math.max(V, ((x1 - x0) * 1.25) / aspect);
   const viewTop = top - framing.headroom * V;
-  const cy = viewTop + V / 2 + (framing.bias ?? 0) * V;
-  return { center: { x: Math.round((x0 + x1) / 2), y: Math.round(cy) }, width: Math.round(V * aspect), rotation: framing.roll ?? 0 };
+  let cy = viewTop + V / 2 + (framing.bias ?? 0) * V;
+  let cx = (x0 + x1) / 2;
+  // Keep the view on the stage: no wider or taller than it, and slid back inside its edges.
+  V = Math.min(V, stage.height, stage.width / aspect);
+  const W = V * aspect;
+  cx = Math.min(Math.max(cx, W / 2), stage.width - W / 2);
+  cy = Math.min(Math.max(cy, V / 2), stage.height - V / 2);
+  return { center: { x: Math.round(cx), y: Math.round(cy) }, width: Math.round(W), rotation: framing.roll ?? 0 };
 }

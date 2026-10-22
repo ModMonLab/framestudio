@@ -16,7 +16,7 @@ export interface Motion {
   /** Distance travelled along the current path (stage px) while moving; drives the gait. */
   distance: number;
   moving: boolean;
-  /** View to show while walking (side by default). */
+  /** View to draw at t: the instance's view, turned by turn clips and walking (FR-CHR-04). */
   view?: View;
   /** Gait settings of the moving action. */
   gait?: { stride: number; lift: number };
@@ -102,8 +102,8 @@ export function motionClips(scene: Scene, inst: Instance, actionOf: ActionLookup
   const out: MotionClip[] = [];
   let pos: Pt = [inst.transform.x, inst.transform.y];
   for (const c of list) {
-    if (typeof c.params.turn === 'string') {
-      out.push({ clip: c, turn: c.params.turn });
+    if (typeof c.params.turn === 'string' || (!c.asset && typeof c.params.view === 'string')) {
+      out.push({ clip: c, turn: typeof c.params.turn === 'string' ? c.params.turn : '' });
       continue;
     }
     const a = c.asset ? actionOf(c.asset) : undefined;
@@ -117,6 +117,25 @@ export function motionClips(scene: Scene, inst: Instance, actionOf: ActionLookup
   return out;
 }
 
+const VIEWS: View[] = ['front', 'three', 'side', 'back'];
+
+/**
+ * View during a turn from `a` to `b` at progress u (0…1): adjacent views in order, so a jump such as front → back
+ * passes through three-quarter and side (FR-CHR-04).
+ */
+export function turnView(a: View, b: View, u: number): View {
+  const i = VIEWS.indexOf(a);
+  const j = VIEWS.indexOf(b);
+  if (i === j || u >= 1) return b;
+  if (u <= 0) return a;
+  const step = j > i ? 1 : -1;
+  const n = Math.abs(j - i);
+  return VIEWS[i + step * Math.min(n, Math.floor(u * (n + 1)))]!;
+}
+
+/** Seconds a walk takes to turn into its walking view at the start, and back at the end. */
+const WALK_TURN = 0.24;
+
 /**
  * Position, facing and gait of an instance at time t. `others` resolves another instance's position at t so "turn
  * to face" and gaze can follow moving characters.
@@ -125,15 +144,23 @@ export function motionAt(scene: Scene, inst: Instance, t: number, actionOf: Acti
   let x = inst.transform.x;
   let y = inst.transform.y;
   let flip = inst.transform.flipX;
+  let view: View = inst.character?.view ?? 'front';
   for (const m of motionClips(scene, inst, actionOf)) {
     const c = m.clip;
     if (t < c.start) break;
-    if (m.turn) {
+    if (m.turn !== undefined) {
       if (m.turn === 'left') flip = true;
       else if (m.turn === 'right') flip = false;
-      else {
+      else if (m.turn) {
         const o = others?.(m.turn) ?? (() => { const i = scene.instances.find((z) => z.id === m.turn); return i ? [i.transform.x, i.transform.y] as Pt : undefined; })();
         if (o && Math.abs(o[0] - x) > 1) flip = o[0] < x;
+      }
+      // A turn clip may also change the view, passing through the views in between over the clip.
+      const to = c.params.view as View | undefined;
+      if (to && VIEWS.includes(to)) {
+        const from = view;
+        view = t >= c.end ? to : turnView(from, to, (t - c.start) / Math.max(1, c.end - c.start));
+        if (t < c.end) return { x, y, flip, distance: 0, moving: false, view };
       }
       continue;
     }
@@ -146,8 +173,12 @@ export function motionAt(scene: Scene, inst: Instance, t: number, actionOf: Acti
     if (Math.abs(at.dx) > 1e-6) flip = at.dx < 0;
     if (t < c.end) {
       const loco = m.action!.locomotion!;
-      return { x, y, flip, distance: s, moving: true, view: (c.params.view as View | undefined) ?? 'side', gait: { stride: loco.stride, lift: (m.action as { locomotion: { lift?: number } }).locomotion.lift ?? 0.12 } };
+      // Turn into the walking view at the start and back to the standing view at the end.
+      const walkView = (c.params.view as View | undefined) ?? 'side';
+      const turn = Math.min(WALK_TURN, dur / 4) * S;
+      const v = t < c.start + turn ? turnView(view, walkView, (t - c.start) / turn) : t > c.end - turn ? turnView(walkView, view, (t - (c.end - turn)) / turn) : walkView;
+      return { x, y, flip, distance: s, moving: true, view: v, gait: { stride: loco.stride, lift: (m.action as { locomotion: { lift?: number } }).locomotion.lift ?? 0.12 } };
     }
   }
-  return { x, y, flip, distance: 0, moving: false };
+  return { x, y, flip, distance: 0, moving: false, view };
 }

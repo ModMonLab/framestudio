@@ -24,7 +24,7 @@ async function openProject(page: Page, dir: string) {
 }
 
 /** Compares the preview canvas with the server's export renderer at the same time and size (FR-RND-01, NFR-03). */
-async function previewMatchesServer(page: Page, t: number) {
+async function previewMatchesServer(page: Page, t: number, sceneId?: string) {
   const info = await page.evaluate(() => {
     const c = document.querySelector('[data-testid="stage-canvas"]') as HTMLCanvasElement;
     const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
@@ -32,7 +32,7 @@ async function previewMatchesServer(page: Page, t: number) {
   });
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
   const scene = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
-  const sid = scene.episodes[scene.project.episodes[0]].scenes[0];
+  const sid = sceneId ?? scene.episodes[scene.project.episodes[0]].scenes[0];
   const png = await page.request.get(`/api/projects/${pid}/frame?scene=${sid}&t=${t}&width=${info.w}&height=${info.h}&captions=true`);
   const ref = await page.evaluate(async (b64) => {
     const img = new Image();
@@ -204,6 +204,97 @@ test('applies a line-anchored recipe from the Assets panel and generates coverag
   expect(problems.filter((p: { code: string }) => p.code === 'SHOT_OVERLAP' || p.code === 'CHANNEL_CONFLICT')).toEqual([]);
   await page.waitForTimeout(800);
   await previewMatchesServer(page, 0);
+});
+
+test('atmosphere, effects and a shot transition added from the Assets panel preview exactly like the export (FR-FX-01..04)', async ({ page }) => {
+  await openProject(page, sample(true));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  const search = page.getByRole('searchbox', { name: /^Search/ }).or(page.getByRole('textbox', { name: /^Search/ })).first();
+  for (const name of ['Heavy rain', 'Golden hour']) {
+    await search.fill(name);
+    await page.getByRole('button', { name: new RegExp(`^${name}`) }).first().click();
+    await page.getByRole('button', { name: 'Add at playhead' }).click();
+  }
+  await search.fill('Crossfade');
+  await page.getByRole('button', { name: /^Crossfade/ }).first().click();
+  await page.getByRole('button', { name: 'Add to scene' }).click();
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const assets = st.scenes[sid].clips.map((c: { asset?: string }) => c.asset);
+  expect(assets).toContain('atmo.heavy-rain@1');
+  expect(assets).toContain('atmo.golden-hour@1');
+  expect(st.scenes[sid].clips.some((c: { params: { transition?: string } }) => c.params.transition === 'tr.crossfade@1')).toBe(true);
+  await page.waitForTimeout(1000);
+  await previewMatchesServer(page, 0);
+});
+
+test('a speech bubble added for the selected character uses the line they speak and previews like the export (FR-TXT-03)', async ({ page }) => {
+  await openProject(page, sample(true));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  await page.getByRole('treeitem', { name: /Leo Park/ }).first().click();
+  // Seek to 6 s (Leo speaks from 5 s).
+  await page.locator('body').click({ position: { x: 5, y: 895 } });
+  for (let i = 0; i < 6; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await page.getByRole('searchbox', { name: /^Search/ }).or(page.getByRole('textbox', { name: /^Search/ })).first().fill('Speech bubble round');
+  await page.getByRole('button', { name: /^Speech bubble round/ }).first().click();
+  await page.getByRole('button', { name: 'Add at playhead' }).click();
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  await expect.poll(async () => {
+    const st = await state();
+    const sid = st.episodes[st.project.episodes[0]].scenes[0];
+    return st.scenes[sid].clips.filter((c: { asset?: string }) => c.asset === 'txt.speech-bubble-round@1').length;
+  }).toBe(1);
+  const st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const bubble = st.scenes[sid].clips.find((c: { asset?: string }) => c.asset === 'txt.speech-bubble-round@1');
+  const line = st.scenes[sid].clips.find((c: { id: string }) => c.id === bubble.params.line);
+  expect(line.line.text).toContain('forgot to start');
+  expect(bubble.start).toBe(line.start);
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 6 * 48000);
+});
+
+test('timeline editing: a trim snaps to a marker, S splits at the playhead, I/O set the loop (FR-TML-02/04)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  let st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const point = st.scenes[sid].clips.find((c: { asset?: string }) => c.asset === 'act.point-at@1');
+  // Marker at 9 s with the keyboard.
+  await page.locator('body').click({ position: { x: 5, y: 895 } });
+  for (let i = 0; i < 9; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.keyboard.press('m');
+  await expect.poll(async () => (await state()).scenes[sid].markers.length).toBe(1);
+  await page.getByRole('button', { name: 'Zoom to fit' }).click();
+  // The focus click above may land on a group header; make sure Leo's lanes are open.
+  const leoGroup = page.getByRole('button', { name: /^Leo Park \d+$/ });
+  if ((await leoGroup.getAttribute('aria-expanded')) !== 'true') await leoGroup.click();
+  // Drag the end of Leo's point-at clip (ends at 7.8 s) toward the marker: it snaps to 9 s.
+  const chip = page.getByRole('button', { name: /^Acting: Point at/ }).first();
+  await chip.scrollIntoViewIfNeeded();
+  const box = (await chip.boundingBox())!;
+  const marker = (await page.getByRole('region', { name: 'Timeline' }).getByRole('button', { name: 'Marker Marker 1' }).boundingBox())!;
+  await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(marker.x + marker.width / 2 + 3, box.y + box.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state()).scenes[sid].clips.find((c: { id: string }) => c.id === point.id).end).toBe(9 * 48000);
+  // Split it at 8.5 s with S.
+  await page.keyboard.press('Shift+ArrowLeft');
+  for (let i = 0; i < 12; i++) await page.keyboard.press('ArrowRight');
+  await chip.click();
+  await page.keyboard.press('s');
+  await expect.poll(async () => (await state()).scenes[sid].clips.filter((c: { asset?: string }) => c.asset === 'act.point-at@1').length).toBe(2);
+  // Loop in at 8.5 s, out at 9.5 s.
+  await page.keyboard.press('i');
+  for (let i = 0; i < 24; i++) await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('o');
+  await expect.poll(async () => (await state()).scenes[sid].loop).toEqual({ start: 8.5 * 48000, end: 9.5 * 48000 });
+  st = await state();
+  expect(st.scenes[sid].markers[0].at).toBe(9 * 48000);
 });
 
 test('agent changes are tagged and a person reverts the agent session from Activity (FR-AGT-04/05, AC-13)', async ({ page }) => {
@@ -529,4 +620,41 @@ test('full-page library: filters, details with versions and usages, explicit upd
   await details.getByRole('button', { name: 'Update to v2' }).first().click();
   await expect(page.getByText(/Updated .* to version 2/)).toBeVisible();
   await expect.poll(async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id).asset).toBe(v1.replace(/@1$/, '@2'));
+});
+
+test('a template starts a new scene with the chosen cast; Replace cast keeps its clips and the preview matches the export (FR-TPL-01/03)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const before = Object.keys((await state()).scenes).length;
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await page.getByRole('searchbox', { name: /^Search/ }).or(page.getByRole('textbox', { name: /^Search/ })).first().fill('Comedy exchange');
+  await page.getByRole('button', { name: /^Comedy exchange/ }).first().click();
+  await page.getByRole('button', { name: 'New scene…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New scene from Comedy exchange' });
+  await dialog.getByRole('button', { name: /^Customer: / }).click();
+  await page.getByRole('option', { name: 'Maya Bennett' }).click();
+  await dialog.getByRole('button', { name: 'Create scene' }).click();
+  await expect.poll(async () => Object.keys((await state()).scenes).length).toBe(before + 1);
+  let st = await state();
+  const sid = Object.keys(st.scenes).find((k) => st.scenes[k].name === 'Comedy exchange')!;
+  const chars = st.scenes[sid].instances.filter((i: { kind: string }) => i.kind === 'character');
+  expect(chars.map((i: { asset: string }) => i.asset).sort()).toEqual(['chr.maya-bennett@1', 'chr.theo-lambert@1']);
+  const clips = st.scenes[sid].clips.length;
+  // The new scene is open; recast the barista from the Layers context menu.
+  await page.getByRole('button', { name: 'Layers', exact: true }).click();
+  await page.getByRole('treeitem', { name: /Barista/ }).first().click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Replace cast…' }).click();
+  const recast = page.getByRole('dialog', { name: 'Replace Barista' });
+  await recast.getByRole('button', { name: /^Character: / }).click();
+  await page.getByRole('option', { name: 'Leo Park' }).click();
+  await recast.getByRole('button', { name: 'Replace' }).click();
+  await expect.poll(async () => (await state()).scenes[sid].instances.find((i: { id: string }) => i.id === chars.find((c: { asset: string }) => c.asset === 'chr.theo-lambert@1').id).asset).toBe('chr.leo-park@1');
+  st = await state();
+  expect(st.scenes[sid].clips.length).toBe(clips);
+  // Seek to 5 s (the barista's close-up) and compare with the export renderer.
+  await page.locator('body').click({ position: { x: 5, y: 895 } });
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 5 * 48000, sid);
 });

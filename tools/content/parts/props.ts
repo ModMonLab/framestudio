@@ -237,6 +237,94 @@ export const PODCAST_KIT_PARTS: Record<string, { name: string; plane: string; or
   },
 };
 
-export function kitPartsData(): Record<string, { name: string; plane: string; order: number; at: [number, number]; art: PartData; bounds: [number, number, number, number] }> {
-  return Object.fromEntries(Object.entries(PODCAST_KIT_PARTS).map(([k, v]) => [k, { name: v.name, plane: v.plane, order: v.order, at: v.at, art: propPart(v.spec), bounds: v.spec.bounds }]));
+export type KitParts = Record<string, { name: string; plane: string; order: number; at: [number, number]; spec: PropSpec; parallax?: number }>;
+
+/* ------------------------------------------------------------------ coffee shop kit set pieces (I1) */
+
+export const COFFEE_KIT_PARTS: KitParts = {
+  wall: {
+    name: 'Brick wall', plane: 'back', order: 0, at: [960, 700],
+    spec: { colors: { wall: '#C98A6A', brick: '#B4775A', mortar: '#D9A486', trim: '#5A3B2B' }, bounds: [-1400, -800, 2800, 900], draw: (d) => {
+      d.rect(-1400, -800, 2800, 900, 'wall', { flat: true });
+      for (let row = 0; row < 16; row++) for (let col = -14; col < 14; col++) {
+        if ((row * 7 + col * 3) % 5 === 0) d.rect(col * 100 + (row % 2) * 50, -790 + row * 50, 92, 42, 'brick', { flat: true });
+      }
+      d.rect(-1400, -14, 2800, 16, 'trim', { flat: true });
+    } },
+  },
+  window: {
+    name: 'Shop window', plane: 'back', order: 1, at: [1360, 640],
+    spec: { colors: { street: '#BFD7E3', city: '#8FA7B5', frame: '#3E2B20', awning: '#2F6B57' }, bounds: [-300, -560, 600, 560], draw: (d) => {
+      d.rect(-290, -500, 580, 500, 'street', { flat: true, id: 'pane' });
+      for (const [x, w, h] of [[-280, 90, 260], [-180, 120, 200], [-50, 80, 300], [40, 140, 230], [190, 90, 280]] as const) d.rect(x, -h - 60, w, h, 'city', { flat: true, clip: 'pane' });
+      d.rect(-300, -510, 600, 20, 'frame', { flat: true });
+      d.rect(-300, -10, 600, 20, 'frame', { flat: true });
+      d.rect(-300, -510, 20, 520, 'frame', { flat: true });
+      d.rect(280, -510, 20, 520, 'frame', { flat: true });
+      d.rect(-10, -510, 20, 520, 'frame', { flat: true });
+      for (let i = 0; i < 6; i++) d.rect(-320 + i * 107, -560, 107, 60, i % 2 ? 'street' : 'awning', { flat: true });
+    } },
+  },
+  menu: {
+    name: 'Menu board', plane: 'back', order: 2, at: [700, 380],
+    spec: { colors: { board: '#2F4A3A', chalk: '#EDEDE2', frame: '#6B4B34' }, bounds: [-220, -150, 440, 300], draw: (d) => {
+      d.rect(-220, -150, 440, 300, 'frame', { r: 8, flat: true });
+      d.rect(-200, -130, 400, 260, 'board', { flat: true });
+      d.rect(-120, -110, 240, 26, 'chalk', { flat: true, opacity: 0.85 });
+      for (let i = 0; i < 4; i++) {
+        d.rect(-170, -60 + i * 44, 210, 10, 'chalk', { flat: true, opacity: 0.6 });
+        d.rect(120, -60 + i * 44, 50, 10, 'chalk', { flat: true, opacity: 0.6 });
+      }
+    } },
+  },
+  shelves: {
+    name: 'Shelves', plane: 'back', order: 3, at: [260, 560],
+    spec: { colors: { wood: '#7A5236', jar: '#E8D9B8', lid: '#3E2B20', cup: '#F2ECE2' }, bounds: [-220, -320, 440, 330], draw: (d) => {
+      for (let i = 0; i < 3; i++) {
+        d.rect(-220, -100 * i - 10, 440, 16, 'wood', { flat: true });
+        for (let j = 0; j < 5; j++) {
+          const x = -190 + j * 85;
+          if ((i + j) % 2) {
+            d.rect(x, -100 * i - 80, 50, 70, 'jar', { r: 8 });
+            d.rect(x - 2, -100 * i - 88, 54, 12, 'lid', { flat: true });
+          } else d.rect(x + 5, -100 * i - 50, 40, 40, 'cup', { r: 6 });
+        }
+      }
+    } },
+  },
+  counter: {
+    name: 'Counter', plane: 'mid', order: 0, at: [520, 1010],
+    spec: { colors: { front: '#8C5E3C', top: '#E8DCC8', panel: '#7A5236', machine: '#B9BEC4', dark: '#2A2A2E' }, bounds: [-460, -470, 920, 470], draw: (d) => {
+      d.rect(-460, -300, 920, 300, 'front', { id: 'front' });
+      for (let i = 0; i < 6; i++) d.rect(-440 + i * 150, -270, 130, 240, 'panel', { r: 6 });
+      d.rect(-480, -320, 960, 30, 'top', { r: 6 });
+      // Espresso machine.
+      d.rect(-380, -470, 220, 150, 'machine', { r: 10, id: 'machine' });
+      d.rect(-360, -440, 180, 30, 'dark', { r: 4, flat: true });
+      d.rect(-320, -400, 20, 50, 'dark', { flat: true });
+      d.rect(-240, -400, 20, 50, 'dark', { flat: true });
+      d.shade([[-250, -470], [-160, -470], [-160, -320], [-250, -320]], 'machine');
+    } },
+  },
+  lights: {
+    name: 'Pendant lights', plane: 'back', order: 4, at: [960, 0],
+    spec: { colors: { cord: '#2A2A2E', shade: '#2F6B57', glow: '#FFE9B8' }, bounds: [-700, 0, 1400, 300], draw: (d) => {
+      for (const x of [-600, -200, 200, 600]) {
+        d.stroke([[x, 0], [x, 180]], 'cord', 4);
+        d.poly([[x - 60, 250], [x + 60, 250], [x + 30, 180], [x - 30, 180]], 'shade');
+        d.ellipse(x, 270, 120, 60, 'glow', { flat: true, opacity: 0.35 });
+      }
+    } },
+  },
+  floor: {
+    name: 'Tiled floor', plane: 'ground', order: 0, at: [960, 1080],
+    spec: { colors: { a: '#E7DED0', b: '#BBAE9C' }, bounds: [-1400, -460, 2800, 480], draw: (d) => {
+      d.rect(-1400, -460, 2800, 480, 'a', { flat: true });
+      for (let row = 0; row < 6; row++) for (let col = -14; col < 14; col++) if ((row + col) % 2) d.rect(col * 100, -460 + row * 80, 100, 80, 'b', { flat: true });
+    } },
+  },
+};
+
+export function kitPartsData(parts: KitParts = PODCAST_KIT_PARTS): Record<string, { name: string; plane: string; order: number; at: [number, number]; art: PartData; bounds: [number, number, number, number] }> {
+  return Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, { name: v.name, plane: v.plane, order: v.order, at: v.at, art: propPart(v.spec), bounds: v.spec.bounds }]));
 }

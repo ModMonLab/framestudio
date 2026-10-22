@@ -1,6 +1,6 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
 import { useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Bot, ChevronRight, Lock, SkipBack, Sparkles, Video, Volume2 } from 'lucide-react';
+import { AlertTriangle, Bot, ChevronRight, Lock, Maximize, SkipBack, Sparkles, Video, Volume2 } from 'lucide-react';
 import { conflictingClipIds, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
 import type { Clip, Scene, Track } from '@frame/schema';
 import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts } from '@frame/ui';
@@ -98,6 +98,7 @@ export function Timeline() {
         >Auto coverage</Button>
         <div style={{ width: 170 }}><SearchField label="Filter tracks" placeholder="Filter tracks" value={q} onChange={setQ} /></div>
         <Segmented label="Track filter" value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'picture', label: 'Picture' }, { value: 'audio', label: 'Audio' }]} />
+        <IconButton label="Zoom to fit" icon={<Maximize size={14} />} onClick={() => { const w = (scroller.current?.clientWidth ?? 800) - HEADER - 40; setPx(Math.max(10, Math.min(300, w / Math.max(1, scene.duration / 48000)))); }} />
         <div style={{ width: 220 }}><SliderRow inline label="Zoom" value={pxPerSec} min={10} max={300} defaultValue={60} format={(v) => `${Math.round(v)}`} onChange={(v) => setPx(v)} /></div>
       </div>
       <div className="st-tl-body" ref={scroller}>
@@ -106,7 +107,11 @@ export function Timeline() {
             <div className="st-tl-corner" style={{ width: HEADER }} />
             <div className="st-tl-ruler" style={{ width }} onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); seekFromEvent(e); }} onPointerMove={(e) => e.buttons & 1 && seekFromEvent(e)} role="slider" aria-label="Playhead" aria-valuemin={0} aria-valuemax={scene.duration / 48000} aria-valuenow={time / 48000} aria-valuetext={formatTimecode(time)} tabIndex={0}>
               {ticksFor(scene.duration, pxPerSec).map((s) => <span key={s} className="st-tick" style={{ left: s * pxPerSec }}>{s % 60 === 0 && s >= 60 ? `${s / 60}:00` : `${s}s`}</span>)}
-              {scene.markers.map((m) => <span key={m.id} className="st-marker" style={{ left: x(m.at) }} title={m.name} />)}
+              {scene.markers.map((m) => (
+                <button key={m.id} type="button" className="st-marker" style={{ left: x(m.at) }} title={`${m.name} (right-click to delete)`} aria-label={`Marker ${m.name}`}
+                  onPointerDown={(e) => { e.stopPropagation(); studio.set({ time: m.at, playing: false }); }}
+                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); void studio.exec([{ name: 'marker.remove', params: { scene: scene.id, id: m.id } }], `Delete marker ${m.name}`); }} />
+              ))}
               {scene.loop && <span className="st-loop" style={{ left: x(scene.loop.start), width: x(scene.loop.end - scene.loop.start) }} />}
             </div>
           </div>
@@ -198,8 +203,26 @@ function clipLabel(project: ProjectState, scene: Scene, c: Clip, track: Track): 
 function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict }: { project: ProjectState; scene: Scene; clip: Clip; track: Track; x: (t: number) => number; pxPerSec: number; selected: boolean; conflict: boolean }) {
   const { studio } = useCtx();
   const openMenu = useContextMenu();
-  const [drag, setDrag] = useState<{ x0: number; dx: number } | null>(null);
+  const [drag, setDrag] = useState<{ x0: number; dx: number; mode: 'move' | 'start' | 'end' } | null>(null);
   const fps = project.project.frameRate;
+  const time = useStudio(studio, (s) => s.time);
+  // Snapping (FR-TML-02): frames, the playhead, markers and other clips' edges within 8 px.
+  const snap = (t: number): number => {
+    const frame = 48000 / fps;
+    const targets = [time, ...scene.markers.map((m) => m.at), ...scene.clips.filter((c) => c.id !== clip.id).flatMap((c) => [c.start, c.end])];
+    const tol = (8 / pxPerSec) * 48000;
+    let best = Math.round(t / frame) * frame;
+    let d = tol;
+    for (const g of targets) if (Math.abs(g - t) < d) {
+      d = Math.abs(g - t);
+      best = g;
+    }
+    return Math.max(0, best);
+  };
+  const ticksOf = (px: number) => (px / pxPerSec) * 48000;
+  const preview = drag ? (drag.mode === 'move' ? { start: snap(clip.start + ticksOf(drag.dx)), end: 0 } : drag.mode === 'start' ? { start: Math.min(clip.end - 48000 / fps, snap(clip.start + ticksOf(drag.dx))), end: clip.end } : { start: clip.start, end: Math.max(clip.start + 48000 / fps, snap(clip.end + ticksOf(drag.dx))) }) : undefined;
+  const shownStart = preview ? preview.start : clip.start;
+  const shownEnd = preview ? (drag!.mode === 'move' ? preview.start + (clip.end - clip.start) : preview.end) : clip.end;
   const state = clip.line ? lineTakeState(project, clip) : undefined;
   const invalid = conflict || state === 'Missing' || state === 'Failed' || state === 'Outdated';
   const generating = state === 'Generating' || state === 'Queued';
@@ -208,17 +231,24 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict
   // Changes made by agents stay visible to people (FR-AGT-04/05, AC-13).
   const agent = clip.source?.startsWith('agent:') ? clip.source.slice(6) : undefined;
   const commitMove = () => {
-    if (!drag) return;
-    const dt = Math.round((drag.dx / pxPerSec) * fps) * (48000 / fps);
+    if (!drag || !preview) return;
+    const mode = drag.mode;
     setDrag(null);
-    if (dt === 0 || track.lock) return;
-    void studio.exec([{ name: 'clip.move', params: { scene: scene.id, ids: [clip.id], delta: Math.max(-clip.start, dt) } }], `Move ${label.slice(0, 24)}`);
+    if (track.lock || Math.abs(drag.dx) < 2) return;
+    if (mode === 'move') {
+      const dt = shownStart - clip.start;
+      if (dt !== 0) void studio.exec([{ name: 'clip.move', params: { scene: scene.id, ids: [clip.id], delta: dt } }], `Move ${label.slice(0, 24)}`);
+    } else {
+      // Trimming media clips moves their source in-point; nothing is time-stretched (FR-TML-03).
+      const to = mode === 'start' ? shownStart : shownEnd;
+      if (to !== (mode === 'start' ? clip.start : clip.end)) void studio.exec([{ name: 'clip.trim', params: { scene: scene.id, id: clip.id, edge: mode, to } }], `Trim ${label.slice(0, 24)}`);
+    }
   };
   return (
     <button
       type="button"
       className={`fr-clip st-cat--${CATEGORY[track.kind]} ${selected ? 'fr-clip--selected' : ''} ${invalid ? 'fr-clip--invalid' : ''} ${generating ? 'fr-clip--generating' : ''} ${muted ? 'fr-clip--muted' : ''}`}
-      style={{ left: x(clip.start) + (drag?.dx ?? 0), width: Math.max(4, x(clip.end - clip.start)) }}
+      style={{ left: x(shownStart), width: Math.max(4, x(shownEnd - shownStart)) }}
       title={`${label}${state ? ` · ${state}` : ''}${conflict ? ' · In conflict (see Problems)' : ''}${agent ? ` · added by agent ${agent}` : ''}`}
       aria-pressed={selected}
       aria-label={`${track.name}: ${label}${state ? `, ${state}` : ''}${conflict ? ', in conflict' : ''}${agent ? ', added by an agent' : ''}`}
@@ -226,7 +256,10 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict
         e.stopPropagation();
         studio.set({ selection: e.shiftKey ? [...studio.state.selection, { kind: 'clip', id: clip.id }] : [{ kind: 'clip', id: clip.id }] });
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-        setDrag({ x0: e.clientX, dx: 0 });
+        // The outer 6 px of a clip are trim handles (Design System §6.2); lines keep their take length.
+        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const edge = r.width > 18 && !clip.line ? (e.clientX - r.left < 6 ? 'start' : r.right - e.clientX < 6 ? 'end' : 'move') : 'move';
+        setDrag({ x0: e.clientX, dx: 0, mode: edge });
       }}
       onPointerMove={(e) => drag && setDrag({ ...drag, dx: e.clientX - drag.x0 })}
       onPointerUp={commitMove}
@@ -237,6 +270,8 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict
         openMenu({ x: e.clientX || r.left, y: e.clientY || r.bottom, items: clipMenu(studio, clip.id), label: 'Clip actions' });
       }}
     >
+      {!clip.line && <span className="st-trim st-trim--start" aria-hidden />}
+      {!clip.line && <span className="st-trim st-trim--end" aria-hidden />}
       {conflict && <AlertTriangle size={11} aria-hidden className="st-agent-mark" />}
       {agent && <Bot size={11} aria-hidden className="st-agent-mark" />}
       {generating ? 'Generating · ' : ''}{label}
