@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadCatalog, renderCatalogMarkdown } from '../src/catalog.js';
+import { fileURLToPath } from 'node:url';
 
-const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../..');
+const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
 describe('catalog source (CAT-01, CAT-07)', () => {
   const cat = loadCatalog(path.join(repo, 'catalog'));

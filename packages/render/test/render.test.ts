@@ -3,8 +3,9 @@ import path from 'node:path';
 import { createNodeRenderer, type NodeRenderer } from '../src/node.js';
 import { checkGolden } from '../src/golden.js';
 import { compose, rotate, translate, type Frame } from '../src/index.js';
+import { fileURLToPath } from 'node:url';
 
-const here = path.dirname(new URL(import.meta.url).pathname);
+const here = path.dirname(fileURLToPath(import.meta.url));
 const fontsDir = path.resolve(here, '../../../content/fonts');
 let r: NodeRenderer;
 

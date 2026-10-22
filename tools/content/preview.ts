@@ -9,8 +9,9 @@ import { eyesPart, browPart, nosePart, mouthPart, earsPart } from './parts/featu
 import { bodyPart, handsPart, feetPart } from './parts/body.js';
 import { hairPart } from './parts/hair.js';
 import { topPart, bottomPart, shoePart } from './parts/wardrobe.js';
+import { fileURLToPath } from 'node:url';
 
-const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const out = process.argv[2] ?? '/tmp/sheet.png';
 const style = (f: string) => JSON.parse(fs.readFileSync(path.join(repo, 'content/families', `${f}.json`), 'utf8')) as FamilyStyle;
 

@@ -7,8 +7,9 @@ import { ProjectStore, encodeWav, measureLoudness, decodeAudioFile, probe } from
 import { runCli } from '../../packages/cli/src/index.js';
 import { createNodeRenderer, type NodeRenderer } from '../../packages/render/src/node.js';
 import { buildSampleScene, fixtureSpeechPcm } from './sample-scene.js';
+import { fileURLToPath } from 'node:url';
 
-const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 /** Writes the M1 sample to disk with fixture take media (labelled fixture; not real speech). */
 function sampleProject(): { dir: string; scene: string } {

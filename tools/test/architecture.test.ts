@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadCatalog } from '@frame/assets/catalog';
+import { fileURLToPath } from 'node:url';
 
-const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const runtimeRoots = [...fs.readdirSync(path.join(repo, 'packages')).map((p) => `packages/${p}/src`), ...(fs.existsSync(path.join(repo, 'apps')) ? fs.readdirSync(path.join(repo, 'apps')).map((a) => `apps/${a}/src`) : [])];
 
 function sources(dir: string): string[] {

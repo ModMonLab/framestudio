@@ -42,6 +42,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @frame/gallery exec playwright install --with-deps chromium
       - run: pnpm test:visual
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: apps/gallery/test-results/
+          retention-days: 7
   voice-worker:
     # CPU-only: fixture engine, API contract and OpenAPI drift (API-04). GPU paths need the reference machine.
     runs-on: ubuntu-latest

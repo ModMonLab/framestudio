@@ -19,8 +19,9 @@ import { CAST, castData } from './cast-specs.js';
 import { PROPS, propPart, kitPartsData } from './parts/props.js';
 import { CAPTION_STYLES } from './text-specs.js';
 import { OUTPUT_PRESETS } from './output-specs.js';
+import { fileURLToPath } from 'node:url';
 
-const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const outDir = path.join(repo, 'content/assets');
 const DATE = '2026-10-22';
 const ALL_VIEWS: View[] = ['front', 'three', 'side', 'back'];

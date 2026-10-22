@@ -1,18 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { OutputSettings, StyleFamily } from '@frame/schema';
+import { fileURLToPath } from 'node:url';
 
 export const APP_VERSION = '0.1.0';
 
 /** Bundled content folder (overridable with FRAME_CONTENT). */
 export function contentDir(): string {
   if (process.env.FRAME_CONTENT) return path.resolve(process.env.FRAME_CONTENT);
-  return path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../../content');
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../content');
 }
 
 export function catalogDir(): string {
   if (process.env.FRAME_CATALOG) return path.resolve(process.env.FRAME_CATALOG);
-  return path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../../catalog');
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../catalog');
 }
 
 export interface LibraryDefaults {

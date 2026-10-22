@@ -5,8 +5,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { OpenProject, stableStringify } from '../src/index.js';
 import { newProject } from './helpers.js';
+import { fileURLToPath } from 'node:url';
 
-const here = path.dirname(new URL(import.meta.url).pathname);
+const here = path.dirname(fileURLToPath(import.meta.url));
 // Run node directly with the tsx loader: the tsx CLI wrapper would leave an orphaned child running after SIGKILL.
 const nodeArgs = ['--import', 'tsx'];
 
@@ -14,11 +15,21 @@ function runAndKill(dir: string, seed: number, edits: number, killAfterMs: numbe
   return new Promise((resolve) => {
     const logFile = path.join(path.dirname(dir), `crash-${seed}.log`);
     const child = spawn(process.execPath, [...nodeArgs, path.join(here, 'fixtures/crash-child.ts'), dir, String(seed), String(edits), logFile], { stdio: ['ignore', 'ignore', 'inherit'] });
-    const timer = setTimeout(() => child.kill('SIGKILL'), killAfterMs);
+    // Start the kill clock only once the child has opened the project and logged its first state: on slow CI
+    // runners loader start-up alone can exceed the kill delay, which would test nothing.
+    let timer: NodeJS.Timeout | undefined;
+    const ready = setInterval(() => {
+      if (fs.existsSync(logFile) && fs.statSync(logFile).size > 0) {
+        clearInterval(ready);
+        timer = setTimeout(() => child.kill('SIGKILL'), killAfterMs);
+      }
+    }, 10);
     child.on('exit', () => {
+      clearInterval(ready);
       clearTimeout(timer);
       const seen = new Map<number, string>();
-      for (const line of fs.readFileSync(logFile, 'utf8').split('\n')) {
+      const text = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
+      for (const line of text.split('\n')) {
         const [rev, h] = line.split(' ');
         if (rev && h) seen.set(Number(rev), h);
       }
@@ -39,6 +50,7 @@ describe('reliability: kill during random edits (NFR-08, AC-16)', () => {
       const reopened = OpenProject.open(dir);
       const rev = reopened.session.revision;
       const h = crypto.createHash('sha256').update(stableStringify(reopened.state)).digest('hex');
+      expect(seen.size, 'child logged its initial state').toBeGreaterThan(0);
       const last = Math.max(...seen.keys());
       // The commit is durable once journaled; it may have been printed or not yet printed before the kill.
       expect([last, last + 1]).toContain(rev);
@@ -50,5 +62,5 @@ describe('reliability: kill during random edits (NFR-08, AC-16)', () => {
     }
     expect(total).toBeGreaterThanOrEqual(1000);
     expect(kills).toBeGreaterThan(0);
-  }, 120_000);
+  }, 300_000);
 });

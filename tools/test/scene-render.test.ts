@@ -5,8 +5,9 @@ import { bundledLibrary, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '../../packages/render/src/node.js';
 import { checkGolden } from '../../packages/render/src/golden.js';
 import { buildSampleScene } from './sample-scene.js';
+import { fileURLToPath } from 'node:url';
 
-const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const content = path.join(repo, 'content');
 let r: NodeRenderer;
 beforeAll(async () => {
