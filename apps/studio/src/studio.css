@@ -141,3 +141,8 @@
 .st-tb-select--more { width: 84px; }
 .st-testbar { overflow-x: auto; overflow-y: hidden; }
 .st-testbar > * { flex: none; }
+.st-versions { display: grid; grid-template-columns: minmax(200px, 1fr) 2fr; gap: var(--space-6); min-height: 240px; }
+.st-versions .st-list { border: 1px solid var(--color-border); border-radius: var(--radius-sm); max-height: 360px; overflow: auto; }
+.st-versions .st-list__row[aria-pressed='true'] { background: var(--color-selected); }
+.st-version-detail { display: flex; flex-direction: column; gap: var(--space-4); align-items: flex-start; }
+.st-h3 { margin: 0; font-size: 13px; font-weight: 600; }

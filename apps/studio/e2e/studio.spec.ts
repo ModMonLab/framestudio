@@ -207,3 +207,30 @@ test('character builder edits a draft, checks the rig, saves a new character for
   await page.getByRole('button', { name: /^Undo Save .* as a new character/ }).first().click();
   await expect.poll(async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id).asset).toBe(maya.asset);
 });
+
+test('project versions: save, compare and restore; packages import from the File menu (FR-PER-03, FR-IMP-04)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const original = st.scenes[sid].name;
+  await page.getByRole('menuitem', { name: 'File' }).click();
+  await page.getByRole('menuitem', { name: 'Versions…' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Versions' });
+  await dlg.getByRole('textbox', { name: 'Version name' }).fill('Before rename');
+  await dlg.getByRole('button', { name: 'Save version' }).click();
+  await expect(dlg.getByRole('button', { name: /Before rename/ })).toBeVisible();
+  await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'scene.rename', params: { id: sid, name: 'Renamed scene' } }] } });
+  await dlg.getByRole('button', { name: /Before rename/ }).click();
+  await expect(dlg.getByRole('list', { name: 'Differences' })).toContainText('Renamed scene');
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await dlg.getByRole('button', { name: 'Restore this version' }).click();
+  await expect(dlg).toBeHidden();
+  await expect.poll(async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state.scenes[sid].name).toBe(original);
+  // A .framechar from this project imports as "already present"; the menu path and file input work.
+  const made = await (await page.request.post(`/api/projects/${pid}/characters`, { data: { spec: { name: 'Packed', from: st.scenes[sid].instances.find((i: { kind: string }) => i.kind === 'character').asset } } })).json();
+  const pkg = await page.request.get(`/api/projects/${pid}/packages/export?format=framechar&refs=${encodeURIComponent(made.ref)}`);
+  await page.locator('input[aria-label="Import package"]').setInputFiles({ name: 'packed.framechar', mimeType: 'application/zip', buffer: await pkg.body() });
+  await expect(page.getByText('Everything in the package is already in this project')).toBeVisible();
+});
