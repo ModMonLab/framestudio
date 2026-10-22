@@ -108,6 +108,8 @@ export const api = {
     const q = new URLSearchParams({ name: file.name, rights: o.rights, ...(o.licence ? { licence: o.licence } : {}), ...(o.scene ? { scene: o.scene } : {}), ...(o.as ? { as: o.as } : {}), ...(o.at !== undefined ? { at: String(Math.round(o.at)) } : {}), ...(o.x !== undefined ? { x: String(o.x) } : {}), ...(o.y !== undefined ? { y: String(o.y) } : {}) });
     return file.arrayBuffer().then((b) => req<{ kind: 'image' | 'audio'; asset?: string; instance?: string; clip?: string; warnings: string[]; revision: number }>('POST', `/api/projects/${pid}/import?${q}`, new Uint8Array(b), { 'content-type': 'application/octet-stream' }));
   },
+  readArtwork: (pid: string, name: string, bytes: Uint8Array) => req<unknown>('POST', `/api/projects/${pid}/rigging/read?name=${encodeURIComponent(name)}`, bytes, { 'content-type': 'application/octet-stream' }),
+  buildRig: (pid: string, body: Record<string, unknown>) => req<unknown>('POST', `/api/projects/${pid}/rigging/build`, body),
   versions: (pid: string) => req<{ versions: { id: string; name: string; createdAt: string; revision: number }[] }>('GET', `/api/projects/${pid}/versions`),
   saveVersion: (pid: string, name: string) => req<{ id: string; name: string; createdAt: string; revision: number }>('POST', `/api/projects/${pid}/versions`, { name }),
   compareVersion: (pid: string, vid: string) => req<VersionComparison>('GET', `/api/projects/${pid}/versions/${vid}/compare`),

@@ -50,6 +50,7 @@
     "typescript-eslint": "^8.72.0",
     "vitest": "^3.2.7",
     "yaml": "^2.9.1",
-    "@frame/mcp": "workspace:*"
+    "@frame/mcp": "workspace:*",
+    "ag-psd": "31.0.3"
   }
 }

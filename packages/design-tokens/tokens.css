@@ -65,8 +65,8 @@
   --z-canvas: 0;
   --z-panel: 10;
   --z-sticky: 20;
-  --z-popover: 100;
   --z-dialog: 200;
+  --z-popover: 250;
   --z-toast: 300;
 }
 

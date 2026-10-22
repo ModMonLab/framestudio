@@ -12,6 +12,7 @@
     "@frame/render": "workspace:*",
     "@frame/rig": "workspace:*",
     "@frame/schema": "workspace:*",
+    "ag-psd": "31.0.3",
     "fast-xml-parser": "5.2.5",
     "fflate": "0.8.2"
   }

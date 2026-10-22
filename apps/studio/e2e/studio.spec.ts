@@ -259,3 +259,34 @@ test('imports an SVG as an object with a rights statement; the preview still mat
   await page.waitForTimeout(800);
   await previewMatchesServer(page, 0);
 });
+
+test('rigging assistant: a layered PSD becomes a character with declared view gaps and a library mouth (FR-IMP-03, AC-12 path)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const psd = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-psd-')), 'hero.psd');
+  execFileSync(process.execPath, ['--import', 'tsx', path.join(repo, 'tools/demo/make-psd.ts'), psd], { cwd: repo });
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await page.locator('input[aria-label="Import a file"]').setInputFiles(psd);
+  await page.getByRole('dialog', { name: 'Import hero.psd' }).getByRole('button', { name: 'Open rigging assistant' }).click();
+  const dlg = page.getByRole('dialog', { name: /Rigging assistant/ });
+  await expect(dlg.getByRole('region', { name: 'Front layers' }).or(dlg.locator('section[aria-label="Front layers"]'))).toBeVisible({ timeout: 30_000 });
+  await expect(dlg.getByRole('button', { name: 'Rig target for head' }).first()).toContainText('Head');
+  // The three-quarter view has only a resting mouth: the rig check blocks saving until a library mouth fills in.
+  await expect(dlg.getByRole('list', { name: 'Rig check problems' })).toContainText('mouth shapes');
+  await expect(dlg.getByRole('button', { name: 'Save character' })).toBeDisabled();
+  await dlg.getByRole('button', { name: 'Library mouth' }).click();
+  await page.getByRole('option', { name: /^Library: / }).first().click();
+  await expect(dlg.getByText('Rig check passed')).toBeVisible();
+  await expect(dlg.getByRole('img', { name: /hero, (Front|Three-quarter) view/ })).toHaveCount(2);
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await dlg.getByRole('button', { name: 'Save character' }).click();
+  await expect(dlg).toBeHidden();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const chr = Object.values(st.assets as Record<string, { kind: string; name: string; viewExemptions: Record<string, string> }>).find((a) => a.kind === 'chr' && a.name === 'hero')!;
+  expect(Object.keys(chr.viewExemptions).sort()).toEqual(['back', 'side']);
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  expect(st.scenes[sid].instances.some((i: { name: string }) => i.name === 'hero')).toBe(true);
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 0);
+});

@@ -8,12 +8,12 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { assetUsages, checkCharacter, compareStates, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { assetUsages, checkCharacter, compareStates, rigArtwork, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, importFile, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -397,6 +397,56 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         dryRun: q.dryRun === 'true',
       });
       return res;
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- rigging assistant (FR-IMP-03) */
+  // Reads layered artwork, stores raster layers as media and returns layers with suggested rig targets.
+  app.post<{ Params: { pid: string }; Querystring: { name: string }; Body: Buffer }>('/api/projects/:pid/rigging/read', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the PSD or SVG bytes as application/octet-stream');
+      const art = readLayeredArtwork(new Uint8Array(req.body), String(req.query.name ?? 'artwork'));
+      const layers = art.layers.map((l) => ({
+        id: l.id, name: l.name, ...(l.view ? { view: l.view } : {}), ...(l.group ? { group: l.group } : {}), hidden: l.hidden, bounds: l.bounds,
+        ...(l.png ? { media: p.open.store.putMedia(l.png, { ext: 'png', mime: 'image/png', width: Math.round(l.bounds[2]), height: Math.round(l.bounds[3]) }).hash } : {}),
+        ...(l.paths ? { paths: l.paths } : {}),
+        suggestion: suggestTarget(l.name),
+      }));
+      return { fileName: art.fileName, source: art.source, width: art.width, height: art.height, views: art.views, layers, warnings: art.warnings, targets: RIG_TARGETS.map((t) => ({ value: t, label: RIG_TARGET_LABELS[t] })) };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Builds the character from mapped layers: a dry run returns the manifests and the rig check; save adds them.
+  app.post<{ Params: { pid: string }; Body: { name: string; fileName: string; rights: string; layers: RigLayer[]; mapping: Record<string, RigTarget>; libraryParts?: Record<string, string>; save?: boolean; place?: { scene: string; x?: number; y?: number } } }>('/api/projects/:pid/rigging/build', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      if (!b?.name?.trim()) throw new FrameError('USAGE', 'Name the character');
+      if (!b.rights?.trim()) throw new FrameError('USAGE', 'State your rights to the artwork', undefined, 'Imports record a statement of rights (FR-IMP-02).');
+      for (const l of b.layers ?? []) if (l.media && !p.open.store.findMedia(l.media)) throw new FrameError('NOT_FOUND', `Layer ${l.name} media is missing; read the artwork again`);
+      const lib = library(p);
+      for (const ref of Object.values(b.libraryParts ?? {})) if (ref && !lib.has(ref)) throw new FrameError('NOT_FOUND', `${ref} is not in the library`);
+      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: b.mapping ?? {}, libraryParts: b.libraryParts ?? {}, newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
+      const local = new Map([...res.parts, res.character].map((m) => [`${m.id}@${m.version}`, m]));
+      const look = (r: string) => local.get(r) ?? (lib.manifest(r) as AssetManifest | undefined);
+      const check = checkCharacter(res.character, look, lib.byKind('act').map((x) => x.manifest));
+      const errors = [...res.problems.filter((x) => x.severity === 'error'), ...check.problems.filter((x) => x.severity === 'error')];
+      if (!b.save) return { ...res, check, ok: errors.length === 0 };
+      if (errors.length) throw new FrameError('VALIDATION_FAILED', `The character cannot be saved yet: ${errors.map((e) => e.message).join('; ')}`, { problems: errors });
+      const ref = `${res.character.id}@1`;
+      const cmds: { name: string; params: Record<string, unknown> }[] = [...res.parts, res.character].map((manifest) => ({ name: 'asset.addLocal', params: { manifest } }));
+      cmds.push({ name: 'cast.add', params: { character: ref, name: res.character.name } });
+      let instance: string | undefined;
+      if (b.place) {
+        instance = randomId('ins');
+        cmds.push({ name: 'instance.add', params: { scene: b.place.scene, id: instance, kind: 'character', asset: ref, name: res.character.name, transform: { x: b.place.x ?? 960, y: b.place.y ?? 1000 }, character: { look: 'default', view: res.views[0], posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false } } } });
+      }
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: `Rig ${res.character.name}` });
+      return { ref, instance: instance ?? null, revision: r.revision, views: res.views };
     } catch (e) {
       return sendError(reply, e);
     }

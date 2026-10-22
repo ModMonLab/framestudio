@@ -2,7 +2,7 @@ import type { StyleFamily, View } from '@frame/schema';
 import type { GroupItem, Item, Paint } from '@frame/render';
 import { bodyDims, projectAll, solvePose, VIEW_ANGLE, type BodyDims, type BodyParams, type Joint, type Pose, type Projected, type Vec2 } from './skeleton.js';
 import { along, buildPath, ellipsePath, evalPoint, limbPath, resolveColor, resolveFill, subChain, type Mapper, type Palette, type Params, type Pt } from './geometry.js';
-import type { FamilyArt, FitSpace, LayerDef, LimbLayerDef, MouthLetter, PartData, ViewArt, When } from './types.js';
+import type { FamilyArt, FitSpace, LayerDef, LimbLayerDef, MouthLetter, PartData, ShapeDef, ViewArt, When } from './types.js';
 
 /** Family style guide values that the engine applies generically (Vision §7). */
 export interface FamilyStyle {
@@ -310,6 +310,15 @@ function makeFrames(d: BodyDims, st: PerformState, headArt: ViewArt | undefined,
     return (u, v) => [an[0] + u * s * flipS, an[1] + v * s];
   };
 
+  // Limb segment frames: v along the bone, u across in half-widths; u ≥ 0 is the screen-right side of the bone.
+  const segmentMap = (a: Pt, b: Pt, half: number): Mapper => {
+    const ax: Pt = [b[0] - a[0], b[1] - a[1]];
+    const L = Math.hypot(ax[0], ax[1]) || 1;
+    const perp: Pt = [-ax[1] / L, ax[0] / L];
+    const s = st.flip ? -1 : 1;
+    return (u, v) => [a[0] + ax[0] * v + perp[0] * u * half * s, a[1] + ax[1] * v + perp[1] * u * half * s];
+  };
+
   const featureUnit = d.headW * 0.11 * (1 + (params['eye.size'] ?? 0) * 0.18);
   const map: Frames['map'] = (space, side, mirror) => {
     const keep = mirror === 'keep';
@@ -334,6 +343,14 @@ function makeFrames(d: BodyDims, st: PerformState, headArt: ViewArt | undefined,
       case 'mouth': return featureMap('mouth', featureUnit * 1.25 * (1 + (params['mouth.size'] ?? 0) * 0.15), keep, false);
       case 'nose': return featureMap('nose', featureUnit * 1.1, keep, false);
       case 'stage': return (u, v) => [u, v];
+      case 'upperArmL': return segmentMap(J.shoulderL.p, J.elbowL.p, d.armW / 2);
+      case 'upperArmR': return segmentMap(J.shoulderR.p, J.elbowR.p, d.armW / 2);
+      case 'foreArmL': return segmentMap(J.elbowL.p, J.wristL.p, d.armW / 2);
+      case 'foreArmR': return segmentMap(J.elbowR.p, J.wristR.p, d.armW / 2);
+      case 'thighL': return segmentMap(J.hipL.p, J.kneeL.p, d.legW / 2);
+      case 'thighR': return segmentMap(J.hipR.p, J.kneeR.p, d.legW / 2);
+      case 'shinL': return segmentMap(J.kneeL.p, J.ankleL.p, d.legW / 2);
+      case 'shinR': return segmentMap(J.kneeR.p, J.ankleR.p, d.legW / 2);
       default: return undefined;
     }
   };
@@ -464,8 +481,10 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
         const map = frames.map(sp, side, part.data.mirror);
         if (!map) continue; // feature not present in this view (e.g. far eye in side view)
         const params = side && /^(eye|brow)/.test(sp) ? sideParams(side) : side && sp.startsWith('ear') ? baseParams : { ...baseParams, 'gaze.x': gx, 'gaze.y': gy, ...sideParams('L') };
-        const pair = sp.startsWith('hand') ? 'arm' : sp.startsWith('foot') ? 'leg' : undefined;
-        const slot = resolveSlot(layer.slot, side, pair);
+        const pair = /^(hand|upperArm|foreArm)/.test(sp) ? 'arm' : /^(foot|thigh|shin)/.test(sp) ? 'leg' : undefined;
+        // Limb-segment spaces carry their side in the name (upperArmL …).
+        const limbSide = !side && pair && /[LR]$/.test(sp) ? (sp.slice(-1) as 'L' | 'R') : side;
+        const slot = resolveSlot(layer.slot, limbSide, pair);
         const sideState = side ? { ...state, hand: side === 'L' ? st.pose.handL : st.pose.handR, side } : state;
         if (!whenOk(layer.when, sideState)) continue;
         drawShapes(layer, art, part, map, params, sideState, slot, side === 'R' ? 'R' : 'L');
@@ -485,6 +504,11 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
     const missing = (n: string) => issues.push(`${part.ref}: missing point ${n}`);
     const items: Item[] = [];
     for (const s of shapes) {
+      if (s.art) {
+        const placed = placedArt(s.art, map, s.opacity);
+        if (placed) items.push(placed);
+        continue;
+      }
       const d = s.path ? buildPath(s.path, art.points, params, map, missing) : s.ellipse ? ellipsePath(s.ellipse, art.points, params, map, missing) : '';
       if (!d) continue;
       if (s.id) byId.set(s.id, d);
@@ -588,4 +612,33 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
   const top = Math.min(...ys) - d.headH * 0.75;
   const bounds = { x: Math.min(...xs) - d.armW * 2, y: top, w: Math.max(...xs) - Math.min(...xs) + d.armW * 4, h: Math.max(0, ...ys) - top };
   return { item: { k: 'group', items: ordered }, anchors, joints: J, bounds, dims: d, issues: [...new Set(issues)] };
+}
+
+/**
+ * Draws placed artwork (imported drawings) into its fit-space box: the source rectangle maps affinely onto the box's
+ * corners as the space moves (u along the box's first axis, v along its second), so mirroring and rotation follow.
+ */
+function placedArt(a: NonNullable<ShapeDef['art']>, map: Mapper, opacity?: number): Item | undefined {
+  const [u0, v0, u1, v1] = a.box;
+  const [x, y, w, h] = a.src;
+  if (!(w > 0 && h > 0)) return undefined;
+  const p0 = map(u0, v0);
+  const pu = map(u1, v0);
+  const pv = map(u0, v1);
+  const A = (pu[0] - p0[0]) / w;
+  const B = (pu[1] - p0[1]) / w;
+  const C = (pv[0] - p0[0]) / h;
+  const D = (pv[1] - p0[1]) / h;
+  const tf: [number, number, number, number, number, number] = [A, B, C, D, p0[0] - A * x - C * y, p0[1] - B * x - D * y];
+  const op = opacity !== undefined && opacity < 1 ? { op: opacity } : {};
+  if (a.image) return { k: 'image', src: `media:${a.image}`, x, y, w, h, tf, ...op };
+  const items: Item[] = (a.paths ?? []).map((pth) => ({
+    k: 'path', d: pth.d,
+    ...(pth.fill ? { fill: { color: pth.fill } } : {}),
+    ...(pth.stroke ? { stroke: { paint: { color: pth.stroke }, width: pth.strokeWidth ?? 1 } } : {}),
+    ...(pth.opacity !== undefined && pth.opacity < 1 ? { op: pth.opacity } : {}),
+    ...(pth.evenOdd ? { evenOdd: true } : {}),
+    ...(pth.tf ? { tf: pth.tf } : {}),
+  } as Item));
+  return { k: 'group', tf, items, ...op };
 }

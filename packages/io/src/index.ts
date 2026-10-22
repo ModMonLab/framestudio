@@ -9,3 +9,4 @@ export * from './assets-io.js';
 export * from './locks.js';
 export * from './import-image.js';
 export * from './import.js';
+export * from './artwork.js';

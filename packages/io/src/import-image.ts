@@ -79,6 +79,8 @@ export interface VectorShape {
 export interface VectorLayer {
   /** Layer name from id, data-name or inkscape:label (used by the rigging assistant's name mapping). */
   name: string;
+  /** Container group the layer came from (e.g. a view group), when `container` matched. */
+  group?: string;
   shapes: VectorShape[];
   /** Bounding box in drawing units [x, y, w, h] (approximate: transformed control points). */
   bounds: [number, number, number, number];
@@ -244,7 +246,7 @@ export interface SvgResult {
 }
 
 /** Parses an SVG document into layers of paths. Throws on malformed or unsafe documents. */
-export function parseSvg(text: string): SvgResult {
+export function parseSvg(text: string, o: { container?: (groupName: string) => boolean } = {}): SvgResult {
   if (text.length > 16 * 1024 * 1024) throw bad('The SVG is larger than 16 MB');
   if (/<!DOCTYPE|<!ENTITY/i.test(text)) throw bad('SVG files with a DOCTYPE or entities are not accepted (they can expand to unbounded size)');
   let doc: unknown[];
@@ -285,6 +287,19 @@ export function parseSvg(text: string): SvgResult {
 
   interface Inherited { fill: string | undefined; stroke: string | undefined; strokeWidth: number; opacity: number; tf: Affine; evenOdd: boolean }
   const layers: VectorLayer[] = [];
+  const inherit = (a: Record<string, string>, inh: Inherited): Inherited => {
+    const tf = mul(inh.tf, parseTransform(a.transform));
+    const fill = a.fill !== undefined ? color(a.fill, gradients) : inh.fill;
+    if (a.fill !== undefined && fill === undefined) warnings.add(`Unsupported paint "${a.fill}" replaced`);
+    const stroke = a.stroke !== undefined ? color(a.stroke, gradients) : inh.stroke;
+    return {
+      fill, stroke,
+      strokeWidth: a['stroke-width'] !== undefined ? num(a['stroke-width'], 1) : inh.strokeWidth,
+      opacity: inh.opacity * num(a.opacity, 1) * num(a['fill-opacity'], 1),
+      tf,
+      evenOdd: a['fill-rule'] ? a['fill-rule'] === 'evenodd' : inh.evenOdd,
+    };
+  };
   const walk = (nodes: Node[], inh: Inherited, out: VectorShape[]) => {
     for (const n of nodes) {
       const tag = tagOf(n);
@@ -295,17 +310,7 @@ export function parseSvg(text: string): SvgResult {
       }
       const a = styleOf(n[':@'] ?? {});
       if (a.display === 'none' || a.visibility === 'hidden') continue;
-      const tf = mul(inh.tf, parseTransform(a.transform));
-      const fill = a.fill !== undefined ? color(a.fill, gradients) : inh.fill;
-      if (a.fill !== undefined && fill === undefined) warnings.add(`Unsupported paint "${a.fill}" replaced`);
-      const stroke = a.stroke !== undefined ? color(a.stroke, gradients) : inh.stroke;
-      const next: Inherited = {
-        fill, stroke,
-        strokeWidth: a['stroke-width'] !== undefined ? num(a['stroke-width'], 1) : inh.strokeWidth,
-        opacity: inh.opacity * num(a.opacity, 1) * num(a['fill-opacity'], 1),
-        tf,
-        evenOdd: a['fill-rule'] ? a['fill-rule'] === 'evenodd' : inh.evenOdd,
-      };
+      const next = inherit(a, inh);
       if (tag === 'g' || tag === 'svg') {
         walk((n[tag] as Node[]) ?? [], next, out);
         continue;
@@ -324,7 +329,7 @@ export function parseSvg(text: string): SvgResult {
         ...(s && s !== 'none' ? { stroke: s, strokeWidth: next.strokeWidth } : {}),
         ...(next.opacity < 1 ? { opacity: Math.max(0, next.opacity) } : {}),
         ...(next.evenOdd ? { evenOdd: true } : {}),
-        ...(tf.some((v, i) => v !== ID[i]) ? { tf } : {}),
+        ...(next.tf.some((v, i) => v !== ID[i]) ? { tf: next.tf } : {}),
       });
     }
   };
@@ -335,10 +340,22 @@ export function parseSvg(text: string): SvgResult {
     const tag = tagOf(child);
     if (tag === 'g') {
       const a = child[':@'] ?? {};
+      const name = a['inkscape:label'] ?? a['data-name'] ?? a.id ?? `Layer ${++n}`;
+      const kids = ((child.g as Node[]) ?? []).filter((k) => tagOf(k) === 'g');
+      if (o.container?.(name) && kids.length) {
+        // A container group (e.g. a view: "front", "three-quarter") lists its child groups as layers.
+        const inh = inherit(styleOf(a), base);
+        for (const k of kids) {
+          const ka = k[':@'] ?? {};
+          const shapes: VectorShape[] = [];
+          walk([k], inh, shapes);
+          if (shapes.length) layers.push({ name: ka['inkscape:label'] ?? ka['data-name'] ?? ka.id ?? `Layer ${++n}`, group: name, shapes, bounds: [0, 0, 0, 0] });
+        }
+        continue;
+      }
       const shapes: VectorShape[] = [];
       walk([child], base, shapes);
-      n++;
-      if (shapes.length) layers.push({ name: a['inkscape:label'] ?? a['data-name'] ?? a.id ?? `Layer ${n}`, shapes, bounds: [0, 0, 0, 0] });
+      if (shapes.length) layers.push({ name, shapes, bounds: [0, 0, 0, 0] });
     } else walk([child], base, loose);
   }
   if (loose.length) layers.unshift({ name: 'Background', shapes: loose, bounds: [0, 0, 0, 0] });

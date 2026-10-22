@@ -66,6 +66,13 @@ either `shapes` or a `limb`:
   `flare`, `shade`, `outline` and `cap`. Sleeves and trouser legs use it so they bend cleanly in every pose.
 - `sides: ['L','R']` instances a layer per side (hands, feet, eyes, brows, ears).
 
+### Additions after the freeze (decision 0019)
+
+- `ShapeDef.art` — placed artwork: `{ box: [u0, v0, u1, v1], src: [x, y, w, h], image?: <media hash>, paths?: [...] }`.
+  The source rectangle of a raster image or of vector paths is drawn into the box of the layer's fit space.
+- Fit spaces `upperArmL/R`, `foreArmL/R`, `thighL/R`, `shinL/R`: origin at the proximal joint, `v` 0→1 along the bone
+  to the next joint, `u` across in limb half-widths (u ≥ 0 on the screen-right side of the bone).
+
 ## 5. Conditions
 
 `when` on layers and shapes filters by render state: `{ mouth: 'A' }` (mouth shapes A–H, X), `{ eyeClosed: 'true' }`,

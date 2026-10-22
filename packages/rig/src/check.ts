@@ -17,7 +17,7 @@ export interface RigIssue {
 const FAMILIES: StyleFamily[] = ['flat', 'illustrated'];
 const VIEWS: View[] = ['front', 'three', 'side', 'back'];
 const SLOTS = new Set<string>(SLOT_ORDER);
-const SPACES = new Set<FitSpace>(['head', 'face', 'torso', 'pelvis', 'neck', 'handL', 'handR', 'hand', 'footL', 'footR', 'foot', 'eye', 'eyeL', 'eyeR', 'brow', 'browL', 'browR', 'mouth', 'nose', 'ear', 'earL', 'earR', 'stage']);
+const SPACES = new Set<FitSpace>(['head', 'face', 'torso', 'pelvis', 'neck', 'handL', 'handR', 'hand', 'footL', 'footR', 'foot', 'eye', 'eyeL', 'eyeR', 'brow', 'browL', 'browR', 'mouth', 'nose', 'ear', 'earL', 'earR', 'stage', 'upperArmL', 'upperArmR', 'foreArmL', 'foreArmR', 'thighL', 'thighR', 'shinL', 'shinR']);
 /** Palette roots produced by buildPalette and the family style (suffixes .shade/.deep/.light/.line are derived). */
 const PALETTE = /^(#[0-9a-fA-F]{3,8}|white|black|mouth|teeth|tongue|line|eyewhite|lash|[a-z][a-zA-Z0-9-]*(\.(shade|deep|light|line|blush|[a-z0-9-]+))*)$/;
 
@@ -32,7 +32,13 @@ function segRefs(seg: Seg): string[] {
 function checkShape(sh: ShapeDef, v: ViewArt, layer: LayerDef, ids: Set<string>, push: (m: string, sev?: 'error' | 'warning') => void) {
   for (const seg of sh.path ?? []) for (const ref of segRefs(seg)) if (!v.points[ref]) push(`Layer ${layer.slot}: path uses unknown point "${ref}"`);
   if (sh.ellipse && !v.points[sh.ellipse.c]) push(`Layer ${layer.slot}: ellipse centre "${sh.ellipse.c}" is not a point`);
-  if (!sh.path && !sh.ellipse) push(`Layer ${layer.slot}: a shape has neither a path nor an ellipse`);
+  if (sh.art) {
+    const a = sh.art;
+    if (!a.box?.every(Number.isFinite) || a.box[0] === a.box[2] || a.box[1] === a.box[3]) push(`Layer ${layer.slot}: placed artwork has an empty or invalid box`);
+    if (!a.src?.every(Number.isFinite) || !(a.src[2] > 0 && a.src[3] > 0)) push(`Layer ${layer.slot}: placed artwork has an invalid source rectangle`);
+    if (!a.image && !a.paths?.length) push(`Layer ${layer.slot}: placed artwork has neither an image nor paths`);
+    if (a.image && !/^sha256-[0-9a-f]{64}$/.test(a.image)) push(`Layer ${layer.slot}: placed image is not a media hash`);
+  } else if (!sh.path && !sh.ellipse) push(`Layer ${layer.slot}: a shape has neither a path nor an ellipse`);
   if (sh.clip && !ids.has(sh.clip)) push(`Layer ${layer.slot}: clips to unknown shape "${sh.clip}"`);
   const colours: string[] = [];
   if (typeof sh.fill === 'string') colours.push(sh.fill);
