@@ -57,3 +57,8 @@ check passes with declared gaps; rendered through the one renderer), Studio e2e 
 export renderer); prop and set cases in the same unit file (state switching rendered by pixel colour, set pieces on
 planes filling the frame), `packages/server/test/rigging.test.ts` (API dry run, save, place, validate, frame) and the
 Studio e2e "rigging assistant: a layered SVG becomes a prop with states…".
+
+## Owner decisions
+
+- 2026-10-22: the part-contract change is **accepted as additive** under `rig.biped@1` (no version bump).
+- Using the imported drawing for both style families: open, explanation requested.

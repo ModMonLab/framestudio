@@ -17,8 +17,10 @@ Status: Accepted · Requirements: FR-RND-01..10, FR-SND-02/03/05, FR-TXT-01/02/0
   previews and piped to ffmpeg as raw RGBA (no browser). Codecs: H.264 (libx264, yuv420p, BT.709 tags, faststart),
   H.265 (libx265), VP9 + Opus, ProRes 4444 with alpha, GIF (palettegen/paletteuse), PNG sequence + WAV, WAV/MP3 audio.
   Checked with ffmpeg 6.1.1 (`ffmpeg -encoders`), whose Ubuntu build includes libx264/libx265/libvpx/libopus/libmp3lame.
-  **Bundling a static ffmpeg build is deferred to packaging (M6)**: static builds that include libx264/libx265 are
-  GPL; the licence obligations for distribution will be recorded with the installer decision.
+  **Distribution (owner decision 2026-10-22): download on first use.** The installer does not include ffmpeg. On the
+  first export that needs it, Frame downloads a pinned ffmpeg build per platform, checks its SHA-256 against a
+  manifest shipped with the app, stores it in the user profile and records the build's GPL notice and source link
+  there; `FRAME_FFMPEG` or `PATH` still take precedence. Implemented with packaging (M6).
 - **Output presets are content** (`content/assets/out/*.json`, Catalog R1), never hard-coded (FR-ARC-06).
 - **Captions:** caption styles are content (`txt.*` data.caption). Paging uses word timings so the burned-in captions,
   SRT and WebVTT always show the same text at the same times. The renderer gained `valign` and per-line `box` on text
