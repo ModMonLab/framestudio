@@ -61,4 +61,5 @@ Studio e2e "rigging assistant: a layered SVG becomes a prop with states…".
 ## Owner decisions
 
 - 2026-10-22: the part-contract change is **accepted as additive** under `rig.biped@1` (no version bump).
-- Using the imported drawing for both style families: open, explanation requested.
+- 2026-10-22: imported drawings are **used as drawn in both style families** (no automatic restyling); a second
+  family can be drafted in the part editor. Closed.
