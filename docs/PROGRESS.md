@@ -38,13 +38,13 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-DAT-10 | Done | packages/io/test/package.test.ts (malicious archives); cli/test/packages.test.ts; server/test/packages.test.ts; decision 0017 | Packages are zip archives with a `manifest — Declared paths only, safe names, type allow-list, size limits, hashes verified, nothing executed |
 | FR-DAT-11 | Done | package.test.ts “refuses different content … new ID” | Importing a package never overwrites existing assets of the same `id@v — Identical skipped; conflicts refused or imported under new user IDs with references rewritten |
 | FR-DAT-12 | In progress | `frame schema <type>`; packages/schema | Every format has a published JSON Schema in `@frame/schema` and docume — docs/formats/ pending |
-| FR-PRJ-01 | In progress | Home “New project” form; POST /api/projects/create `template`; `frame init --template --cast`; m3-templates.test.ts; Studio e2e “a new project starts from a template…” | Create — Empty or from a production template; from a project package pending |
+| FR-PRJ-01 | Done | Home “New project” form (empty, template, or project package); POST /api/projects/create `template`; /api/projects/import-package; `frame init --template --cast`; m3-templates.test.ts; Studio e2e “a new project starts from a template…” | Create — Empty or from a production template; from a project package pending |
 | FR-PRJ-02 | Done | session.test.ts (duplicate/delete); cli episode group | Episodes |
 | FR-PRJ-03 | Done | session.test.ts (duration safety); cli scene group | Scenes — Tree drag reorder in Studio M1 |
-| FR-PRJ-04 | Not started | — | Notes and script |
-| FR-PRJ-05 | Not started | — | Project settings |
-| FR-PRJ-06 | Not started | — | Browser |
-| FR-PRJ-07 | In progress | store.test.ts “invalid folders” | Open folder — Studio open-folder UI |
+| FR-PRJ-04 | Done | core notes.ts (Markdown subset) + NotesEditor (project description, episode and scene notes; one undo step per edit); Script view (scene order, in-place edits, take states); export text/Fountain/PDF (io pdf.ts); script.test.ts, pdf.test.ts; e2e “the script view…”, “project settings, rich-text notes…” | Notes and script |
+| FR-PRJ-05 | Done | File ▸ Project settings…: name, description, style family (refused with a list via styleFamilyBlockers), frame rate (re-snap report), default output, captions, worker endpoint, render folder, agent permissions; e2e “project settings…” | Project settings |
+| FR-PRJ-06 | Done | Home browser: server recent list (io recent.ts) with thumbnails, last opened, episode/scene counts, pinned, templates; search and sort; open, reveal, duplicate (new id), export package, delete to OS trash; recent.test.ts; e2e “the project browser…” | Browser |
+| FR-PRJ-07 | Done | store.test.ts “invalid folders”; Home validation report for unreadable folders and “opened with problems” dialog; e2e “the project browser…” | Open folder — Studio open-folder UI |
 | FR-PER-01 | In progress | io/project.ts autosave; Studio save badge (Saved/Saving…/Unsaved/Not saved) | Autosave — Retry action in badge pending |
 | FR-PER-02 | In progress | session.test.ts (undo ≥200, labels) | Undo/redo — Studio single-step drags in M1 |
 | FR-PER-03 | Done | store.test.ts; server/test/versions.test.ts; Studio e2e “project versions…”; `frame versions compare|restore` | Versions (snapshots) — Save, list, compare summary (scenes, clips, character versions, assets), undoable restore and “open as a copy” (new folder, new project id) |

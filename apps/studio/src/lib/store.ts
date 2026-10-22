@@ -33,7 +33,7 @@ export interface StudioState {
   family?: 'flat' | 'illustrated';
   jobs: Record<string, JobInfo>;
   lastError?: { message: string; hint?: string };
-  externalNotice?: string[];
+  externalNotice?: { files: string[]; conflicts: string[] };
   /** Recipe being applied (opens the recipe dialog, FR-RCP-01). */
   recipe?: { ref: string; name: string };
   /** Ripple editing (FR-TML-02): moves, trims and deletes shift later clips on the same track. */
@@ -41,6 +41,7 @@ export interface StudioState {
   /** Episode view in the timeline area, and playback that continues into the next scene (FR-TML-05/09). */
   episodeView?: boolean;
   scriptView?: boolean;
+  projectSettings?: boolean;
   episodePlay?: boolean;
   /** Template being applied as a new scene (FR-TPL-01), or a character being recast (FR-TPL-03). */
   template?: { ref: string; name: string };
@@ -111,11 +112,11 @@ export class Studio {
       this.set({ project, revision: e.revision, scene, selection, ...e.undo });
     } else if (e.type === 'save' && e.project === this.s.pid) this.set({ save: e.save });
     else if (e.type === 'job' && (!e.job.project || e.job.project === this.s.pid)) this.set({ jobs: { ...this.s.jobs, [e.job.id]: e.job } });
-    else if (e.type === 'external' && e.project === this.s.pid && !e.reloaded) this.set({ externalNotice: e.files });
+    else if (e.type === 'external' && e.project === this.s.pid && !e.reloaded) this.set({ externalNotice: { files: e.files, conflicts: e.conflicts ?? [] } });
   }
 
   /** Sends commands; errors surface as a toast-able lastError and are rethrown. */
-  async exec(commands: Command[], label?: string): Promise<{ revision: number; commands: Command[] } | undefined> {
+  async exec(commands: Command[], label?: string): Promise<{ revision: number; commands: Command[]; reports: unknown[] } | undefined> {
     try {
       const r = await api.apply(this.s.pid, commands, { baseRevision: this.s.revision, ...(label ? { label } : {}) });
       return r;

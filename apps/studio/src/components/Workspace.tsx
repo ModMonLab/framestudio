@@ -1,7 +1,7 @@
 /** Studio workspace (Design System §4, §7.1): app bar, rail, left panel, canvas, properties and timeline. */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Download, Image as ImageIcon, LayoutGrid, Layers, Moon, Music, Redo2, Sparkles, Sun, Trash2, Type, Undo2, Users } from 'lucide-react';
-import { AppBar, Breadcrumb, Button, IconButton, MenuBar, Rail, StatusBadge, Tabs, Toolbar, ToolbarSeparator, useTheme, useToasts, VSep, type MenuEntry } from '@frame/ui';
+import { AppBar, Breadcrumb, Button, Dialog, IconButton, MenuBar, Rail, StatusBadge, Tabs, Toolbar, ToolbarSeparator, useTheme, useToasts, VSep, type MenuEntry } from '@frame/ui';
 import { Studio, useStudio, type Mode } from '../lib/store.js';
 import { AssetCache } from '../lib/preview.js';
 import { LayersPanel } from './LayersPanel.js';
@@ -11,6 +11,7 @@ import { PropertiesPanel } from './PropertiesPanel.js';
 import { Timeline } from './Timeline.js';
 import { EpisodeView } from './EpisodeView.js';
 import { ScriptView } from './ScriptView.js';
+import { ProjectSettingsDialog } from './ProjectSettings.js';
 import { ExportDialog } from './ExportDialog.js';
 import { JobsButton } from './JobsButton.js';
 import { WorkerBadge } from './WorkerBadge.js';
@@ -103,9 +104,51 @@ export function Workspace({ pid, builder, part, screen }: { pid: string; builder
       <VersionsDialog pid={pid} open={versionsOpen} onClose={() => setVersionsOpen(false)} />
       <RecipeDialog />
       <TemplateDialog />
+      <SettingsHost />
+      <ExternalChangeDialog />
       <input ref={pkgInput} type="file" accept=".framechar,.frameasset,.framevoice" hidden aria-label="Import package" onChange={(e) => { void onPackage(e.target.files?.[0]); e.target.value = ''; }} />
     </StudioCtx.Provider>
   );
+}
+
+/** Files changed on disk while local changes were unsaved (FR-PER-05): choose which version to keep. */
+function ExternalChangeDialog() {
+  const { studio } = useCtx();
+  const toasts = useToasts();
+  const notice = useStudio(studio, (s) => s.externalNotice);
+  const [busy, setBusy] = useState(false);
+  if (!notice) return null;
+  const keep = async (k: 'disk' | 'mine') => {
+    setBusy(true);
+    try {
+      await api.resolveExternal(studio.state.pid, k);
+      studio.set({ externalNotice: undefined });
+      toasts.show({ tone: 'success', message: k === 'disk' ? 'Loaded the version on disk.' : 'Saved your version over the files on disk.' });
+    } catch (e) {
+      toasts.show({ tone: 'error', message: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog title="Project changed on disk" open onClose={() => studio.set({ externalNotice: undefined })} footer={<>
+      <Button disabled={busy} onClick={() => studio.set({ externalNotice: undefined })}>Decide later</Button>
+      <Button disabled={busy} onClick={() => void keep('disk')}>Load the disk version</Button>
+      <Button variant="primary" disabled={busy} onClick={() => void keep('mine')}>Keep my changes</Button>
+    </>}>
+      <p>Another program changed {notice.files.length === 1 ? 'a file' : `${notice.files.length} files`} in this project while you had unsaved changes. Saving is paused until you choose.</p>
+      <ul className="st-home-problems" aria-label="Changed files">
+        {notice.files.map((f) => <li key={f} className="fr-mono">{f}{notice.conflicts.includes(f) ? ' — you changed this too' : ''}</li>)}
+      </ul>
+      <p className="fr-hint">Loading the disk version drops your unsaved changes and restarts undo. Keeping yours overwrites the other program's edits.</p>
+    </Dialog>
+  );
+}
+
+function SettingsHost() {
+  const { studio } = useCtx();
+  const open = useStudio(studio, (s) => !!s.projectSettings);
+  return open ? <ProjectSettingsDialog onClose={() => studio.set({ projectSettings: false })} /> : null;
 }
 
 function Shell() {
@@ -168,6 +211,7 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
   const redoLabel = useStudio(studio, (s) => s.redoLabel);
   const sceneId = useStudio(studio, (s) => s.scene);
   const connected = useStudio(studio, (s) => s.connected);
+  const external = useStudio(studio, (s) => !!s.externalNotice);
   const scene = sceneId ? project.scenes[sceneId] : undefined;
   const episode = sceneId ? project.episodes[project.sceneEpisode[sceneId] ?? ''] : undefined;
   const sel = useStudio(studio, (s) => s.selection);
@@ -178,6 +222,7 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
       { id: 'home', label: 'Projects…', onSelect: () => (location.hash = '#/') },
       { id: 'save', label: 'Save now', shortcut: 'Ctrl S', onSelect: () => void import('../lib/api.js').then(({ api }) => api.save(studio.state.pid)) },
       { id: 'versions', label: 'Versions…', onSelect: openVersions },
+      { id: 'settings', label: 'Project settings…', onSelect: () => studio.set({ projectSettings: true }) },
       { kind: 'separator', id: 's1' },
       { id: 'import-pkg', label: 'Import package…', onSelect: importPackage },
       { id: 'export-proj', label: 'Export project package (.frameproj)', onSelect: () => (location.href = api.projectPackageUrl(studio.state.pid)) },
@@ -223,6 +268,7 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
           ...(scene ? [{ label: scene.name }] : []),
         ]} />
         <StatusBadge tone={connected ? SAVE_TONE[save.status] : 'warning'} title={save.error}>{connected ? SAVE_LABEL[save.status] : 'Reconnecting…'}</StatusBadge>
+        {connected && save.status === 'error' && !external && <Button variant="ghost" title={save.error} onClick={() => void api.save(studio.state.pid).then((r) => r.status === 'error' && toasts.show({ tone: 'error', message: `Still not saved: ${r.error ?? 'unknown error'}` }))}>Retry</Button>}
       </>}
       center={<Tabs label="Workspace mode" value={mode} onChange={(m: Mode) => studio.set({ mode: m })} tabs={[{ value: 'stage', label: 'Stage', shortcut: '1' }, { value: 'direct', label: 'Direct', shortcut: '2' }, { value: 'edit', label: 'Edit', shortcut: '3' }]} />}
       right={<>
@@ -286,7 +332,7 @@ export async function deleteSelection(studio: Studio) {
 export async function duplicateSelection(studio: Studio) {
   const s = studio.state;
   if (!s.scene) return;
-  const cmds = s.selection.flatMap((x) => (x.kind === 'clip' ? [{ name: 'clip.duplicate', params: { scene: s.scene, id: x.id } }] : []));
+  const cmds = s.selection.flatMap((x) => (x.kind === 'clip' ? [{ name: 'clip.duplicate', params: { scene: s.scene, ids: [x.id] } }] : []));
   const insts = s.selection.filter((x) => x.kind === 'instance').map((x) => s.project!.scenes[s.scene!]!.instances.find((i) => i.id === x.id)!).filter(Boolean);
   for (const i of insts) {
     const { id: _id, ...rest } = i;

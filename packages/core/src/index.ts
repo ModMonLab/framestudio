@@ -29,6 +29,7 @@ export * from './camera-framing.js';
 export * from './recipes.js';
 export * from './templates.js';
 export * from './script.js';
+export * from './notes.js';
 export * from './captions.js';
 export * from './audio.js';
 export * from './sync.js';

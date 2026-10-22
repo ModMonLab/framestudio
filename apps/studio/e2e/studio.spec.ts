@@ -796,3 +796,89 @@ test('the script view imports a script, edits a line in place and exports Founta
   expect(fountain).toContain(`${names[1]!.toUpperCase()}\n(happy)\nAlways.`);
   await new AxeBuilder({ page }).include('[aria-label="Script"]').analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
 });
+
+test('project settings, rich-text notes and the script PDF (FR-PRJ-04, FR-PRJ-05)', async ({ page }) => {
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-e2e-settings-')), 'Settings.frame');
+  await page.goto('/');
+  const form = page.getByRole('region', { name: 'New project' }).or(page.locator('form').filter({ has: page.getByRole('button', { name: 'Create project' }) })).first();
+  await form.getByRole('textbox', { name: 'Folder' }).fill(dir);
+  await form.getByRole('textbox', { name: 'Name' }).fill('Settings test');
+  await form.getByRole('button', { name: /^Start from: / }).click();
+  await page.getByRole('option', { name: 'Comedy exchange' }).click();
+  await form.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('tab', { name: 'Direct' })).toBeVisible();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  await page.getByRole('menuitem', { name: 'File' }).click();
+  await page.getByRole('menuitem', { name: 'Project settings…' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Project settings' });
+  await dlg.getByRole('textbox', { name: 'Project name' }).fill('Renamed show');
+  await dlg.getByRole('textbox', { name: 'Description' }).click();
+  await expect.poll(async () => (await state()).project.name).toBe('Renamed show');
+  await dlg.getByRole('textbox', { name: 'Description' }).fill('A show about ');
+  await dlg.getByRole('textbox', { name: 'Description' }).press('End');
+  await dlg.getByRole('button', { name: 'Bold' }).click();
+  await dlg.getByRole('button', { name: 'Preview notes' }).click();
+  await expect(dlg.locator('.st-notes-view strong')).toHaveText('text');
+  await expect.poll(async () => (await state()).project.description).toBe('A show about **text**');
+  await dlg.getByRole('button', { name: /^Frame rate: / }).click();
+  await page.getByRole('option', { name: '25 fps' }).click();
+  await expect.poll(async () => (await state()).project.frameRate).toBe(25);
+  const before = (await state()).project.captions.speakerLabels;
+  await dlg.getByRole('checkbox', { name: 'Speaker labels' }).click();
+  await expect.poll(async () => (await state()).project.captions.speakerLabels).toBe(!before);
+  await new AxeBuilder({ page }).include('[role="dialog"]').analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
+  await dlg.getByRole('button', { name: 'Done' }).click();
+  // Scene notes are one undo step per edit session.
+  await page.getByRole('tab', { name: 'Properties', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Scene notes' }).fill('## Beat\n- setup\n- *payoff*');
+  await page.getByRole('textbox', { name: 'Scene notes' }).blur();
+  await expect(page.getByRole('button', { name: /^Undo Edit scene notes/ }).first()).toBeVisible();
+  const pdf = await page.request.get(`/api/projects/${pid}/script?format=pdf`);
+  expect(pdf.headers()['content-type']).toBe('application/pdf');
+  expect((await pdf.body()).subarray(0, 8).toString('latin1')).toBe('%PDF-1.4');
+});
+
+test('the project browser pins, searches, duplicates and moves a project to the trash (FR-PRJ-06, FR-PRJ-07)', async ({ page }) => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'frame-e2e-browser-'));
+  const dir = path.join(base, 'Browse.frame');
+  await page.goto('/');
+  const form = page.getByRole('region', { name: 'New project' }).or(page.locator('form').filter({ has: page.getByRole('button', { name: 'Create project' }) })).first();
+  await form.getByRole('textbox', { name: 'Folder' }).fill(dir);
+  await form.getByRole('textbox', { name: 'Name' }).fill('Browser show');
+  await form.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('tab', { name: 'Direct' })).toBeVisible();
+  await page.goto('/#/');
+  const browser = page.getByRole('region', { name: 'Projects' }).or(page.getByRole('complementary', { name: 'Projects' })).first();
+  await expect(browser.getByRole('button', { name: 'Open Browser show' })).toBeVisible();
+  await expect(browser.getByText(/1 episode · 1 scene/).first()).toBeVisible();
+  // Pin, then search.
+  await browser.getByRole('button', { name: 'Pin Browser show' }).click();
+  await expect(browser.getByRole('list', { name: 'Pinned projects' }).getByRole('button', { name: 'Open Browser show' })).toBeVisible();
+  await browser.getByRole('textbox', { name: 'Search projects' }).fill('zzz-nothing');
+  await expect(browser.getByText('No matches')).toBeVisible();
+  await browser.getByRole('textbox', { name: 'Search projects' }).fill('browser sh');
+  // Duplicate under a new id.
+  await browser.getByRole('button', { name: 'Browser show actions' }).first().click();
+  await page.getByRole('menuitem', { name: 'Duplicate…' }).click();
+  const copyDir = path.join(base, 'Browse copy.frame');
+  await page.getByRole('textbox', { name: 'New folder' }).fill(copyDir);
+  await page.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  await expect(browser.getByRole('button', { name: 'Open Browser show copy' })).toBeVisible();
+  const ids = await Promise.all([dir, copyDir].map((d) => JSON.parse(fs.readFileSync(path.join(d, 'project.json'), 'utf8')).id as string));
+  expect(ids[0]).not.toBe(ids[1]);
+  // Delete the copy: it moves to the trash, never a permanent delete.
+  await browser.getByRole('button', { name: 'Browser show copy actions' }).click();
+  await page.getByRole('menuitem', { name: 'Delete (move to trash)…' }).click();
+  await page.getByRole('button', { name: 'Move to trash' }).click();
+  await expect(browser.getByRole('button', { name: 'Open Browser show copy' })).toHaveCount(0);
+  expect(fs.existsSync(copyDir)).toBe(false);
+  // An invalid folder shows a validation report (FR-PRJ-07).
+  const bad = path.join(base, 'Broken.frame');
+  fs.mkdirSync(bad);
+  fs.writeFileSync(path.join(bad, 'project.json'), '{ not json');
+  await page.getByRole('textbox', { name: 'Project folder' }).fill(bad);
+  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await expect(page.getByRole('list', { name: 'Validation report' })).toContainText('INVALID_JSON');
+  await new AxeBuilder({ page }).analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
+});

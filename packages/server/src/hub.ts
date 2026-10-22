@@ -10,7 +10,7 @@ import { FrameError } from '@frame/schema';
 export type HubEvent =
   | { type: 'change'; project: string; revision: number; label: string; source: string; delta: Record<string, unknown>; full: boolean; undo: UndoInfo }
   | { type: 'save'; project: string; save: SaveState }
-  | { type: 'external'; project: string; files: string[]; reloaded: boolean };
+  | { type: 'external'; project: string; files: string[]; reloaded: boolean; conflicts?: string[] };
 
 export interface UndoInfo {
   canUndo: boolean;
@@ -116,7 +116,12 @@ export class ProjectHub {
       if (!files.length) continue;
       const pending = p.open.saveState.status !== 'saved';
       if (pending) {
-        this.emit({ type: 'external', project: p.id, files, reloaded: false });
+        // Never overwrite another program's edits silently: hold autosave and let a person choose (FR-PER-05).
+        if (p.open.heldFiles?.join() === files.join()) continue;
+        const mine = p.open.pendingFiles();
+        const conflicts = mine.includes('*') ? files : files.filter((f) => mine.includes(f));
+        p.open.hold(files);
+        this.emit({ type: 'external', project: p.id, files, reloaded: false, conflicts });
         continue;
       }
       try {

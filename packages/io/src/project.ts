@@ -25,6 +25,8 @@ export class OpenProject {
   private _save: SaveState;
   private statusListeners = new Set<(s: SaveState) => void>();
   private debounceMs: number;
+  /** Files changed on disk by another program while local changes were unsaved: saving waits for a choice (FR-PER-05). */
+  private held: string[] | undefined;
   /** Computes the project's locks at save time (FR-DAT-06); without it locks are kept as loaded. */
   locksFor?: (state: ProjectState) => ProjectState['locks'];
 
@@ -96,6 +98,10 @@ export class OpenProject {
       this.timer = undefined;
     }
     if (this.pending.size === 0 && this._save.status !== 'error') return true;
+    if (this.held) {
+      this.setSave({ status: 'error', error: `Changed on disk by another program (${this.held.join(', ')}); choose which version to keep` });
+      return false;
+    }
     this.setSave({ status: 'saving' });
     if (this.locksFor) {
       try {
@@ -118,6 +124,39 @@ export class OpenProject {
       this.setSave({ status: 'error', error: (e as Error).message });
       return false;
     }
+  }
+
+  /** Project-relative files holding unsaved local changes. */
+  pendingFiles(): string[] {
+    if (this.pending.has('*')) return ['*'];
+    return [...this.pending].map((k) => this.store.entityPath(this.session.state, k)).filter((f): f is string => !!f);
+  }
+
+  /** Stops autosave until the external change is resolved (FR-PER-05). */
+  hold(files: string[]): void {
+    this.held = files;
+  }
+
+  get heldFiles(): string[] | undefined {
+    return this.held;
+  }
+
+  /**
+   * Resolves an external change: `disk` loads the files on disk (local unsaved changes are dropped and the undo
+   * history restarts, as for any reload); `mine` writes the open state over them.
+   */
+  resolveExternal(keep: 'disk' | 'mine', load: () => ProjectState): void {
+    this.held = undefined;
+    if (keep === 'disk') {
+      this.pending.clear();
+      this.session.replaceState(load(), 'Load changes made on disk');
+      // Rewrite every file so the store's record of what is on disk matches again.
+      this.pending.add('*');
+      this.flush();
+      return;
+    }
+    this.pending.add('*');
+    this.flush();
   }
 
   close(): void {

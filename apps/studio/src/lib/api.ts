@@ -2,6 +2,8 @@
 import type { Command, Problem } from '@frame/schema';
 import type { ProjectState } from '@frame/core';
 
+export interface RecentProject { root: string; name: string; openedAt: string; pinned?: boolean; episodes: number; scenes: number; exists: boolean; open: string | null }
+
 export class ApiError extends Error {
   constructor(public readonly code: string, message: string, public readonly hint?: string, public readonly details?: unknown) {
     super(message);
@@ -68,6 +70,15 @@ export interface HistoryEntry { revision: number; at: string; label: string; sou
 
 export const api = {
   health: () => req<{ ok: boolean; version: string }>('GET', '/api/health'),
+  recent: () => req<{ projects: RecentProject[] }>('GET', '/api/recent'),
+  recentUpdate: (root: string, patch: { pinned?: boolean; forget?: boolean }) => req<{ ok: boolean }>('POST', '/api/recent/update', { root, ...patch }),
+  recentDuplicate: (root: string, to: string, name?: string) => req<{ id: string; root: string; name: string }>('POST', '/api/recent/duplicate', { root, to, ...(name ? { name } : {}) }),
+  recentTrash: (root: string) => req<{ trashed: string; where: string }>('POST', '/api/recent/trash', { root }),
+  recentReveal: (root: string) => req<{ ok: boolean }>('POST', '/api/recent/reveal', { root }),
+  recentThumbUrl: (root: string, v: string) => `/api/recent/thumbnail?root=${encodeURIComponent(root)}&v=${encodeURIComponent(v)}`,
+  importProjectPackage: (to: string, file: File, allowMissing = false) => file.arrayBuffer().then((b) => req<{ id: string; root: string; name: string; missing: string[] }>('POST', `/api/projects/import-package?path=${encodeURIComponent(to)}${allowMissing ? '&allowMissing=true' : ''}`, new Uint8Array(b), { 'content-type': 'application/zip' })),
+  resolveExternal: (pid: string, keep: 'disk' | 'mine') => req<{ revision: number }>('POST', `/api/projects/${pid}/external/resolve`, { keep }),
+  relinkMedia: (pid: string, hash: string, file: File) => file.arrayBuffer().then((b) => req<{ relinked: string }>('POST', `/api/projects/${pid}/media/relink?hash=${encodeURIComponent(hash)}&ext=${encodeURIComponent((file.name.split('.').pop() ?? '').toLowerCase())}`, new Uint8Array(b), { 'content-type': 'application/octet-stream' })),
   projects: () => req<{ projects: { id: string; name: string; root: string; revision: number }[] }>('GET', '/api/projects'),
   open: (path: string, migrate = false) => req<{ id: string; root: string; revision: number; problems: Problem[] }>('POST', '/api/projects/open', { path, migrate }),
   state: (pid: string) => req<Snapshot>('GET', `/api/projects/${pid}/state`),
@@ -155,7 +166,7 @@ export type ServerEvent =
   | { type: 'hello'; version: string; project?: string; revision?: number }
   | { type: 'change'; project: string; revision: number; label: string; source: string; delta: Record<string, unknown>; full: boolean; undo: { canUndo: boolean; canRedo: boolean; undoLabel: string | null; redoLabel: string | null } }
   | { type: 'save'; project: string; save: SaveState }
-  | { type: 'external'; project: string; files: string[]; reloaded: boolean }
+  | { type: 'external'; project: string; files: string[]; reloaded: boolean; conflicts?: string[] }
   | { type: 'job'; job: JobInfo };
 
 /** WebSocket event stream with automatic reconnect; calls onReconnect so the client can resync. */

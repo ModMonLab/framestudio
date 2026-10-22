@@ -35,3 +35,20 @@ export function lockMismatches(locks: Locks, lookup: LockLookup): { ref: string;
   }
   return out;
 }
+
+/**
+ * Assets the project uses that have no artwork in `family` (FR-PRJ-05: switching style family is refused while any
+ * exist). Assets without a family list (audio, data) never block.
+ */
+export function styleFamilyBlockers(state: ProjectState, lookup: LockLookup, family: string): { ref: string; name: string; families: string[] }[] {
+  const local = new Set(Object.keys(state.assets));
+  const used = collectRefs([state.project, state.episodes, state.scenes, state.assets]);
+  const manifest = (r: string) => (local.has(r) ? state.assets[r] : lookup(r)?.manifest);
+  const { refs } = refClosure([...used], manifest);
+  const out: { ref: string; name: string; families: string[] }[] = [];
+  for (const ref of refs.sort()) {
+    const m = manifest(ref) as (AssetManifest & { families?: string[] }) | undefined;
+    if (m?.families && m.families.length && !m.families.includes(family)) out.push({ ref, name: m.name, families: [...m.families] });
+  }
+  return out;
+}

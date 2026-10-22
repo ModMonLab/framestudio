@@ -107,3 +107,46 @@ describe('dialogue details (FR-DLG-04/07)', () => {
     expect(clips.find((c) => c.id === b)!.start).toBe(secondsToTicks(3.5));
   });
 });
+
+describe('notes (FR-PRJ-04 rich text subset)', () => {
+  it('parses headings, lists, bold and italic and leaves unclosed markers literal', async () => {
+    const { parseNotes, notesPlainText } = await import('../src/index.js');
+    const blocks = parseNotes('# Pilot\n\nA **short** show about *coffee* and_more.\n\n- one\n- two\n1. first\n\nTrailing * star');
+    expect(blocks).toEqual([
+      { kind: 'heading', level: 1, spans: [{ text: 'Pilot' }] },
+      { kind: 'paragraph', spans: [{ text: 'A ' }, { text: 'short', bold: true }, { text: ' show about ' }, { text: 'coffee', italic: true }, { text: ' and_more.' }] },
+      { kind: 'list', ordered: false, items: [[{ text: 'one' }], [{ text: 'two' }]] },
+      { kind: 'list', ordered: true, items: [[{ text: 'first' }]] },
+      { kind: 'paragraph', spans: [{ text: 'Trailing * star' }] },
+    ]);
+    expect(notesPlainText('## A\n- *b*')).toBe('A\n\n• b');
+  });
+});
+
+describe('one-click fixes (FR-PER-06)', () => {
+  it('fix commands resolve the problems they are attached to', async () => {
+    const { validateProject } = await import('../src/index.js');
+    const { session, scene } = newSession();
+    const maya = addCharacter(session, scene, 'Maya');
+    const st = () => session.state.scenes[scene]!;
+    session.apply({ commands: [
+      { name: 'line.add', params: { scene, speaker: maya, text: 'One.', start: 0, durationS: 2 } },
+      { name: 'line.add', params: { scene, speaker: maya, text: 'Two.', start: secondsToTicks(1), durationS: 2 } },
+    ] });
+    const shot = st().tracks.find((t) => t.kind === 'shot')!.id;
+    session.apply({ commands: [
+      { name: 'clip.add', params: { scene, track: shot, start: 0, end: secondsToTicks(3), params: { camera: st().defaultCamera } } },
+      { name: 'clip.add', params: { scene, track: shot, start: secondsToTicks(2), end: secondsToTicks(4), params: { camera: st().defaultCamera } } },
+    ] });
+    session.apply({ commands: [{ name: 'scene.setDuration', params: { id: scene, durationS: 3.5, allowTruncate: true } }] });
+    const codes = ['SPEAKER_OVERLAP', 'SHOT_OVERLAP', 'PAST_SCENE_END'];
+    for (const code of codes) {
+      const p = validateProject(session.state).find((x) => x.code === code);
+      expect(p?.fix?.command, code).toBeDefined();
+      session.apply({ commands: [p!.fix!.command as never] });
+    }
+    expect(validateProject(session.state).filter((x) => codes.includes(x.code))).toEqual([]);
+    const gen = validateProject(session.state).find((x) => x.code === 'TAKE_MISSING')!;
+    expect(gen.fix?.command).toMatchObject({ job: 'generate', scene });
+  });
+});

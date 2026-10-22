@@ -22,6 +22,8 @@ export interface JournalEntry {
 export interface LoadOptions {
   /** Write migrated files back to disk (the user or `--yes` confirmed; FR-DAT-05). */
   writeMigrations?: boolean;
+  /** Read only the entity files: unsaved journaled commits are not replayed (choosing the disk version, FR-PER-05). */
+  skipJournal?: boolean;
 }
 
 export interface LoadResult {
@@ -220,7 +222,7 @@ export class ProjectStore {
     const saved = this.savedRevision();
     let revision = saved;
     let recovered = 0;
-    for (const entry of this.readJournal()) {
+    for (const entry of opts.skipJournal ? [] : this.readJournal()) {
       if (entry.revision <= saved) continue;
       applyDeltaInPlace(state, entry.entities);
       revision = entry.revision;
