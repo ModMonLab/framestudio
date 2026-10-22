@@ -11,12 +11,13 @@ import fastifyStatic from '@fastify/static';
 import { assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
+import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
   projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, UserLibrary, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
-import { exitCodeFor, FrameError, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
+import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
 import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
@@ -361,7 +362,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   });
 
   /* ---------------------------------------------------------------- library (FR-AST) */
-  app.get<{ Querystring: { q?: string; kind?: string; limit?: string; project?: string; scene?: string; instance?: string } }>('/api/library', async (req, reply) => {
+  app.get<{ Querystring: { q?: string; kind?: string; limit?: string; project?: string; scene?: string; instance?: string; family?: string; view?: string; source?: string } }>('/api/library', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
       const lib = library(p);
@@ -370,7 +371,12 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const inst = p && req.query.scene && req.query.instance ? p.open.state.scenes[req.query.scene]?.instances.find((i) => i.id === req.query.instance) : undefined;
       const charMan = inst?.kind === 'character' && inst.asset ? lib.manifest(inst.asset) : undefined;
       const target: CompatTarget | undefined = p ? { family: p.open.state.project.styleFamily, ...(charMan && inst?.character ? { character: { manifest: charMan, view: inst.character.view, posture: inst.character.posture } } : {}) } : undefined;
-      const hits = lib.search(req.query.q ?? '', { ...(req.query.kind ? { kind: req.query.kind } : {}), ...(target ? { compatible: (m) => compatibility(m, target) } : {}) }).slice(0, limit);
+      const hits = lib.search(req.query.q ?? '', {
+        ...(req.query.kind ? { kind: req.query.kind } : {}), ...(target ? { compatible: (m) => compatibility(m, target) } : {}),
+        ...(req.query.family === 'flat' || req.query.family === 'illustrated' ? { family: req.query.family } : {}),
+        ...(['front', 'three', 'side', 'back'].includes(req.query.view ?? '') ? { view: req.query.view as View } : {}),
+        ...(['bundled', 'user', 'project', 'imported'].includes(req.query.source ?? '') ? { source: req.query.source as 'bundled' } : {}),
+      }).slice(0, limit);
       return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source: m.id.startsWith('user.') && p?.open.state.assets[`${m.id}@${m.version}`] ? 'project' : source, preview: previewable(m.kind), ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views, capabilities: m.capabilities })) };
     } catch (e) {
       return sendError(reply, e);
@@ -566,6 +572,33 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     } catch (e) {
       return sendError(reply, e);
     }
+  });
+  // Asset details (FR-AST-05): versions with their changes, where the asset is used in the project, licence and
+  // provenance, and the rig check for parts (FR-AST-08).
+  app.get<{ Querystring: { ref: string; project?: string } }>('/api/library/details', async (req, reply) => {
+    try {
+      const p = req.query.project ? hub.get(req.query.project) : undefined;
+      const lib = library(p);
+      const e = lib.get(req.query.ref);
+      if (!e) throw new FrameError('NOT_FOUND', `Asset ${req.query.ref} not found`);
+      const m = e.manifest;
+      const part = (m.data as { families?: unknown } | undefined)?.families ? (m.data as PartData) : undefined;
+      const { data: _d, ...meta } = m;
+      return {
+        ref: req.query.ref, source: p && m.id.startsWith('user.') && p.open.state.assets[req.query.ref] ? 'project' : e.source, manifest: meta,
+        latest: lib.latestRef(m.id), hash: manifestHash(m),
+        versions: lib.versions(m.id).map((v) => ({ version: v.version, ref: `${v.id}@${v.version}`, changes: v.changes ?? null, date: v.provenance.date, draft: v.tags.includes('draft') })),
+        usages: p ? assetUsages(p.open.state, m.id) : [],
+        rigCheck: part ? rigCheck(part) : null,
+      };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Manifests that failed validation and were left out of the library (FR-AST-02).
+  app.get<{ Querystring: { project?: string } }>('/api/library/problems', async (req) => {
+    const p = req.query.project ? hub.get(req.query.project) : undefined;
+    return { problems: library(p).problems };
   });
   app.get('/api/styles', async () => styles);
 

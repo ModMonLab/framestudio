@@ -1,6 +1,6 @@
 /** Library browser (Design System §5.3, FR-AST-03/04): search, categories with live counts, apply to the scene. */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Star, Upload } from 'lucide-react';
+import { Maximize2, Star, Upload } from 'lucide-react';
 import { AssetRow, Button, EmptyState, IconButton, Panel, SearchField, Section, Segmented, Select, useToasts } from '@frame/ui';
 import { ImportDialog, IMPORT_ACCEPT } from './ImportDialog.js';
 import { trackFor } from '@frame/core';
@@ -109,7 +109,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
 
   const pickedHit = all?.find((h) => h.ref === picked);
   return (
-    <Panel title={f.title} label={f.title} actions={<IconButton label="Import a file…" icon={<Upload size={16} />} onClick={() => fileInput.current?.click()} />} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
+    <Panel title={f.title} label={f.title} actions={<><IconButton label="Open the full library" icon={<Maximize2 size={16} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/library`)} /><IconButton label="Import a file…" icon={<Upload size={16} />} onClick={() => fileInput.current?.click()} /></>} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
       {all === undefined ? <p className="fr-faint" style={{ padding: 12 }}>Loading library…</p> : groups.length === 0 ? (
         <EmptyState title={q ? 'No matches' : f.title}>{q ? `Nothing matches “${q}”.` : f.empty}</EmptyState>
       ) : groups.map(([cat, hits]) => (

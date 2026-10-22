@@ -344,3 +344,26 @@ test('part editor: edit points of a library hairstyle, check the rig and save a 
   expect(custom.provenance.notes).toContain('hair.afro-medium@1');
   await expect(page.getByText('v1', { exact: true })).toBeVisible();
 });
+
+test('full-page library: filters, details with versions and usages, explicit update to the latest version (FR-AST-03/05, UI-03)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const maya = st.scenes[sid].instances.find((i: { name: string }) => i.name === 'Maya Bennett');
+  // A project character with two versions; the scene uses version 1.
+  const v1 = (await (await page.request.post(`/api/projects/${pid}/characters/versions`, { data: { from: maya.asset, asNew: true, spec: { name: 'Maya B' }, update: { scope: 'instance', scene: sid, instance: maya.id } } })).json()).ref as string;
+  await page.request.post(`/api/projects/${pid}/characters/versions`, { data: { from: v1, spec: { role: 'Host, season 2', changes: 'New role' } } });
+  await page.getByRole('menuitem', { name: 'View' }).click();
+  await page.getByRole('menuitem', { name: 'Asset library' }).click();
+  await page.getByRole('textbox', { name: 'Search the library' }).fill('Maya B');
+  await page.getByRole('listitem', { name: 'Maya B', exact: true }).getByRole('button').click();
+  const details = page.locator('.st-right');
+  await expect(details.getByRole('list', { name: 'Versions' })).toContainText('New role');
+  await expect(details.getByRole('list', { name: 'Usages' })).toContainText('v1');
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await details.getByRole('button', { name: 'Update to v2' }).first().click();
+  await expect(page.getByText(/Updated .* to version 2/)).toBeVisible();
+  await expect.poll(async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id).asset).toBe(v1.replace(/@1$/, '@2'));
+});

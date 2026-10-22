@@ -306,6 +306,9 @@ importers:
       '@frame/render':
         specifier: workspace:*
         version: link:../render
+      '@frame/rig':
+        specifier: workspace:*
+        version: link:../rig
       '@frame/schema':
         specifier: workspace:*
         version: link:../schema

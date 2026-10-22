@@ -11,6 +11,7 @@
     "@frame/core": "workspace:*",
     "@frame/io": "workspace:*",
     "@frame/render": "workspace:*",
+    "@frame/rig": "workspace:*",
     "@frame/schema": "workspace:*",
     "@frame/voice-client": "workspace:*",
     "fastify": "5.12.5"
