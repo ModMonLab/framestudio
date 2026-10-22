@@ -1,6 +1,8 @@
 /** Library browser (Design System §5.3, FR-AST-03/04): search, categories with live counts, apply to the scene. */
-import { useEffect, useMemo, useState } from 'react';
-import { AssetRow, Button, EmptyState, Panel, SearchField, Section, useToasts } from '@frame/ui';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Upload } from 'lucide-react';
+import { AssetRow, Button, EmptyState, IconButton, Panel, SearchField, Section, useToasts } from '@frame/ui';
+import { ImportDialog, IMPORT_ACCEPT } from './ImportDialog.js';
 import { trackFor } from '@frame/core';
 import { api } from '../lib/api.js';
 import { useStudio, type Studio } from '../lib/store.js';
@@ -29,7 +31,7 @@ const FILTERS: Record<string, { title: string; kinds?: string[]; empty: string }
 };
 
 /** Kinds that can be placed or applied from this panel. */
-const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit']);
+const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img']);
 
 export function AssetsPanel({ filter }: { filter: string }) {
   const { studio } = useCtx();
@@ -42,6 +44,8 @@ export function AssetsPanel({ filter }: { filter: string }) {
   const [all, setAll] = useState<Hit[]>();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [picked, setPicked] = useState<string>();
+  const [importing, setImporting] = useState<File>();
+  const fileInput = useRef<HTMLInputElement>(null);
   const f = FILTERS[filter] ?? FILTERS.assets!;
 
   useEffect(() => {
@@ -80,7 +84,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
 
   const pickedHit = all?.find((h) => h.ref === picked);
   return (
-    <Panel title={f.title} label={f.title} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
+    <Panel title={f.title} label={f.title} actions={<IconButton label="Import a file…" icon={<Upload size={16} />} onClick={() => fileInput.current?.click()} />} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
       {all === undefined ? <p className="fr-faint" style={{ padding: 12 }}>Loading library…</p> : groups.length === 0 ? (
         <EmptyState title={q ? 'No matches' : f.title}>{q ? `Nothing matches “${q}”.` : f.empty}</EmptyState>
       ) : groups.map(([cat, hits]) => (
@@ -102,6 +106,8 @@ export function AssetsPanel({ filter }: { filter: string }) {
           {hits.length > 60 && <p className="fr-faint" style={{ padding: '4px 12px' }}>{hits.length - 60} more · refine the search to see them</p>}
         </Section>
       ))}
+      <input ref={fileInput} type="file" hidden accept={IMPORT_ACCEPT} aria-label="Import a file" onChange={(e) => { setImporting(e.target.files?.[0]); e.target.value = ''; }} />
+      <ImportDialog file={importing} onClose={() => setImporting(undefined)} />
       {pickedHit && (
         <div className="st-panel-foot">
           <span className="fr-faint">{pickedHit.name}</span>
@@ -131,6 +137,9 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
       await studio.exec([{ name: 'instance.add', params: { scene: scene.id, kind: 'character', asset: h.ref, name: h.name, transform: { x: pos?.x ?? cx, y: pos?.y ?? project.project.output.height * 0.92 }, character: { look: m.data.defaultLook, view: 'three', posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false } } } }], `Add ${h.name}`);
       return undefined;
     }
+    case 'img':
+      await studio.exec([{ name: 'instance.add', params: { scene: scene.id, kind: 'image', asset: h.ref, name: h.name, transform: { x: pos?.x ?? cx, y: pos?.y ?? project.project.output.height / 2 } } }], `Add ${h.name}`);
+      return undefined;
     case 'prop':
       await studio.exec([{ name: 'instance.add', params: { scene: scene.id, kind: 'prop', asset: h.ref, name: h.name, transform: { x: pos?.x ?? cx, y: pos?.y ?? project.project.output.height * 0.8 } } }], `Add ${h.name}`);
       return undefined;

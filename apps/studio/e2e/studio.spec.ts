@@ -153,3 +153,140 @@ test.describe(() => {
     expect(res.headers()['content-type']).toBe('video/mp4');
   });
 });
+
+test('character builder edits a draft, checks the rig, saves a new character for one instance and undoes (FR-BLD-01..08, FR-CHR-10)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const maya = st.scenes[sid].instances.find((i: { name: string }) => i.name === 'Maya Bennett');
+  await page.getByRole('treeitem', { name: /Maya Bennett/ }).first().click();
+  await page.getByRole('tab', { name: 'Properties' }).click();
+  await page.getByRole('button', { name: 'Open in builder' }).click();
+  await expect(page.getByRole('button', { name: 'Rig check details' })).toContainText('Rig check passed', { timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Rig check details' })).toContainText('4 views · 2 styles · 9 mouth shapes');
+  const saveBtn = page.getByRole('button', { name: 'Save as new character' });
+  await expect(saveBtn).toBeDisabled();
+  // Search matches current values; choosing a hairstyle marks the draft edited.
+  await page.getByRole('textbox', { name: 'Search parts and settings' }).fill('hairstyle');
+  await page.getByRole('treeitem', { name: /Hairstyle/ }).click();
+  await page.getByRole('textbox', { name: 'Search parts and settings' }).fill('');
+  const tiles = page.getByRole('radiogroup', { name: 'Hairstyle' });
+  const current = await tiles.getByRole('radio', { checked: true }).getAttribute('title');
+  const other = tiles.getByRole('radio', { checked: false }).first();
+  const otherName = await other.getAttribute('title');
+  await other.click();
+  await expect(page.getByText(/· edited/).first()).toBeVisible();
+  await expect(page.getByRole('treeitem', { name: new RegExp(`Hairstyle.*${otherName}`) })).toBeVisible();
+  // Builder-local undo/redo.
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(tiles.getByRole('radio', { checked: true })).toHaveAttribute('title', current!);
+  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await expect(tiles.getByRole('radio', { checked: true })).toHaveAttribute('title', otherName!);
+  // Turnaround sheet shows all four views.
+  await page.getByText('Turnaround sheet').click();
+  await expect(page.getByRole('img', { name: /Maya Bennett, (Front|Three-quarter|Side|Back) view/ })).toHaveCount(4);
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  // A library character is saved as a new character used only by this instance.
+  await expect(saveBtn).toBeEnabled({ timeout: 15_000 });
+  await saveBtn.click();
+  const dlg = page.getByRole('dialog', { name: 'Save as a new character' });
+  await dlg.getByRole('radio', { name: /Only Maya Bennett in this scene/ }).click();
+  await dlg.getByRole('button', { name: 'Save character' }).click();
+  await expect(dlg).toBeHidden();
+  await expect(page.getByText(/^v1$/)).toBeVisible();
+  const after = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const inst = after.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id);
+  expect(inst.asset).toMatch(/^user\..+@1$/);
+  expect(after.assets[inst.asset].data.parts.hair).not.toBe(st.assets[inst.asset]?.data?.parts?.hair);
+  // Saved versions export as .framechar.
+  await expect(page.getByRole('button', { name: 'Export…' })).toBeEnabled();
+  // The save is one undoable step in the project history.
+  await page.getByRole('button', { name: 'Back to the workspace' }).click();
+  await page.getByRole('button', { name: /^Undo Save .* as a new character/ }).first().click();
+  await expect.poll(async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id).asset).toBe(maya.asset);
+});
+
+test('project versions: save, compare and restore; packages import from the File menu (FR-PER-03, FR-IMP-04)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const original = st.scenes[sid].name;
+  await page.getByRole('menuitem', { name: 'File' }).click();
+  await page.getByRole('menuitem', { name: 'Versions…' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Versions' });
+  await dlg.getByRole('textbox', { name: 'Version name' }).fill('Before rename');
+  await dlg.getByRole('button', { name: 'Save version' }).click();
+  await expect(dlg.getByRole('button', { name: /Before rename/ })).toBeVisible();
+  await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'scene.rename', params: { id: sid, name: 'Renamed scene' } }] } });
+  await dlg.getByRole('button', { name: /Before rename/ }).click();
+  await expect(dlg.getByRole('list', { name: 'Differences' })).toContainText('Renamed scene');
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await dlg.getByRole('button', { name: 'Restore this version' }).click();
+  await expect(dlg).toBeHidden();
+  await expect.poll(async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state.scenes[sid].name).toBe(original);
+  // A .framechar from this project imports as "already present"; the menu path and file input work.
+  const made = await (await page.request.post(`/api/projects/${pid}/characters`, { data: { spec: { name: 'Packed', from: st.scenes[sid].instances.find((i: { kind: string }) => i.kind === 'character').asset } } })).json();
+  const pkg = await page.request.get(`/api/projects/${pid}/packages/export?format=framechar&refs=${encodeURIComponent(made.ref)}`);
+  await page.locator('input[aria-label="Import package"]').setInputFiles({ name: 'packed.framechar', mimeType: 'application/zip', buffer: await pkg.body() });
+  await expect(page.getByText('Everything in the package is already in this project')).toBeVisible();
+});
+
+test('imports an SVG as an object with a rights statement; the preview still matches the export renderer (FR-IMP-01/02)', async ({ page }) => {
+  await openProject(page, sample(false));
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 10 10"><g id="sign"><rect width="10" height="10" fill="#22aa55"/></g></svg>';
+  await page.locator('input[aria-label="Import a file"]').setInputFiles({ name: 'green sign.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(svg) });
+  const dlg = page.getByRole('dialog', { name: 'Import green sign.svg' });
+  await dlg.getByRole('radio', { name: 'I have a licence to use it' }).click();
+  await expect(dlg.getByRole('button', { name: 'Import', exact: true })).toBeDisabled();
+  await dlg.getByRole('textbox', { name: 'Licence' }).fill('CC-BY-4.0');
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await dlg.getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(dlg).toBeHidden();
+  await expect(page.getByText('Imported green sign.svg')).toBeVisible();
+  await page.getByRole('button', { name: 'Layers', exact: true }).click();
+  await expect(page.getByRole('treeitem', { name: /green sign/ }).first()).toBeVisible();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const asset = Object.values(st.assets as Record<string, { kind: string; license: { id: string }; provenance: { sourceFile: string } }>).find((a) => a.kind === 'img')!;
+  expect(asset.license.id).toBe('CC-BY-4.0');
+  expect(asset.provenance.sourceFile).toBe('green sign.svg');
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 0);
+});
+
+test('rigging assistant: a layered PSD becomes a character with declared view gaps and a library mouth (FR-IMP-03, AC-12 path)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const psd = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-psd-')), 'hero.psd');
+  execFileSync(process.execPath, ['--import', 'tsx', path.join(repo, 'tools/demo/make-psd.ts'), psd], { cwd: repo });
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await page.locator('input[aria-label="Import a file"]').setInputFiles(psd);
+  await page.getByRole('dialog', { name: 'Import hero.psd' }).getByRole('button', { name: 'Open rigging assistant' }).click();
+  const dlg = page.getByRole('dialog', { name: /Rigging assistant/ });
+  await expect(dlg.getByRole('region', { name: 'Front layers' }).or(dlg.locator('section[aria-label="Front layers"]'))).toBeVisible({ timeout: 30_000 });
+  await expect(dlg.getByRole('button', { name: 'Rig target for head' }).first()).toContainText('Head');
+  // The three-quarter view has only a resting mouth: the rig check blocks saving until a library mouth fills in.
+  await expect(dlg.getByRole('list', { name: 'Rig check problems' })).toContainText('mouth shapes');
+  await expect(dlg.getByRole('button', { name: 'Save character' })).toBeDisabled();
+  await dlg.getByRole('button', { name: 'Library mouth' }).click();
+  await page.getByRole('option', { name: /^Library: / }).first().click();
+  await expect(dlg.getByText('Rig check passed')).toBeVisible();
+  await expect(dlg.getByRole('img', { name: /hero, (Front|Three-quarter) view/ })).toHaveCount(2);
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await dlg.getByRole('button', { name: 'Save character' }).click();
+  await expect(dlg).toBeHidden();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const chr = Object.values(st.assets as Record<string, { kind: string; name: string; viewExemptions: Record<string, string> }>).find((a) => a.kind === 'chr' && a.name === 'hero')!;
+  expect(Object.keys(chr.viewExemptions).sort()).toEqual(['back', 'side']);
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  expect(st.scenes[sid].instances.some((i: { name: string }) => i.name === 'hero')).toBe(true);
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 0);
+});

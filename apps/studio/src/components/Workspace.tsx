@@ -16,6 +16,8 @@ import { ProblemsButton } from './ProblemsButton.js';
 import { ActivityButton } from './ActivityButton.js';
 import { VoiceDesigner } from './VoiceDesigner.js';
 import { Builder } from './Builder.js';
+import { VersionsDialog } from './VersionsDialog.js';
+import { api } from '../lib/api.js';
 import { usePlayback } from '../lib/playback.js';
 import { ResizeHandle, usePanelSize } from './Resize.js';
 import { ContextMenuHost } from './ContextMenu.js';
@@ -25,6 +27,8 @@ interface Ctx {
   assets: AssetCache;
   openExport: () => void;
   openVoiceDesigner: (instance?: string) => void;
+  openVersions: () => void;
+  importPackage: () => void;
 }
 const StudioCtx = createContext<Ctx | null>(null);
 export function useCtx(): Ctx {
@@ -42,7 +46,25 @@ export function Workspace({ pid, builder }: { pid: string; builder?: { scene: st
   const [failed, setFailed] = useState<string>();
   const [exportOpen, setExportOpen] = useState(false);
   const [voiceFor, setVoiceFor] = useState<string | undefined | null>(null);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const pkgInput = useRef<HTMLInputElement>(null);
   const toasts = useToasts();
+  // Imports a .framechar, .frameasset or .framevoice into the project (FR-IMP-04); conflicts can be kept under new IDs.
+  const onPackage = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      let r;
+      try {
+        r = await api.importPackage(pid, file);
+      } catch (e) {
+        if ((e as { code?: string }).code !== 'CONFLICT' || !window.confirm(`${(e as Error).message}\n\nImport them under new IDs instead?`)) throw e;
+        r = await api.importPackage(pid, file, { newIds: true });
+      }
+      toasts.show({ tone: 'success', message: r.added.length ? `Imported ${r.added.length} asset(s)${r.renamed.length ? ` (${r.renamed.length} under new IDs)` : ''}` : 'Everything in the package is already in this project' });
+    } catch (e) {
+      toasts.show({ tone: 'error', message: (e as Error).message });
+    }
+  };
 
   useEffect(() => {
     studio.start().catch((e: Error) => setFailed(e.message));
@@ -66,12 +88,14 @@ export function Workspace({ pid, builder }: { pid: string; builder?: { scene: st
     );
   }
   if (!project) return <div className="fr-root st-app st-center" aria-busy="true">Opening project…</div>;
-  const ctx: Ctx = { studio, assets, openExport: () => setExportOpen(true), openVoiceDesigner: (i) => setVoiceFor(i) };
+  const ctx: Ctx = { studio, assets, openExport: () => setExportOpen(true), openVoiceDesigner: (i) => setVoiceFor(i), openVersions: () => setVersionsOpen(true), importPackage: () => pkgInput.current?.click() };
   return (
     <StudioCtx.Provider value={ctx}>
       <ContextMenuHost>{builder ? <Builder scene={builder.scene} instance={builder.instance} /> : <Shell />}</ContextMenuHost>
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <VoiceDesigner open={voiceFor !== null} instance={voiceFor ?? undefined} onClose={() => setVoiceFor(null)} />
+      <VersionsDialog pid={pid} open={versionsOpen} onClose={() => setVersionsOpen(false)} />
+      <input ref={pkgInput} type="file" accept=".framechar,.frameasset,.framevoice" hidden aria-label="Import package" onChange={(e) => { void onPackage(e.target.files?.[0]); e.target.value = ''; }} />
     </StudioCtx.Provider>
   );
 }
@@ -117,7 +141,7 @@ function Shell() {
 }
 
 function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right' | 'timeline') => void; panels: { left: boolean; right: boolean; timeline: boolean } }) {
-  const { studio, openExport, openVoiceDesigner } = useCtx();
+  const { studio, openExport, openVoiceDesigner, openVersions, importPackage } = useCtx();
   const { resolved, setTheme } = useTheme();
   const project = useStudio(studio, (s) => s.project)!;
   const save = useStudio(studio, (s) => s.save);
@@ -137,7 +161,11 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
     { id: 'file', label: 'File', items: [
       { id: 'home', label: 'Projects…', onSelect: () => (location.hash = '#/') },
       { id: 'save', label: 'Save now', shortcut: 'Ctrl S', onSelect: () => void import('../lib/api.js').then(({ api }) => api.save(studio.state.pid)) },
+      { id: 'versions', label: 'Versions…', onSelect: openVersions },
       { kind: 'separator', id: 's1' },
+      { id: 'import-pkg', label: 'Import package…', onSelect: importPackage },
+      { id: 'export-proj', label: 'Export project package (.frameproj)', onSelect: () => (location.href = api.projectPackageUrl(studio.state.pid)) },
+      { kind: 'separator', id: 's2' },
       { id: 'export', label: 'Export…', shortcut: 'Ctrl E', onSelect: openExport },
     ] },
     { id: 'edit', label: 'Edit', items: [

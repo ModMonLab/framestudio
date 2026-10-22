@@ -8,6 +8,7 @@ import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
 import { instanceMenu, useContextMenu } from './ContextMenu.js';
 import { DRAG_TYPE, placeAsset, type Hit } from './AssetsPanel.js';
+import { ImportDialog } from './ImportDialog.js';
 import type { Renderer } from '@frame/render';
 import type { FamilyStyle } from '@frame/rig';
 
@@ -26,6 +27,7 @@ export function CanvasView() {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [box, setBox] = useState({ w: 800, h: 450 });
   const [zoom, setZoom] = useState<number | 'fit'>('fit');
+  const [dropped, setDropped] = useState<{ file: File; position: { x: number; y: number } }>();
   const [renderer, setRenderer] = useState<Renderer>();
   const [styles, setStyles] = useState<Record<string, FamilyStyle>>();
   const [assetsVersion, setAssetsVersion] = useState(0);
@@ -133,9 +135,9 @@ export function CanvasView() {
   // character under the pointer at the playhead.
   const onDrop = (e: React.DragEvent) => {
     const raw = e.dataTransfer.getData(DRAG_TYPE);
-    if (!raw || !ev || !sceneId) return;
+    const file = e.dataTransfer.files?.[0];
+    if ((!raw && !file) || !ev || !sceneId) return;
     e.preventDefault();
-    const h = JSON.parse(raw) as Hit;
     const stage = (e.currentTarget as HTMLElement).querySelector('.st-stage')!.getBoundingClientRect();
     const px = (e.clientX - stage.left) / k;
     const py = (e.clientY - stage.top) / k;
@@ -144,6 +146,12 @@ export function CanvasView() {
     const det = a * d - b * c;
     const x = (d * (px - tx) - c * (py - ty)) / det;
     const y = (-b * (px - tx) + a * (py - ty)) / det;
+    // Files dropped from the desktop open the import dialog at the drop point (FR-IMP-01).
+    if (!raw && file) {
+      setDropped({ file, position: { x: Math.round(x), y: Math.round(y) } });
+      return;
+    }
+    const h = JSON.parse(raw) as Hit;
     const target = hit(e.clientX - stage.left, e.clientY - stage.top);
     const targetIsChar = target && project.scenes[sceneId]!.instances.find((i) => i.id === target)?.kind === 'character';
     if ((h.kind === 'exp' || h.kind === 'act') && !targetIsChar) {
@@ -154,7 +162,7 @@ export function CanvasView() {
   };
   const selIds = new Set(selection.filter((s) => s.kind === 'instance').map((s) => s.id));
   return (
-    <div className="st-canvas" ref={wrap} onDragOver={(e) => { if (e.dataTransfer.types.includes(DRAG_TYPE)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }} onDrop={onDrop}>
+    <div className="st-canvas" ref={wrap} onDragOver={(e) => { if (e.dataTransfer.types.includes(DRAG_TYPE) || e.dataTransfer.types.includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }} onDrop={onDrop}>
       <div className="st-stage" style={{ width: cssW, height: cssH }} onContextMenu={onContextMenu} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} role="img" aria-label={`Stage preview${ev ? `, camera ${ev.camera.name}` : ''}`}>
         <canvas ref={canvas} style={{ width: cssW, height: cssH, display: 'block' }} data-testid="stage-canvas" />
         {ev && <span className="st-shot">{ev.camera.name}</span>}
@@ -174,6 +182,7 @@ export function CanvasView() {
         <button type="button" className="st-zoom" onClick={() => setZoom('fit')} title="Fit to window">{zoom === 'fit' ? 'Fit' : `${Math.round(scale * 100)}%`}</button>
         <IconButton size="sm" label="Zoom in" icon={<Plus size={14} />} onClick={() => setZoom(ZOOMS.find((z) => z > scale + 1e-6) ?? ZOOMS.at(-1)!)} />
       </FloatingControl>
+      <ImportDialog file={dropped?.file} {...(dropped ? { position: dropped.position } : {})} onClose={() => setDropped(undefined)} />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { FrameError } from '@frame/schema';
 import { createServer } from '@frame/server';
 import { runStdio } from '@frame/mcp';
 import { command } from './framework.js';
-import { contentDir } from './env.js';
+import { contentDir, userLibraryDir } from './env.js';
 
 command({
   path: ['server', 'start'],
@@ -28,7 +28,7 @@ command({
     const studioDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../apps/studio/dist');
     if (ctx.opts.dryRun) return { dryRun: true, host, port, workerUrl: workerUrl ?? null, studioDir };
     const srv = await createServer({
-      contentDir: contentDir(), studioDir, host, ...(token ? { token } : {}), watchMs: 1000,
+      contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), studioDir, host, ...(token ? { token } : {}), watchMs: 1000,
       ...(workerUrl ? { workerUrl } : {}), ...(ctx.io.env.FRAME_WORKER_TOKEN ? { workerToken: ctx.io.env.FRAME_WORKER_TOKEN } : {}),
     });
     if (ctx.args.open) srv.hub.open(path.resolve(ctx.io.cwd, String(ctx.args.open)));
@@ -61,7 +61,7 @@ command({
     const token = ctx.opts.token ?? ctx.io.env.FRAME_SERVER_TOKEN;
     if (ctx.opts.dryRun) return { dryRun: true, server: ctx.opts.server ?? 'embedded', session: session ?? null };
     await runStdio({
-      contentDir: contentDir(), log: ctx.log,
+      contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), log: ctx.log,
       ...(ctx.opts.server ? { serverUrl: ctx.opts.server } : {}), ...(token ? { token } : {}), ...(session ? { session } : {}),
       ...(workerUrl ? { workerUrl } : {}), ...(ctx.io.env.FRAME_WORKER_TOKEN ? { workerToken: ctx.io.env.FRAME_WORKER_TOKEN } : {}),
     });

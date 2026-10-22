@@ -11,12 +11,42 @@ import { api } from './api.js';
 
 let rendererP: Promise<Renderer> | undefined;
 
+/**
+ * Media bytes for images in the preview, fetched on demand by hash (content-addressed, so never stale). The
+ * renderer asks synchronously; a miss starts the fetch and listeners redraw when it lands.
+ */
+const media = new Map<string, Uint8Array | null>();
+const mediaListeners = new Set<() => void>();
+let mediaProject = '';
+export function setMediaProject(pid: string) {
+  mediaProject = pid;
+}
+export function onMediaLoaded(fn: () => void) {
+  mediaListeners.add(fn);
+  return () => mediaListeners.delete(fn);
+}
+function imageBytes(src: string): Uint8Array | undefined {
+  if (!src.startsWith('media:') || !mediaProject) return undefined;
+  const hash = src.slice(6);
+  if (media.has(hash)) return media.get(hash) ?? undefined;
+  media.set(hash, null);
+  void fetch(api.mediaUrl(mediaProject, hash))
+    .then(async (r) => (r.ok ? new Uint8Array(await r.arrayBuffer()) : null))
+    .catch(() => null)
+    .then((b) => {
+      if (!b) return; // stays null: missing media is reported by validation, not refetched every frame
+      media.set(hash, b);
+      for (const fn of mediaListeners) fn();
+    });
+  return undefined;
+}
+
 export function getRenderer(): Promise<Renderer> {
   rendererP ??= (async () => {
     const ck = await CanvasKitInit({ locateFile: () => wasmUrl });
     const manifest = (await (await fetch('/content/fonts/fonts.json')).json()) as { fonts: { family: string; file: string }[] };
     const fonts: FontSource[] = await Promise.all(manifest.fonts.map(async (f) => ({ family: f.family, data: new Uint8Array(await (await fetch(`/content/fonts/${f.file}`)).arrayBuffer()) })));
-    return createRenderer(ck, fonts);
+    return createRenderer(ck, fonts, imageBytes);
   })();
   return rendererP;
 }
@@ -37,7 +67,10 @@ export class AssetCache {
   private listeners = new Set<() => void>();
   version = 0;
 
-  constructor(private readonly pid: string) {}
+  constructor(private readonly pid: string) {
+    setMediaProject(pid);
+    onMediaLoaded(() => this.bump());
+  }
 
   onChange(fn: () => void) {
     this.listeners.add(fn);
@@ -70,6 +103,11 @@ export class AssetCache {
     }
     return undefined;
   };
+
+  /** True when the server reported the ref as not found. */
+  isMissing(ref: string): boolean {
+    return this.map.get(ref) === null;
+  }
 
   get loading(): boolean {
     return this.pending.size > 0;

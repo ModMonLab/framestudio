@@ -25,6 +25,8 @@ export class OpenProject {
   private _save: SaveState;
   private statusListeners = new Set<(s: SaveState) => void>();
   private debounceMs: number;
+  /** Computes the project's locks at save time (FR-DAT-06); without it locks are kept as loaded. */
+  locksFor?: (state: ProjectState) => ProjectState['locks'];
 
   constructor(store: ProjectStore, session: ProjectSession, opts: { debounceMs?: number; load?: LoadResult } = {}) {
     this.store = store;
@@ -95,6 +97,17 @@ export class OpenProject {
     }
     if (this.pending.size === 0 && this._save.status !== 'error') return true;
     this.setSave({ status: 'saving' });
+    if (this.locksFor) {
+      try {
+        const locks = this.locksFor(this.session.state);
+        if (JSON.stringify(locks) !== JSON.stringify(this.session.state.locks)) {
+          this.session.setLocks(locks);
+          this.pending.add('locks');
+        }
+      } catch {
+        // Locks are derived; a failure to compute them never blocks saving the user's work.
+      }
+    }
     const keys = [...this.pending];
     try {
       this.store.save(this.session.state, this.session.revision, keys.includes('*') ? ['*'] : keys);

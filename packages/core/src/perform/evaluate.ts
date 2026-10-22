@@ -48,6 +48,8 @@ export interface EvaluatedFrame {
   issues: string[];
   /** Screen-space boxes per instance (selection handles, hit testing). */
   boxes: Record<string, { x: number; y: number; w: number; h: number }>;
+  /** Current mouth shape per speaking character (builder lip-sync readout, FR-LIP-03). */
+  mouths: Record<string, MouthLetter | null>;
 }
 
 const sec = (t: number) => t / TICKS_PER_SECOND;
@@ -428,6 +430,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
   const designAspect = state.project.output.width / state.project.output.height;
   const fps = state.project.frameRate;
   const boxes: EvaluatedFrame['boxes'] = {};
+  const mouths: EvaluatedFrame['mouths'] = {};
   const planeOrder = new Map(scene.stage.depthPlanes.map((p) => [p.id, p.order]));
 
   const visibleInstances = scene.instances.filter((i) => i.visible && i.kind !== 'group');
@@ -459,6 +462,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
         continue;
       }
       const perf = perform(state, scene, inst, t, o.assets, fps);
+      mouths[inst.id] = perf.mouth;
       const { spec, missing } = resolveCharacter(man, inst.character.look, family, style, o.assets, perf.extraParts);
       for (const mref of missing) issues.push(`${inst.name}: missing asset ${mref}`);
       const composed = composeCharacter(spec, { view: inst.character.view, flip: tr.flipX, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
@@ -478,6 +482,16 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
       content = drawPropArt(data, family, propState(scene, inst, t), (inst.params.colors as Record<string, string> | undefined) ?? {}, style, t, hash32(inst.id));
       const bb = kitPart?.bounds ?? (man!.anchors as { bounds?: [number, number, number, number] }).bounds ?? [-100, -200, 200, 200];
       boxes[inst.id] = screenBox(m, bb[0], bb[1], bb[2], bb[3]);
+    } else if (inst.kind === 'image' && inst.asset) {
+      // Imported images (FR-IMP-01): raster media or a parsed vector drawing, centred on the instance origin.
+      const data = o.assets.manifest(inst.asset)?.data as ImportedImageData | undefined;
+      const drawn = data ? importedImageItems(data) : undefined;
+      if (!drawn) {
+        issues.push(`${inst.name}: ${inst.asset} not found`);
+        continue;
+      }
+      content = drawn.items;
+      boxes[inst.id] = screenBox(m, -drawn.w / 2, -drawn.h / 2, drawn.w, drawn.h);
     } else if (inst.kind === 'text') {
       content = [{ k: 'text', text: String(inst.params.text ?? ''), x: 0, y: 0, size: Number(inst.params.size ?? 48), family: String(inst.params.font ?? 'Inter'), weight: Number(inst.params.weight ?? 700), color: String(inst.params.color ?? '#FFFFFF'), align: 'center' }];
     }
@@ -507,6 +521,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
     view,
     issues,
     boxes,
+    mouths,
   };
 }
 
@@ -517,4 +532,45 @@ function screenBox(m: Mat, x: number, y: number, w: number, h: number) {
   const xs = pts.map((p) => p[0]!);
   const ys = pts.map((p) => p[1]!);
   return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+}
+
+/** Data of an imported image asset (`img` kind): raster media or a vector drawing in viewBox units. */
+export interface ImportedImageData {
+  image?: { media: { hash: string; ext: string }; width: number; height: number };
+  vector?: {
+    width: number;
+    height: number;
+    viewBox: [number, number, number, number];
+    layers: { name: string; shapes: { d: string; fill?: string; stroke?: string; strokeWidth?: number; opacity?: number; evenOdd?: boolean; tf?: Mat }[] }[];
+  };
+}
+
+/** Display items for an imported image, centred on (0, 0), size in stage units. */
+export function importedImageItems(data: ImportedImageData, hidden: Set<string> = new Set()): { items: Item[]; w: number; h: number } | undefined {
+  if (data.image) {
+    const { width: w, height: h } = data.image;
+    return { items: [{ k: 'image', src: `media:${data.image.media.hash}`, x: -w / 2, y: -h / 2, w, h }], w, h };
+  }
+  if (data.vector) {
+    const v = data.vector;
+    const sx = v.width / v.viewBox[2];
+    const sy = v.height / v.viewBox[3];
+    const items: Item[] = [];
+    for (const layer of v.layers) {
+      if (hidden.has(layer.name)) continue;
+      for (const sh of layer.shapes) {
+        items.push({
+          k: 'path', d: sh.d,
+          ...(sh.fill ? { fill: { color: sh.fill } } : {}),
+          ...(sh.stroke ? { stroke: { paint: { color: sh.stroke }, width: sh.strokeWidth ?? 1 } } : {}),
+          ...(sh.opacity !== undefined && sh.opacity < 1 ? { op: sh.opacity } : {}),
+          ...(sh.evenOdd ? { evenOdd: true } : {}),
+          ...(sh.tf ? { tf: sh.tf } : {}),
+        } as Item);
+      }
+    }
+    const tf: Mat = [sx, 0, 0, sy, -v.width / 2 - v.viewBox[0] * sx, -v.height / 2 - v.viewBox[1] * sy];
+    return { items: [{ k: 'group', tf, items } as GroupItem], w: v.width, h: v.height };
+  }
+  return undefined;
 }

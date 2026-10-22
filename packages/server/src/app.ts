@@ -8,10 +8,14 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { buildCharacter, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { assetUsages, checkCharacter, compareStates, rigArtwork, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
-import { decodeAudioFile, OpenProject, renderExport, rmsEnvelope, type OutputPreset } from '@frame/io';
+import {
+  decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+} from '@frame/io';
+import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
 import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
@@ -33,11 +37,14 @@ export interface ServerOptions {
   watchMs?: number;
   debounceMs?: number;
   logger?: boolean;
+  /** User library folder (FR-AST-01). */
+  userDir?: string;
 }
 
 const STATUS: Partial<Record<ErrorCode, number>> = {
   USAGE: 400, VALIDATION_FAILED: 422, NOT_FOUND: 404, REVISION_CONFLICT: 409, CONFLICT: 409, PERMISSION_REQUIRED: 403,
   CONSENT_REQUIRED: 403, WORKER_UNAVAILABLE: 503, CANCELLED: 409, SCHEMA_TOO_NEW: 422, MIGRATION_REQUIRED: 409, RENDER_FAILED: 500,
+  INVALID_PACKAGE: 422, UNSUPPORTED: 400,
 };
 
 function sendError(reply: FastifyReply, e: unknown) {
@@ -56,12 +63,34 @@ export interface FrameServer {
 
 export async function createServer(o: ServerOptions): Promise<FrameServer> {
   const app = Fastify({ logger: o.logger ?? false, bodyLimit: 512 * 1024 * 1024 });
-  const hub = new ProjectHub({ ...(o.watchMs ? { watchMs: o.watchMs } : {}), ...(o.debounceMs !== undefined ? { debounceMs: o.debounceMs } : {}) });
+  // Locks are computed against bundled + user sources at every save (FR-DAT-06).
+  const lockLookup = () => {
+    const lib = libraryFor({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}) });
+    return (ref: string) => {
+      const e = lib.get(ref);
+      return e ? { manifest: e.manifest, source: e.source } : undefined;
+    };
+  };
+  const hub = new ProjectHub({
+    ...(o.watchMs ? { watchMs: o.watchMs } : {}), ...(o.debounceMs !== undefined ? { debounceMs: o.debounceMs } : {}),
+    onAttach: (open) => {
+      open.locksFor = (state) => computeLocks(state, lockLookup());
+    },
+  });
   const jobs = { render: new JobQueue(1), voice: new JobQueue(1) };
   const styles = loadStyles(o.contentDir);
   let renderer: Promise<NodeRenderer> | undefined;
-  const getRenderer = () => (renderer ??= createNodeRenderer({ fontsDir: path.join(o.contentDir, 'fonts') }));
-  const library = (p?: HubProject) => libraryFor({ contentDir: o.contentDir, projectAssets: Object.fromEntries(Object.entries(p?.open.state.assets ?? {}).map(([ref, m]) => [`assets/local/${ref}.json`, m])) });
+  // Imported images resolve from the media store of whichever open project holds them (content-addressed).
+  const images = (src: string) => {
+    if (!src.startsWith('media:')) return undefined;
+    for (const p of hub.list()) {
+      const f = p.open.store.findMedia(src.slice(6));
+      if (f) return new Uint8Array(fs.readFileSync(f));
+    }
+    return undefined;
+  };
+  const getRenderer = () => (renderer ??= createNodeRenderer({ fontsDir: path.join(o.contentDir, 'fonts'), images }));
+  const library = (p?: HubProject) => libraryFor({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}), projectAssets: Object.fromEntries(Object.entries(p?.open.state.assets ?? {}).map(([ref, m]) => [`assets/local/${ref}.json`, m])) });
 
   /* ---------------------------------------------------------------- security */
   app.addHook('onRequest', async (req, reply) => {
@@ -75,7 +104,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (auth !== `Bearer ${o.token}` && q !== o.token) return reply.code(401).send({ error: { code: 'PERMISSION_REQUIRED', message: 'A valid token is required' } });
     }
   });
-  app.addContentTypeParser(['application/octet-stream', 'audio/*', 'image/*', 'video/*'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
+  app.addContentTypeParser(['application/octet-stream', 'application/zip', 'audio/*', 'image/*', 'video/*'], { parseAs: 'buffer' }, (_req, body, done) => done(null, body));
   app.setErrorHandler((e, _req, reply) => {
     const fe = e as { validation?: unknown; statusCode?: number; message: string };
     if (fe.validation || fe.statusCode === 400) return sendError(reply, new FrameError('USAGE', fe.message));
@@ -216,7 +245,8 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     try {
       const p = hub.get(req.params.pid);
       const lib = library(p);
-      const problems = validateProject(p.open.state, { assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h) });
+      const locked = lockLookup();
+      const problems = validateProject(p.open.state, { assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), assetHash: (r) => { const m = locked(r)?.manifest; return m ? manifestHash(m) : undefined; } });
       return { revision: p.open.session.revision, problems };
     } catch (e) {
       return sendError(reply, e);
@@ -352,6 +382,131 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
+  /* ---------------------------------------------------------------- file import (FR-IMP-01/02) */
+  app.post<{ Params: { pid: string }; Querystring: { name: string; rights: string; licence?: string; attribution?: string; scene?: string; as?: string; at?: string; x?: string; y?: string; dryRun?: string }; Body: Buffer }>('/api/projects/:pid/import', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the file bytes as application/octet-stream');
+      const q = req.query;
+      const n = (v?: string) => (v !== undefined && v !== '' && Number.isFinite(Number(v)) ? Number(v) : undefined);
+      const res = importFile(p.open, new Uint8Array(req.body), {
+        fileName: String(q.name ?? ''), rights: q.rights as RightsStatement, author: sourceOf(req) === 'user' ? 'Studio user' : sourceOf(req), source: sourceOf(req),
+        ...(q.licence ? { licence: q.licence } : {}), ...(q.attribution ? { attribution: q.attribution } : {}),
+        ...(q.scene ? { scene: q.scene } : {}), ...(q.as ? { as: q.as as never } : {}),
+        ...(n(q.at) !== undefined ? { at: n(q.at)! } : {}), ...(n(q.x) !== undefined ? { x: n(q.x)! } : {}), ...(n(q.y) !== undefined ? { y: n(q.y)! } : {}),
+        dryRun: q.dryRun === 'true',
+      });
+      return res;
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- rigging assistant (FR-IMP-03) */
+  // Reads layered artwork, stores raster layers as media and returns layers with suggested rig targets.
+  app.post<{ Params: { pid: string }; Querystring: { name: string }; Body: Buffer }>('/api/projects/:pid/rigging/read', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the PSD or SVG bytes as application/octet-stream');
+      const art = readLayeredArtwork(new Uint8Array(req.body), String(req.query.name ?? 'artwork'));
+      const layers = art.layers.map((l) => ({
+        id: l.id, name: l.name, ...(l.view ? { view: l.view } : {}), ...(l.group ? { group: l.group } : {}), hidden: l.hidden, bounds: l.bounds,
+        ...(l.png ? { media: p.open.store.putMedia(l.png, { ext: 'png', mime: 'image/png', width: Math.round(l.bounds[2]), height: Math.round(l.bounds[3]) }).hash } : {}),
+        ...(l.paths ? { paths: l.paths } : {}),
+        suggestion: suggestTarget(l.name),
+      }));
+      return { fileName: art.fileName, source: art.source, width: art.width, height: art.height, views: art.views, layers, warnings: art.warnings, targets: RIG_TARGETS.map((t) => ({ value: t, label: RIG_TARGET_LABELS[t] })) };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Builds the character from mapped layers: a dry run returns the manifests and the rig check; save adds them.
+  app.post<{ Params: { pid: string }; Body: { name: string; fileName: string; rights: string; layers: RigLayer[]; mapping: Record<string, RigTarget>; libraryParts?: Record<string, string>; save?: boolean; place?: { scene: string; x?: number; y?: number } } }>('/api/projects/:pid/rigging/build', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      if (!b?.name?.trim()) throw new FrameError('USAGE', 'Name the character');
+      if (!b.rights?.trim()) throw new FrameError('USAGE', 'State your rights to the artwork', undefined, 'Imports record a statement of rights (FR-IMP-02).');
+      for (const l of b.layers ?? []) if (l.media && !p.open.store.findMedia(l.media)) throw new FrameError('NOT_FOUND', `Layer ${l.name} media is missing; read the artwork again`);
+      const lib = library(p);
+      for (const ref of Object.values(b.libraryParts ?? {})) if (ref && !lib.has(ref)) throw new FrameError('NOT_FOUND', `${ref} is not in the library`);
+      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: b.mapping ?? {}, libraryParts: b.libraryParts ?? {}, newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
+      const local = new Map([...res.parts, res.character].map((m) => [`${m.id}@${m.version}`, m]));
+      const look = (r: string) => local.get(r) ?? (lib.manifest(r) as AssetManifest | undefined);
+      const check = checkCharacter(res.character, look, lib.byKind('act').map((x) => x.manifest));
+      const errors = [...res.problems.filter((x) => x.severity === 'error'), ...check.problems.filter((x) => x.severity === 'error')];
+      if (!b.save) return { ...res, check, ok: errors.length === 0 };
+      if (errors.length) throw new FrameError('VALIDATION_FAILED', `The character cannot be saved yet: ${errors.map((e) => e.message).join('; ')}`, { problems: errors });
+      const ref = `${res.character.id}@1`;
+      const cmds: { name: string; params: Record<string, unknown> }[] = [...res.parts, res.character].map((manifest) => ({ name: 'asset.addLocal', params: { manifest } }));
+      cmds.push({ name: 'cast.add', params: { character: ref, name: res.character.name } });
+      let instance: string | undefined;
+      if (b.place) {
+        instance = randomId('ins');
+        cmds.push({ name: 'instance.add', params: { scene: b.place.scene, id: instance, kind: 'character', asset: ref, name: res.character.name, transform: { x: b.place.x ?? 960, y: b.place.y ?? 1000 }, character: { look: 'default', view: res.views[0], posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false } } } });
+      }
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: `Rig ${res.character.name}` });
+      return { ref, instance: instance ?? null, revision: r.revision, views: res.views };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- packages (FR-DAT-10/11, FR-IMP-04) */
+  const download = (reply: FastifyReply, bytes: Uint8Array, name: string) =>
+    reply.header('content-type', 'application/zip').header('content-disposition', `attachment; filename="${name.replace(/[^A-Za-z0-9._-]/g, '-')}"`).send(Buffer.from(bytes));
+  const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'export';
+  app.get<{ Params: { pid: string }; Querystring: { format: string; refs: string } }>('/api/projects/:pid/packages/export', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const format = req.query.format as Exclude<PackageFormat, 'frameproj'>;
+      if (!['framechar', 'frameasset', 'framevoice'].includes(format)) throw new FrameError('USAGE', 'format must be framechar, frameasset or framevoice');
+      const refs = String(req.query.refs ?? '').split(',').filter(Boolean);
+      const lib = library(p);
+      const bytes = exportAssetsFromProject(p.open, lib, format, refs, { appVersion: SERVER_VERSION });
+      const unresolved = unresolvedReferences(refs, projectAssetSource(lib, p.open));
+      if (unresolved.length) reply.header('x-frame-unresolved', unresolved.join(','));
+      return download(reply, bytes, `${slug(lib.manifest(refs[0]!)?.name ?? 'export')}${PACKAGE_EXTENSIONS[format]}`);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string }; Querystring: { onConflict?: string; expect?: string; dryRun?: string }; Body: Buffer }>('/api/projects/:pid/packages/import', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the package bytes as application/zip');
+      const expect = (req.query.expect ? req.query.expect.split(',') : ['framechar', 'frameasset', 'framevoice']) as PackageFormat[];
+      const r = importAssetsIntoProject(p.open, library(p), new Uint8Array(req.body), { expect, onConflict: req.query.onConflict === 'new-id' ? 'new-id' : 'refuse', dryRun: req.query.dryRun === 'true', source: sourceOf(req) });
+      return { ...r.report, revision: r.revision };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.get<{ Params: { pid: string } }>('/api/projects/:pid/package', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const bytes = exportProjectFromOpen(p.open, library(p), { appVersion: SERVER_VERSION });
+      return download(reply, bytes, `${slug(p.open.state.project.name)}.frameproj`);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Querystring: { path: string; allowMissing?: string }; Body: Buffer }>('/api/projects/import-package', async (req, reply) => {
+    try {
+      if (!req.query.path) throw new FrameError('USAGE', 'path is required');
+      if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the package bytes as application/zip');
+      const lib = library();
+      const bundledHash = (ref: string) => {
+        const e = lib.get(ref);
+        return e?.source === 'bundled' ? manifestHash(e.manifest) : undefined;
+      };
+      const res = importProjectPackage(new Uint8Array(req.body), req.query.path, { bundledHash }, { allowMissing: req.query.allowMissing === 'true' });
+      const p = hub.open(res.root);
+      return { id: p.id, root: p.root, revision: p.open.session.revision, name: p.open.state.project.name, missing: res.missing };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
   app.get('/api/styles', async () => styles);
 
   // Thumbnails (FR-AST-07): the item on the library's preview character, rendered with the export renderer and cached.
@@ -362,6 +517,8 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return {};
     }
   })();
+  // Library defaults the Studio reads (builder test sets, preview character); content, not code (FR-ARC-06).
+  app.get('/api/library/defaults', async () => libraryDefaults);
   const thumbs = new Map<string, Buffer>();
   app.get<{ Querystring: { ref: string; family?: string; w?: string; h?: string; project?: string } }>('/api/library/thumbnail', async (req, reply) => {
     try {
@@ -537,6 +694,96 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       if (b.place) cmds.push({ name: 'instance.add', params: { scene: b.place.scene, kind: 'character', asset: ref, name: manifest.name, transform: { x: b.place.x ?? 960, y: b.place.y ?? 1000 }, character: { look: b.place.look ?? data.defaultLook, view: b.place.view ?? 'three', posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false }, ...(data.voice ? { voice: data.voice } : {}) } } });
       const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: `Create ${manifest.name}` }, { dryRun: b.dryRun === true });
       return { ref, revision: r.revision, dryRun: r.dryRun, instance: b.place ? (r.commands[2]!.params as { id: string }).id : null };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  // Character versions (FR-CHR-10, FR-BLD-06): save the builder's changes as version n+1 (or as a new character) and,
+  // when asked, switch one instance, a scene or the whole project to it in the same undoable step.
+  app.post<{ Params: { pid: string }; Body: { from: string; spec?: Omit<CharacterSpec, 'from' | 'name'> & { name?: string }; asNew?: boolean; update?: { scope: 'instance' | 'scene' | 'project'; scene?: string; instance?: string }; dryRun?: boolean } }>('/api/projects/:pid/characters/versions', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      const lib = library(p);
+      const { manifest, commands: cmds, label, isNew } = characterVersionCommands(p.open.state, b, {
+        manifest: (r) => lib.manifest(r) as AssetManifest | undefined, versions: (id) => lib.versions(id).map((m) => m.version),
+      }, { newId: () => `user.${randomUUID()}`, date: new Date().toISOString().slice(0, 10), author: sourceOf(req) });
+      const ref = `${manifest.id}@${manifest.version}`;
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label }, { dryRun: b.dryRun === true });
+      return { ref, version: manifest.version, isNew, revision: r.revision, dryRun: r.dryRun, reports: r.reports };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Project versions (FR-PER-03): named snapshots; list, save, compare with the current state, restore (undoable).
+  app.get<{ Params: { pid: string } }>('/api/projects/:pid/versions', async (req, reply) => {
+    try {
+      return { versions: hub.get(req.params.pid).open.store.listVersions() };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string }; Body: { name: string } }>('/api/projects/:pid/versions', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const name = String(req.body?.name ?? '').trim();
+      if (!name) throw new FrameError('USAGE', 'name is required');
+      p.open.flush();
+      return p.open.store.saveVersion(p.open.state, p.open.session.revision, name, randomId('snap'));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.get<{ Params: { pid: string; vid: string } }>('/api/projects/:pid/versions/:vid/compare', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      return compareStates(p.open.store.loadVersion(req.params.vid), p.open.state);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; vid: string } }>('/api/projects/:pid/versions/:vid/restore', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const snap = p.open.store.loadVersion(req.params.vid);
+      const name = p.open.store.listVersions().find((v) => v.id === req.params.vid)?.name ?? req.params.vid;
+      // Applied as one undoable step (unlike an external reload, history is kept).
+      const r = p.open.session.restore(snap, `Restore version "${name}"`, sourceOf(req));
+      return { revision: r.revision, label: r.label };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Live rig check of a character draft (FR-BLD-08): validates the changes and checks every part it draws.
+  app.post<{ Params: { pid: string }; Body: { from: string; spec?: Omit<CharacterSpec, 'from' | 'name'> & { name?: string } } }>('/api/projects/:pid/characters/check', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const lib = library(p);
+      const look = (r: string) => lib.manifest(r) as AssetManifest | undefined;
+      const base = look(req.body?.from ?? '');
+      if (!base || base.kind !== 'chr') throw new FrameError('NOT_FOUND', `${req.body?.from} is not a character`);
+      let manifest: AssetManifest;
+      try {
+        manifest = buildCharacter({ ...(req.body.spec ?? {}), from: req.body.from, name: req.body.spec?.name ?? base.name }, { manifest: look }, { id: base.id, date: '', author: '' });
+      } catch (e) {
+        if (e instanceof FrameError && e.code === 'VALIDATION_FAILED') {
+          const list = ((e.details as { problems?: string[] } | undefined)?.problems ?? [e.message]).map((message) => ({ severity: 'error' as const, message }));
+          return { ok: false, families: [], views: [], mouthShapes: 0, actions: { compatible: 0, total: 0 }, problems: list };
+        }
+        throw e;
+      }
+      return checkCharacter(manifest, look, lib.byKind('act').filter((x) => lib.latestRef(x.manifest.id) === `${x.manifest.id}@${x.manifest.version}`).map((x) => x.manifest));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Where an asset is used, across every open project (FR-AST-05).
+  app.get<{ Querystring: { id: string } }>('/api/library/usages', async (req, reply) => {
+    try {
+      const id = String(req.query.id ?? '').replace(/@\d+$/, '');
+      if (!id) throw new FrameError('USAGE', 'id is required');
+      return { id, projects: hub.list().map((p) => ({ project: p.id, name: p.open.state.project.name, usages: assetUsages(p.open.state, id) })).filter((x) => x.usages.length) };
     } catch (e) {
       return sendError(reply, e);
     }

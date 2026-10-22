@@ -1,12 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FrameError, jsonSchema, schemas, type Command, type CommandBatch, type Problem } from '@frame/schema';
-import { describeCommands, formatTimecode, lineTakeState, validateProject, ticksToSeconds, randomId, type ProjectState } from '@frame/core';
+import { compareStates, describeCommands, formatTimecode, lineTakeState, validateProject, ticksToSeconds, randomId, type ProjectState } from '@frame/core';
 import { remote, remoteProject } from './remote.js';
 import { remoteState } from './remote.js';
-import { OpenProject, isProjectFolder } from '@frame/io';
+import { OpenProject, isProjectFolder, computeLocks, manifestHash } from '@frame/io';
+import { libraryFor } from '@frame/assets/node';
+import type { Library } from '@frame/assets';
 import { command, commands, type CommandContext } from './framework.js';
-import { APP_VERSION, libraryDefaults } from './env.js';
+import { APP_VERSION, contentDir, libraryDefaults, userLibraryDir } from './env.js';
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -26,8 +28,33 @@ export function findProjectDir(ctx: CommandContext): string {
   throw new FrameError('NOT_FOUND', 'No Frame project in this folder or its parents', undefined, 'Use --project <folder> or run `frame init <folder>`.');
 }
 
+/** Bundled + user library, plus the project's local assets when a project is given (FR-AST-01). */
+export function projectLibrary(ctx: CommandContext, p?: OpenProject): Library {
+  return libraryFor({ contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), ...(p ? { projectAssets: p.state.assets } : {}) });
+}
+
+/** Validation context with library lookups: missing assets and lock drift (FR-PER-06, FR-DAT-06). */
+export function validationContext(ctx: CommandContext, p: OpenProject) {
+  const lib = projectLibrary(ctx, p);
+  return {
+    assetExists: (r: string) => lib.has(r),
+    mediaExists: (h: string) => p.store.verifyMedia(h),
+    assetHash: (r: string) => {
+      const e = lib.get(r);
+      return e && e.source !== 'project' ? manifestHash(e.manifest) : undefined;
+    },
+  };
+}
+
 export function openProject(ctx: CommandContext): OpenProject {
   const p = OpenProject.open(findProjectDir(ctx), { writeMigrations: ctx.opts.yes });
+  p.locksFor = (state) => {
+    const lib = projectLibrary(ctx);
+    return computeLocks(state, (ref) => {
+      const e = lib.get(ref);
+      return e ? { manifest: e.manifest, source: e.source } : undefined;
+    });
+  };
   if (p.load?.migrated.length && !ctx.opts.yes && !ctx.opts.dryRun) {
     throw new FrameError('MIGRATION_REQUIRED', `${p.load.migrated.length} file(s) use an older format`, { files: p.load.migrated }, 'Re-run with --yes to migrate them (originals are rewritten in the new format).');
   }
@@ -47,7 +74,7 @@ export async function mutate(ctx: CommandContext, cmds: Command[], label?: strin
   const batch: CommandBatch = { commands: cmds, source: (ctx.io.env.FRAME_AGENT_SESSION ? `agent:${ctx.io.env.FRAME_AGENT_SESSION}` : 'cli'), ...(label ? { label } : {}) };
   if (ctx.opts.baseRevision !== undefined) batch.baseRevision = ctx.opts.baseRevision;
   const res = p.session.apply(batch, { dryRun: ctx.opts.dryRun });
-  const problems = validateProject(res.state, { mediaExists: (h) => p.store.verifyMedia(h) });
+  const problems = validateProject(res.state, validationContext(ctx, p));
   if (!ctx.opts.dryRun) p.close();
   return {
     dryRun: res.dryRun,
@@ -158,7 +185,7 @@ command({
       revision = v.revision;
     } else {
       const p = openProject(ctx);
-      problems = [...(p.load?.problems ?? []), ...validateProject(p.state, { mediaExists: (h) => p.store.verifyMedia(h) })];
+      problems = [...(p.load?.problems ?? []), ...validateProject(p.state, validationContext(ctx, p))];
       revision = p.session.revision;
     }
     const blocking = problems.filter((x) => x.blocksExport);
@@ -294,11 +321,31 @@ command({
     const p = openProject(ctx);
     const snap = p.store.loadVersion(String(ctx.args.id));
     if (ctx.opts.dryRun) return { dryRun: true, id: ctx.args.id, scenes: Object.keys(snap.scenes).length };
-    const r = p.session.replaceState(snap, `Restore version ${ctx.args.id}`);
+    const r = p.session.restore(snap, `Restore version ${ctx.args.id}`, 'cli');
     p.close();
     return { revision: r.revision, restored: ctx.args.id };
   },
   human: (r) => (r.dryRun ? `Dry run: would restore ${r.id}` : `Restored ${r.restored} (revision ${r.revision})`),
+});
+
+command({
+  path: ['versions', 'compare'],
+  summary: 'Compare a saved version with the current project: scenes, clips, instances, character versions and assets that differ.',
+  args: [{ name: 'id', description: 'Version id', positional: true, required: true }],
+  run: (ctx) => {
+    localOnly(ctx, 'Comparing versions');
+    const p = openProject(ctx);
+    return compareStates(p.store.loadVersion(String(ctx.args.id)), p.state);
+  },
+  human: (r) =>
+    r.identical
+      ? 'No differences.'
+      : [
+          ...(r.project.length ? [`project: ${r.project.join(', ')}`] : []),
+          ...r.scenes.map((s: any) => `${s.change.padEnd(8)} ${s.name}${s.clips ? `  clips +${s.clips.added} −${s.clips.removed} ~${s.clips.changed}` : ''}${(s.versions ?? []).map((v: any) => `\n           ${v.instance}: ${v.from} → ${v.to}`).join('')}`),
+          ...(r.assets.added.length ? [`assets added: ${r.assets.added.join(', ')}`] : []),
+          ...(r.assets.removed.length ? [`assets removed: ${r.assets.removed.join(', ')}`] : []),
+        ].join('\n'),
 });
 
 /* ------------------------------------------------------------------ discoverability (FR-CLI-03) */

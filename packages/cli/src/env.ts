@@ -28,3 +28,9 @@ export function libraryDefaults(): LibraryDefaults {
   const lib = JSON.parse(fs.readFileSync(path.join(contentDir(), 'library.json'), 'utf8')) as { defaults: LibraryDefaults };
   return lib.defaults;
 }
+
+/** The user library folder (FR-AST-01): FRAME_USER_DIR, or `~/.frame/library`. */
+export function userLibraryDir(env: Record<string, string | undefined> = process.env): string {
+  if (env.FRAME_USER_DIR) return path.resolve(env.FRAME_USER_DIR);
+  return path.join(env.HOME ?? env.USERPROFILE ?? '.', '.frame', 'library');
+}

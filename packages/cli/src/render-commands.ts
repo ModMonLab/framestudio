@@ -2,19 +2,29 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { evaluateFrame, parseTime, type ProjectState } from '@frame/core';
-import { bundledLibrary, loadStyles } from '@frame/assets/node';
+import { bundledLibrary, libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer } from '@frame/render/node';
 import { FrameError, type AssetManifest } from '@frame/schema';
 import { renderExport, writeFileAtomic, type OutputPreset, type RenderProgress } from '@frame/io';
 import { command, type CommandContext } from './framework.js';
-import { contentDir } from './env.js';
+import { contentDir, userLibraryDir } from './env.js';
 import { findProjectDir, openProject } from './project-commands.js';
 import { remote, remoteProject, remoteState, waitJob } from './remote.js';
 
-function library() {
+/** Bundled + user library, plus the project's local assets when given (imported images, custom characters, voices). */
+function library(projectAssets?: Record<string, unknown>) {
   const content = contentDir();
-  const lib = bundledLibrary(content);
+  const lib = projectAssets ? libraryFor({ contentDir: content, userDir: userLibraryDir(), projectAssets }) : bundledLibrary(content);
   return { content, lib, styles: loadStyles(content), assets: { manifest: (ref: string) => lib.manifest(ref) as AssetManifest | undefined } };
+}
+
+/** Images resolve from the project's content-addressed media (`media:<hash>`). */
+function mediaImages(store: { findMedia(hash: string): string | undefined }) {
+  return (src: string) => {
+    if (!src.startsWith('media:')) return undefined;
+    const f = store.findMedia(src.slice(6));
+    return f ? new Uint8Array(fs.readFileSync(f)) : undefined;
+  };
 }
 
 function sceneArg(state: ProjectState, v: unknown): string {
@@ -110,8 +120,8 @@ command({
     if (family && family !== 'flat' && family !== 'illustrated') throw new FrameError('USAGE', '--family must be flat or illustrated');
     const out = path.resolve(ctx.io.cwd, String(ctx.args.out));
     if (ctx.opts.dryRun) return { dryRun: true, scene, at: t, out, width, height };
-    const { content, styles, assets } = library();
-    const renderer = await createNodeRenderer({ fontsDir: path.join(content, 'fonts') });
+    const { content, styles, assets } = library(state.assets);
+    const renderer = await createNodeRenderer({ fontsDir: path.join(content, 'fonts'), images: mediaImages(p.store) });
     try {
       const ev = evaluateFrame(state, scene, t, { assets, styles, width, height, ...(ctx.args.aspect ? { aspect: String(ctx.args.aspect) } : {}), captions: ctx.args.captions === true, ...(family ? { family } : {}) });
       fs.mkdirSync(path.dirname(out), { recursive: true });
@@ -188,8 +198,8 @@ command({
       const job = await r.req<{ id: string }>('POST', `/api/projects/${pid}/renders`, { scenes, preset: presetId, out, width, height, ...(range ? { range } : {}), captions: ctx.args['no-captions'] !== true, ...(preset.subtitles ? { subtitles: preset.subtitles } : {}), ...(preset.stems ? { stems: true } : {}) });
       return await waitJob(r, job.id, ctx.log);
     }
-    const { content, lib, styles, assets } = library();
-    const renderer = await createNodeRenderer({ fontsDir: path.join(content, 'fonts') });
+    const { content, lib, styles, assets } = library(state.assets);
+    const renderer = await createNodeRenderer({ fontsDir: path.join(content, 'fonts'), images: mediaImages(p!.store) });
     const ac = new AbortController();
     const onSig = () => ac.abort();
     process.once('SIGINT', onSig);

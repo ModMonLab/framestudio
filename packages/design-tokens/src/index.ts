@@ -80,7 +80,8 @@ export const shadow = {
 
 export const motion = { fast: 80, base: 150, slow: 220, ease: 'cubic-bezier(0.2,0,0,1)' } as const;
 
-export const z = { canvas: 0, panel: 10, sticky: 20, popover: 100, dialog: 200, toast: 300 } as const;
+/** Stacking: popovers (menus, selects, tooltips) sit above dialogs because they always open from the topmost surface. */
+export const z = { canvas: 0, panel: 10, sticky: 20, dialog: 200, popover: 250, toast: 300 } as const;
 
 export const tokens = { color, clip, font, type, space, size, radius, shadow, motion, z } as const;
 

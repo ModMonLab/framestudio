@@ -27,7 +27,7 @@ export function LayersPanel() {
         out.push({ id: `scn:${sid}`, parent: `ep:${epId}`, label: sc.name, icon: <Clapperboard size={14} />, emphasis: 'group', renamable: true, meta: `${(sc.duration / 48000).toFixed(1)} s`, hasChildren: sid === sceneId });
         if (sid !== sceneId) continue;
         const chars = sc.instances.filter((i) => i.kind === 'character');
-        const set = sc.instances.filter((i) => i.kind === 'set-piece' || i.kind === 'prop' || i.kind === 'group' || i.kind === 'text');
+        const set = sc.instances.filter((i) => i.kind === 'set-piece' || i.kind === 'prop' || i.kind === 'group' || i.kind === 'text' || i.kind === 'image');
         out.push({ id: 'grp:cast', parent: `scn:${sid}`, label: 'Cast', emphasis: 'group', meta: String(chars.length), hasChildren: chars.length > 0 });
         for (const c of chars) {
           out.push({ id: `ins:${c.id}`, parent: 'grp:cast', label: c.name, icon: <User size={14} />, renamable: true, meta: c.character?.posture === 'seated' ? 'Seated' : c.character?.posture ? c.character.posture[0]!.toUpperCase() + c.character.posture.slice(1) : undefined, searchText: c.asset });

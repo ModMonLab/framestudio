@@ -30,7 +30,7 @@ export class ProjectHub {
   private listeners = new Set<(e: HubEvent) => void>();
   private watchTimer?: NodeJS.Timeout;
 
-  constructor(private readonly opts: { watchMs?: number; debounceMs?: number } = {}) {
+  constructor(private readonly opts: { watchMs?: number; debounceMs?: number; onAttach?: (open: OpenProject) => void } = {}) {
     if (opts.watchMs) this.watchTimer = setInterval(() => this.checkExternal(), opts.watchMs);
   }
 
@@ -66,6 +66,7 @@ export class ProjectHub {
   }
 
   attach(open: OpenProject): HubProject {
+    this.opts.onAttach?.(open);
     const id = open.state.project.id;
     const hp: HubProject = { id, root: open.store.root, open };
     this.byId.set(id, hp);

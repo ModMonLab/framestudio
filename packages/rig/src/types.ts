@@ -27,8 +27,25 @@ export type FillDef =
 /** Conditions on render state: `{ mouth: 'A' }`, `{ eyeClosed: 'true' }`, `{ option.hood: 'up' }`. */
 export type When = Record<string, string | string[]>;
 
+/**
+ * Placed artwork (imported drawings, FR-IMP-03; additive contract change, decision 0019): a raster image or vector
+ * paths whose source rectangle is drawn into a box of the layer's fit space, following the space as it moves.
+ */
+export interface PlacedArt {
+  /** Target box in fit-space units [u0, v0, u1, v1]. */
+  box: [number, number, number, number];
+  /** Source rectangle in artwork units [x, y, w, h]. */
+  src: [number, number, number, number];
+  /** Raster artwork: content-addressed media hash (sha256-…), the image covers `src`. */
+  image?: string;
+  /** Vector artwork in artwork units. */
+  paths?: { d: string; fill?: string; stroke?: string; strokeWidth?: number; opacity?: number; evenOdd?: boolean; tf?: [number, number, number, number, number, number] }[];
+}
+
 export interface ShapeDef {
   id?: string;
+  /** Imported artwork placed in the fit space (instead of a path or ellipse). */
+  art?: PlacedArt;
   path?: Seg[];
   ellipse?: { c: string; rx: number; ry: number; drx?: Record<string, number>; dry?: Record<string, number> };
   fill?: FillDef;
@@ -46,7 +63,9 @@ export interface ShapeDef {
 export type FitSpace =
   | 'head' | 'face' | 'torso' | 'pelvis' | 'neck'
   | 'handL' | 'handR' | 'hand' | 'footL' | 'footR' | 'foot'
-  | 'eye' | 'eyeL' | 'eyeR' | 'brow' | 'browL' | 'browR' | 'mouth' | 'nose' | 'ear' | 'earL' | 'earR' | 'stage';
+  | 'eye' | 'eyeL' | 'eyeR' | 'brow' | 'browL' | 'browR' | 'mouth' | 'nose' | 'ear' | 'earL' | 'earR' | 'stage'
+  /** Limb segments (additive, decision 0019): origin at the proximal joint, v 0→1 to the distal joint, u across in limb half-widths. */
+  | 'upperArmL' | 'upperArmR' | 'foreArmL' | 'foreArmR' | 'thighL' | 'thighR' | 'shinL' | 'shinR';
 
 export type Limb = 'armL' | 'armR' | 'legL' | 'legR' | 'neck';
 
