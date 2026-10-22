@@ -6,6 +6,7 @@ import { createContext, useContext, useMemo, useRef, useState, type ReactNode } 
 import { MenuList, Portal, useDismiss, type MenuEntry } from '@frame/ui';
 import type { Studio } from '../lib/store.js';
 import { deleteSelection, duplicateSelection } from './Workspace.js';
+import { api } from '../lib/api.js';
 
 interface MenuState {
   x: number;
@@ -70,6 +71,18 @@ export function clipMenu(studio: Studio, id: string): MenuEntry[] {
     { id: 'split', label: 'Split at playhead', disabled: !inside || !!clip.line, disabledReason: clip.line ? 'Dialogue lines are not split' : 'Move the playhead inside the clip', onSelect: () => void studio.exec([{ name: 'clip.split', params: { scene: scene.id, id, at: s.time } }], 'Split clip') },
     { id: 'enable', label: clip.enabled ? 'Disable' : 'Enable', onSelect: () => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id, set: { enabled: !clip.enabled } } }]) },
     ...(clip.line ? [{ id: 'mute', label: clip.line.muted ? 'Unmute line' : 'Mute line', onSelect: () => void studio.exec([{ name: 'line.setMuted', params: { scene: scene.id, id, muted: !clip.line!.muted } }]) }] : []),
+    ...(clip.group ? [{ id: 'ungroup', label: 'Ungroup', onSelect: () => void studio.exec([{ name: 'clip.ungroup', params: { scene: scene.id, group: clip.group } }], 'Ungroup clips') }] : []),
+    {
+      id: 'recipe', label: 'Save selection as recipe…', disabled: !!clip.line, disabledReason: 'Dialogue lines are not saved in recipes',
+      onSelect: () => {
+        // Selected clips (and the rest of this clip's group) become a recipe with role placeholders (FR-RCP-04).
+        const ids = new Set(s.selection.filter((x) => x.kind === 'clip').map((x) => x.id).concat(id));
+        if (clip.group) for (const c of scene.clips) if (c.group === clip.group) ids.add(c.id);
+        const name = window.prompt('Recipe name', 'My recipe');
+        if (!name?.trim()) return;
+        api.saveRecipe(s.pid, scene.id, [...ids], name.trim()).then(() => studio.set({ lastError: undefined })).catch((e: Error) => studio.set({ lastError: { message: e.message } }));
+      },
+    },
     { kind: 'separator', id: 's1' },
     { id: 'del', label: 'Delete', shortcut: 'Delete', onSelect: () => void deleteSelection(studio) },
   ];

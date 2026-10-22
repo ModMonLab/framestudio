@@ -21,6 +21,7 @@ export interface LibraryDefaults {
   frameRate: number;
   styleFamily: StyleFamily;
   captionStyle?: string;
+  coverage?: { wide: string; single: string; two: string };
 }
 
 /** Defaults come from the content library, never from code (FR-ARC-06). */

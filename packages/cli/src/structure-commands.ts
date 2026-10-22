@@ -2,6 +2,10 @@ import { FrameError } from '@frame/schema';
 import { formatTimecode, ticksToSeconds } from '@frame/core';
 import { command } from './framework.js';
 import { mutate, readProject } from './project-commands.js';
+import { autoPerformanceForLibrary } from '@frame/io';
+import { soundCueCommands } from '@frame/core';
+import { libraryFor } from '@frame/assets/node';
+import { contentDir, userLibraryDir } from './env.js';
 
 const human = (r: { dryRun: boolean; revision: number; label: string; commands: { params: Record<string, unknown> }[] }) =>
   r.dryRun ? `Dry run: "${r.label}" — nothing was written.` : `${r.label} (revision ${r.revision})${r.commands[0]?.params.id ? `  ${String(r.commands[0].params.id)}` : ''}`;
@@ -141,5 +145,40 @@ command({
   path: ['scene', 'duration'], summary: 'Set scene duration in seconds (shortening past clips needs --truncate).', mutating: true,
   args: [{ name: 'id', description: 'Scene id', positional: true, required: true }, { name: 'seconds', description: 'Duration', positional: true, required: true, type: 'number' }, { name: 'truncate', description: 'Allow ending before existing clips (they are kept and flagged)', type: 'boolean' }],
   run: async (ctx) => out(await mutate(ctx, [{ name: 'scene.setDuration', params: { id: ctx.args.id, durationS: ctx.args.seconds, ...(ctx.args.truncate ? { allowTruncate: true } : {}) } }])),
+  human,
+});
+
+command({
+  path: ['scene', 'auto-performance'], summary: 'Generate talking gestures and listening reactions as editable auto clips (FR-ACT-07/08). Baked and manual clips are kept.', mutating: true,
+  args: [
+    { name: 'scene', description: 'Scene id', positional: true, required: true },
+    { name: 'character', description: 'Only this character instance (default: every character with automatic behaviour on)' },
+    { name: 'kinds', description: 'talking, listening or talking,listening (default: from each character\'s automatic behaviour settings)' },
+  ],
+  run: async (ctx) => {
+    const { state } = await readProject(ctx);
+    const sceneId = String(ctx.args.scene);
+    if (!state.scenes[sceneId]) throw new FrameError('NOT_FOUND', `Scene ${ctx.args.scene} not found`);
+    const lib = libraryFor({ contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), projectAssets: state.assets });
+    const kinds = ctx.args.kinds ? String(ctx.args.kinds).split(',').filter((k): k is 'talking' | 'listening' => k === 'talking' || k === 'listening') : undefined;
+    const cmds = autoPerformanceForLibrary(state, sceneId, lib, { ...(ctx.args.character ? { instances: [String(ctx.args.character)] } : {}), ...(kinds?.length ? { kinds } : {}) });
+    if (!cmds.length) throw new FrameError('USAGE', 'Nothing to generate: no characters with lines or automatic behaviour in this scene', undefined, 'Pass --kinds talking,listening to generate regardless of the characters\' settings.');
+    return out(await mutate(ctx, cmds, 'Automatic performance'));
+  },
+  human,
+});
+
+command({
+  path: ['scene', 'sound-cues'], summary: 'Add sound cues for action and prop-state events as editable auto SFX clips (FR-SND-04). Baked cues are kept.', mutating: true,
+  args: [{ name: 'scene', description: 'Scene id', positional: true, required: true }],
+  run: async (ctx) => {
+    const { state } = await readProject(ctx);
+    const sceneId = String(ctx.args.scene);
+    if (!state.scenes[sceneId]) throw new FrameError('NOT_FOUND', `Scene ${sceneId} not found`);
+    const lib = libraryFor({ contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), projectAssets: state.assets });
+    const cmds = soundCueCommands(state, sceneId, lib);
+    if (!cmds.length) throw new FrameError('USAGE', 'No actions or prop states with sounds in this scene');
+    return out(await mutate(ctx, cmds, 'Sound cues'));
+  },
   human,
 });

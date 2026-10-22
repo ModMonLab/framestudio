@@ -72,6 +72,18 @@ export interface Pose {
   handR: string;
   /** Squash/stretch: >1 stretches vertically (FR-ACT-09). */
   stretch: number;
+  /**
+   * Walking gait (FR-ACT-04): legs follow the distance travelled, so a planted foot stays fixed on the ground while
+   * the body moves (no foot sliding). `distance` is in character units along the body's forward axis; `stride` is
+   * the distance of one full cycle (two steps) in leg lengths; `lift` is the swing foot's height in leg lengths.
+   */
+  gait?: { distance: number; stride: number; lift: number };
+}
+
+/** Phase (0…1) of each foot in a gait cycle and whether it is planted (stance) — for tests and foot-contact cues. */
+export function gaitPhase(distance: number, cycle: number, side: 'L' | 'R'): { phase: number; planted: boolean } {
+  const c = (((distance / cycle) + (side === 'R' ? 0.5 : 0)) % 1 + 1) % 1;
+  return { phase: c, planted: c < 0.5 };
 }
 
 export const REST_POSE: Pose = {
@@ -180,6 +192,25 @@ export function solvePose(dims: BodyDims, pose: Pose): Joints3 {
   } else if (pose.posture === 'lying') {
     pelvisY = dims.legW * 0.6;
   }
+  if (pose.gait && pose.posture === 'standing') {
+    // Walk cycle from distance: stance foot moves back exactly as far as the body moves forward.
+    const cycle = Math.max(1e-6, pose.gait.stride * legLen);
+    const half = cycle / 4;
+    const hipDrop = dims.legW * 0.15;
+    // Lower the pelvis so the farthest stance foot is still within reach (keeps planted feet exact).
+    const reach = legLen * 0.985;
+    const bob = Math.abs(Math.cos(2 * Math.PI * (pose.gait.distance / cycle) * 2)) * legLen * 0.012;
+    pelvisY = Math.sqrt(Math.max(0, reach * reach - half * half)) + ankleH + hipDrop - bob;
+    const foot = (side: 'L' | 'R', x: number): LimbTarget => {
+      const { phase, planted } = gaitPhase(pose.gait!.distance, cycle, side);
+      const z = planted ? half - (phase / 0.5) * 2 * half : -half + ((phase - 0.5) / 0.5) * 2 * half;
+      const lift = planted ? 0 : Math.sin(Math.PI * ((phase - 0.5) / 0.5)) * pose.gait!.lift * legLen;
+      const hipY = pelvisY - hipDrop;
+      return { t: [x, (ankleH + lift - hipY) / legLen, z / legLen], pole: [0, 0, 1] };
+    };
+    if (isRest(pose.legL)) legL = foot('L', 0.02);
+    if (isRest(pose.legR)) legR = foot('R', 0.02);
+  }
   const s = pose.stretch;
   const pelvis: Vec3 = [0, pelvisY, pelvisZ];
   const waist: Vec3 = [0, pelvisY + dims.pelvisLen * s, pelvisZ];
@@ -210,13 +241,28 @@ export function solvePose(dims: BodyDims, pose: Pose): Joints3 {
   }
 
   const armLen = dims.upperArm + dims.foreArm;
+  // Arms swing opposite to the legs while walking, unless an action poses them.
+  let armL = pose.armL;
+  let armR = pose.armR;
+  if (pose.gait && pose.posture === 'standing') {
+    const cycle = Math.max(1e-6, pose.gait.stride * legLen);
+    const restArm = (t: LimbTarget) => t === REST_POSE.armL || t === REST_POSE.armR || (t.t[0] === REST_POSE.armL.t[0] && t.t[1] === REST_POSE.armL.t[1] && t.t[2] === REST_POSE.armL.t[2] && !t.pole);
+    const swing = (side: 'L' | 'R'): LimbTarget => {
+      // The arm swings forward when the opposite leg is forward.
+      const { phase } = gaitPhase(pose.gait!.distance, cycle, side === 'L' ? 'R' : 'L');
+      const z = Math.cos(2 * Math.PI * phase) * Math.min(0.35, pose.gait!.stride * 0.22);
+      return { t: [0.12, -Math.sqrt(Math.max(0, 0.95 - z * z)), z] };
+    };
+    if (restArm(armL)) armL = swing('L');
+    if (restArm(armR)) armR = swing('R');
+  }
   const arm = (sh: Vec3, tg: LimbTarget, side: number) => {
     const target = add(sh, mulv([tg.t[0] * side, tg.t[1], tg.t[2]], armLen));
     const pole = tg.pole ? ([tg.pole[0] * side, tg.pole[1], tg.pole[2]] as Vec3) : ([side * 0.35, -0.2, -1] as Vec3);
     return ik2(sh, target, dims.upperArm, dims.foreArm, pole);
   };
-  const aL = arm(shL, pose.armL, 1);
-  const aR = arm(shR, pose.armR, -1);
+  const aL = arm(shL, armL, 1);
+  const aR = arm(shR, armR, -1);
 
   const hipL: Vec3 = [dims.hipW * 0.32, pelvisY - dims.legW * 0.15, pelvisZ];
   const hipR: Vec3 = [-dims.hipW * 0.32, pelvisY - dims.legW * 0.15, pelvisZ];

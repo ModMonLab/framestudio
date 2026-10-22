@@ -19,6 +19,7 @@ import { Builder } from './Builder.js';
 import { PartEditor } from './PartEditor.js';
 import { LibraryScreen } from './LibraryScreen.js';
 import { VersionsDialog } from './VersionsDialog.js';
+import { RecipeDialog } from './RecipeDialog.js';
 import { api } from '../lib/api.js';
 import { usePlayback } from '../lib/playback.js';
 import { ResizeHandle, usePanelSize } from './Resize.js';
@@ -97,6 +98,7 @@ export function Workspace({ pid, builder, part, screen }: { pid: string; builder
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <VoiceDesigner open={voiceFor !== null} instance={voiceFor ?? undefined} onClose={() => setVoiceFor(null)} />
       <VersionsDialog pid={pid} open={versionsOpen} onClose={() => setVersionsOpen(false)} />
+      <RecipeDialog />
       <input ref={pkgInput} type="file" accept=".framechar,.frameasset,.framevoice" hidden aria-label="Import package" onChange={(e) => { void onPackage(e.target.files?.[0]); e.target.value = ''; }} />
     </StudioCtx.Provider>
   );

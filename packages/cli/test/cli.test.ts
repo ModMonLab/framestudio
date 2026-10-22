@@ -110,4 +110,71 @@ describe('frame CLI (FR-CLI-01..07)', () => {
     await frame(['versions', 'restore', v.json.result.id, '--project', 'P'], dir);
     expect((await frame(['info', '--json', '--project', 'P'], dir)).json.result.episodes[0].scenes[0].name).toBe('Scene 1');
   });
+
+  it('scene auto-performance generates editable talking and listening clips from the library (FR-ACT-07/08)', async () => {
+    const dir = tmp();
+    await frame(['init', 'Show.frame'], dir);
+    const cwd = path.join(dir, 'Show.frame');
+    const scene = (await frame(['scene', 'list', '--json'], cwd)).json.result.scenes[0].id as string;
+    const auto = { idle: true, listening: true, blinks: true, talkingGestures: true };
+    const add = (id: string, x: number) => ({ name: 'instance.add', params: { scene, id, kind: 'character', asset: 'chr.aiko-tanaka@1', name: id, transform: { x, y: 1000 }, character: { look: 'default', view: 'three', posture: 'standing', auto } } });
+    const cmds = [add('ins_ada00001', 600), add('ins_ben00001', 1300),
+      { name: 'line.add', params: { scene, speaker: 'ins_ada00001', text: 'We have a lot to talk about today, so let us begin.', start: 0, durationS: 5 } },
+      { name: 'line.add', params: { scene, speaker: 'ins_ben00001', text: 'Absolutely. I have been looking forward to this conversation.', start: 288000, durationS: 4 } }];
+    const file = path.join(dir, 'cmds.json');
+    fs.writeFileSync(file, JSON.stringify(cmds));
+    expect((await frame(['apply', file, '--json'], cwd)).code).toBe(0);
+    const r = await frame(['scene', 'auto-performance', scene, '--json'], cwd);
+    expect(r.code).toBe(0);
+    expect(r.json.result.problems.filter((p: any) => p.code === 'CHANNEL_CONFLICT' || p.code === 'POSTURE_MISMATCH')).toEqual([]);
+    const show = (await frame(['scene', 'show', scene, '--json'], cwd)).json.result;
+    const autoClips = show.clips.filter((c: any) => c.source === 'auto');
+    expect(autoClips.length).toBeGreaterThan(2);
+    // Running it again replaces the auto clips rather than piling up.
+    await frame(['scene', 'auto-performance', scene, '--json'], cwd);
+    const again = (await frame(['scene', 'show', scene, '--json'], cwd)).json.result.clips.filter((c: any) => c.source === 'auto');
+    expect(again.length).toBe(autoClips.length);
+    // Using a door makes a sound cue on the Sound track.
+    const door = [{ name: 'instance.add', params: { scene, id: 'ins_door0001', kind: 'prop', asset: 'prop.door@1', name: 'Door', transform: { x: 300, y: 1000 }, propState: 'closed' } }];
+    fs.writeFileSync(file, JSON.stringify(door));
+    await frame(['apply', file, '--json'], cwd);
+    const acting = show.tracks.find((t: any) => t.owner === 'ins_ada00001' && t.kind === 'acting').id;
+    fs.writeFileSync(file, JSON.stringify([{ name: 'clip.add', params: { scene, track: acting, start: 96000, end: 172800, asset: 'act.open-door@1', params: { prop: 'ins_door0001' } } }]));
+    await frame(['apply', file, '--json'], cwd);
+    const sc = await frame(['scene', 'sound-cues', scene, '--json'], cwd);
+    expect(sc.code, sc.out + sc.err).toBe(0);
+    const cues = (await frame(['scene', 'show', scene, '--json'], cwd)).json.result.clips.filter((c: any) => c.asset === 'sfx.door-open@1');
+    expect(cues).toHaveLength(1);
+  });
+
+  it('applies recipes, frames cameras, covers a scene and saves clips as a recipe (FR-RCP, FR-CAM-01/05)', async () => {
+    const dir = tmp();
+    await frame(['init', 'Show.frame'], dir);
+    const cwd = path.join(dir, 'Show.frame');
+    const scene = (await frame(['scene', 'list', '--json'], cwd)).json.result.scenes[0].id as string;
+    const auto = { idle: false, listening: false, blinks: true, talkingGestures: false };
+    const add = (id: string, x: number) => ({ name: 'instance.add', params: { scene, id, kind: 'character', asset: 'chr.aiko-tanaka@1', name: id, transform: { x, y: 1000 }, character: { look: 'default', view: 'three', posture: 'standing', auto } } });
+    const file = path.join(dir, 'cmds.json');
+    fs.writeFileSync(file, JSON.stringify([add('ins_ada00001', 600), add('ins_ben00001', 1300),
+      { name: 'line.add', params: { scene, id: 'clp_line0001', speaker: 'ins_ada00001', text: 'I think we should start right now.', start: 24000, durationS: 3 } },
+      { name: 'line.add', params: { scene, id: 'clp_line0002', speaker: 'ins_ben00001', text: 'Agreed.', start: 216000, durationS: 1.2 } }]));
+    expect((await frame(['apply', file, '--json'], cwd)).code).toBe(0);
+    const list = (await frame(['recipe', 'list', '--json'], cwd)).json.result.recipes;
+    expect(list.find((r: any) => r.ref === 'rcp.listen-and-nod@1')).toMatchObject({ roles: ['speaker', 'listener'], anchoredTo: 'speaker' });
+    const r = await frame(['recipe', 'apply', scene, 'rcp.listen-and-nod@1', '--roles', 'speaker=ins_ada00001,listener=ins_ben00001', '--line', 'clp_line0001', '--json'], cwd);
+    expect(r.code, r.out).toBe(0);
+    expect(r.json.result.warnings).toEqual([]);
+    const cam = await frame(['camera', 'frame', scene, 'cam.close-up@1', '--subjects', 'ins_ben00001', '--json'], cwd);
+    expect(cam.code, cam.out).toBe(0);
+    const cov = await frame(['scene', 'coverage', scene, '--json'], cwd);
+    expect(cov.code, cov.out).toBe(0);
+    expect(cov.json.result.problems.filter((p: any) => p.code === 'SHOT_OVERLAP' || p.code === 'CHANNEL_CONFLICT')).toEqual([]);
+    const show = (await frame(['scene', 'show', scene, '--json'], cwd)).json.result;
+    expect(show.clips.filter((c: any) => c.source === 'auto' && c.params.camera).length).toBeGreaterThan(1);
+    const recipeClips = show.clips.filter((c: any) => c.source === 'recipe:rcp.listen-and-nod@1').map((c: any) => c.id);
+    expect(recipeClips.length).toBe(5);
+    const saved = await frame(['recipe', 'save', scene, ...recipeClips, '--name', 'My nods', '--json'], cwd);
+    expect(saved.code, saved.out).toBe(0);
+    expect(saved.json.result.roles).toEqual(['character1', 'character2']);
+  });
 });

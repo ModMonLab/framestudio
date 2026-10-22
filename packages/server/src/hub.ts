@@ -68,6 +68,13 @@ export class ProjectHub {
   attach(open: OpenProject): HubProject {
     this.opts.onAttach?.(open);
     const id = open.state.project.id;
+    // A copied folder keeps its project id: the folder opened last wins, and the earlier one is saved and closed so
+    // its changes never reach clients under the same id.
+    const prior = this.byId.get(id);
+    if (prior && prior.open !== open) {
+      prior.open.close();
+      this.byId.delete(id);
+    }
     const hp: HubProject = { id, root: open.store.root, open };
     this.byId.set(id, hp);
     let keys = allEntityKeys(open.state);

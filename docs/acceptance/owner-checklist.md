@@ -39,3 +39,22 @@ in the Studio, the CLI, render reports and voice assets (P7, NFR-18).
 - AC-14: on the reference project measure NFR-01/02/05 and record the machine.
 - AC-15: 20 golden frames from Studio preview, CLI and export (automated pixel identity for preview vs CLI/server
   exists in `apps/studio/e2e/studio.spec.ts`); 10-minute episode sync measurement (NFR-04).
+
+## 4. Builder, assets and direction walkthroughs (M2 and M3)
+
+Each has an automated path in `tools/test/m2-acceptance.test.ts` or `tools/test/m3-acceptance.test.ts`; the owner
+run checks the same scenario by hand in the Studio and judges the look and sound.
+
+- **AC-02:** build a character with the builder in Flat, switch to Illustrated, check all four views, export it as
+  `.framechar`, import it with a fresh profile (`FRAME_USER_DIR` pointing to an empty folder) and compare frames.
+- **AC-11:** use one character in two episodes, save a new version from the builder, update only one scene's
+  instance, close and reopen, then restore a project version from File → Versions.
+- **AC-12:** import a real artist's layered PSD (front and three-quarter groups, `mouth_A` … `mouth_X` layers) into
+  the rigging assistant, fix suggestions, save, and play a library gesture and a line on it.
+- **AC-20:** File → Export project package, copy the `.frameproj` to a second machine (macOS or Linux), open it
+  there without the original user library and compare a few frames with the first machine.
+- **AC-06/07/08:** in the podcast studio, apply the interruption, double take and hand-over recipes, run Auto
+  coverage, use a mug, a phone and a door from the Acting tab, generate sound cues, walk a character to a chair and
+  sit; scrub through and check nothing jumps, slides or drifts.
+- **CAT-08 listening check:** play the 20 synthesised sound effects (`content/assets/sfx`); they are procedural
+  placeholders (no recordings) and stay `review: pending` until approved or replaced with recorded/licensed sounds.

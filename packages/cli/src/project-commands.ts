@@ -38,6 +38,7 @@ export function validationContext(ctx: CommandContext, p: OpenProject) {
   const lib = projectLibrary(ctx, p);
   return {
     assetExists: (r: string) => lib.has(r),
+    manifest: (r: string) => lib.manifest(r),
     mediaExists: (h: string) => p.store.verifyMedia(h),
     assetHash: (r: string) => {
       const e = lib.get(r);

@@ -31,6 +31,11 @@
         "act.wave-hello@1"
       ],
       "lipSyncText": "Hello, this is a lip sync test."
+    },
+    "coverage": {
+      "wide": "cam.wide@1",
+      "single": "cam.medium-close-up@1",
+      "two": "cam.two-shot@1"
     }
   }
 }

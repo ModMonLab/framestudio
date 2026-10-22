@@ -2,6 +2,7 @@ import { Clip, Episode, issues, Project, Scene, Take, type Problem, type Scene a
 import type { ProjectState } from './state.js';
 import { takeMatchesRevision } from './commands/timeline.js';
 import { formatTimecode } from './time.js';
+import { clipChannels, postureAt, type ActionData } from './perform/data.js';
 
 export type TakeState = 'Missing' | 'Queued' | 'Generating' | 'Ready' | 'Failed' | 'Outdated' | 'Muted';
 
@@ -36,8 +37,10 @@ export interface ValidationContext {
   assetExists?: (ref: string) => boolean;
   /** Is this media hash present in the project's media store (and does its hash verify)? */
   mediaExists?: (hash: string) => boolean;
-  /** Channels an action/expression asset drives (from its manifest). */
+  /** Channels an action/expression asset drives (from its manifest). Defaults to reading `manifest`. */
   channelsOf?: (ref: string) => ChannelInfo | undefined;
+  /** Manifest lookup, for action channels, additive blending and allowed postures (FR-ACT-02/03). */
+  manifest?: (ref: string) => { data?: unknown } | undefined;
   /** Current content hash of a library asset, to compare with the project's locks (FR-DAT-06). */
   assetHash?: (ref: string) => string | undefined;
 }
@@ -55,7 +58,11 @@ export function channelConflicts(scene: SceneT, ctx: ValidationContext = {}): { 
     if (!t || t.owner === 'scene') continue;
     const base = exclusiveDefaults[t.kind];
     if (!base) continue;
-    const info = c.asset ? ctx.channelsOf?.(c.asset) : undefined;
+    // Blink clips add or remove blinks; they layer over expressions (FR-EXP-03).
+    if (t.kind === 'face' && c.params.blink !== undefined) continue;
+    // Turn clips change facing only; they combine with any action (FR-ACT-04).
+    if (t.kind === 'acting' && typeof c.params.turn === 'string') continue;
+    const info = c.asset ? ctx.channelsOf?.(c.asset) ?? channelInfo(ctx, c.asset, c.params) : undefined;
     const channels = info?.channels ?? base;
     const list = byOwner.get(t.owner) ?? [];
     list.push({ clip: c, channels, additive: info?.additive ?? false });
@@ -77,6 +84,32 @@ export function channelConflicts(scene: SceneT, ctx: ValidationContext = {}): { 
         if (shared) out.push({ a: x.clip, b: y.clip, channel: shared, owner });
       }
     }
+  }
+  return out;
+}
+
+const actionData = (ctx: ValidationContext, ref: string) => (ctx.manifest?.(ref)?.data as { action?: ActionData } | undefined)?.action;
+
+function channelInfo(ctx: ValidationContext, ref: string, params: Record<string, unknown>): ChannelInfo | undefined {
+  const data = ctx.manifest?.(ref)?.data as { action?: ActionData; expression?: unknown } | undefined;
+  if (data?.action) return { channels: clipChannels(data.action, params), additive: !!data.action.additive };
+  if (data?.expression) return { channels: ['expression'], additive: false };
+  return undefined;
+}
+
+/** Acting clips whose action does not allow the character's posture at the clip's start (FR-ACT-03). */
+export function postureProblems(scene: SceneT, ctx: ValidationContext): { clip: ClipT; owner: string; posture: string; allowed: string[] }[] {
+  if (!ctx.manifest) return [];
+  const out: { clip: ClipT; owner: string; posture: string; allowed: string[] }[] = [];
+  const tracks = new Map(scene.tracks.map((t) => [t.id, t]));
+  for (const c of scene.clips) {
+    const tr = tracks.get(c.track);
+    if (!c.enabled || !c.asset || tr?.kind !== 'acting' || tr.owner === 'scene') continue;
+    const a = actionData(ctx, c.asset);
+    const inst = scene.instances.find((i) => i.id === tr.owner);
+    if (!a?.postures?.length || !inst?.character) continue;
+    const posture = postureAt(scene, inst.id, inst.character.posture, c.start, (r) => actionData(ctx, r));
+    if (!a.postures.includes(posture)) out.push({ clip: c, owner: inst.id, posture, allowed: a.postures });
   }
   return out;
 }
@@ -177,6 +210,10 @@ export function validateProject(state: ProjectState, ctx: ValidationContext = {}
     for (const k of channelConflicts(scene, ctx)) {
       const who = scene.instances.find((i) => i.id === k.owner)?.name ?? 'A character';
       add({ severity: 'error', code: 'CHANNEL_CONFLICT', message: `${who} has two ${k.channel} clips at ${formatTimecode(k.b.start)}`, blocksExport: true, target: { kind: 'clip', id: k.b.id }, details: [k.a.id, k.b.id], ...where } as Problem);
+    }
+    for (const k of postureProblems(scene, ctx)) {
+      const who = scene.instances.find((i) => i.id === k.owner)?.name ?? 'A character';
+      add({ severity: 'warning', code: 'POSTURE_MISMATCH', message: `${who} is ${k.posture} at ${formatTimecode(k.clip.start)}, but ${clipName(scene, k.clip)} needs ${k.allowed.join(' or ')}; add a posture change before it`, blocksExport: false, target: { kind: 'clip', id: k.clip.id }, ...where });
     }
   }
   if (ctx.assetHash) {

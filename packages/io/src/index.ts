@@ -11,3 +11,7 @@ export * from './import-image.js';
 export * from './import.js';
 export * from './artwork.js';
 export * from './user-library.js';
+export * from './auto-performance.js';
+export * from './media-files.js';
+export * from './recipes-apply.js';
+export * from './auto-coverage.js';

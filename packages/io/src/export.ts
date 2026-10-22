@@ -115,7 +115,7 @@ function segments(o: RenderOptions): Segment[] {
 
 /** Concatenates per-scene audio plans into one timeline. */
 function audioPlans(o: RenderOptions, segs: Segment[]): AudioPlan[] {
-  return segs.map((s) => scheduleSceneAudio(o.state, o.state.scenes[s.scene]!, { from: s.from, to: s.to }));
+  return segs.map((s) => scheduleSceneAudio(o.state, o.state.scenes[s.scene]!, { from: s.from, to: s.to }, o.assets));
 }
 
 function videoArgs(p: OutputPreset, q: RenderOptions['quality'] = {}): string[] {
@@ -184,7 +184,7 @@ export async function renderExport(o: RenderOptions): Promise<RenderReport> {
     if (o.width % 2 || o.height % 2) {
       if (p.video === 'h264' || p.video === 'h265') throw new FrameError('VALIDATION_FAILED', `H.264/H.265 need even dimensions; ${o.width}×${o.height} is not supported`);
     }
-    const problems = validateProject(o.state, { assetExists: o.assetExists, ...(o.mediaExists ? { mediaExists: o.mediaExists } : {}) }).filter((pr) => !pr.scene || o.scenes.includes(pr.scene));
+    const problems = validateProject(o.state, { assetExists: o.assetExists, manifest: (r: string) => o.assets.manifest(r), ...(o.mediaExists ? { mediaExists: o.mediaExists } : {}) }).filter((pr) => !pr.scene || o.scenes.includes(pr.scene));
     report.problems = problems;
     const segs = segments(o);
     const plans = audioPlans(o, segs);
