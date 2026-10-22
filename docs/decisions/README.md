@@ -15,3 +15,4 @@ Each file records one decision: context, choice, alternatives, consequences, and
 | [0009](0009-catalog-source.md) | Catalog source format (`catalog/*.yaml`) and document generation | Accepted |
 | [0010](0010-ui-stack.md) | UI stack: React 19.2, Vite 7, lucide-react icons, Playwright visual tests | Accepted |
 | [0011](0011-schema-extensions.md) | Schema details the SRS leaves open (gaze track, versions folder, track owner) | Accepted |
+| [0012](0012-voice-worker-stack.md) | Voice Worker stack: FastAPI, Qwen3-TTS, WhisperX + g2p-en, fixture engine | Accepted |

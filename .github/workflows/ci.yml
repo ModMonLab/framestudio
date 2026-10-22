@@ -35,3 +35,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @frame/gallery exec playwright install --with-deps chromium
       - run: pnpm test:visual
+  voice-worker:
+    # CPU-only: fixture engine, API contract and OpenAPI drift (API-04). GPU paths need the reference machine.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/voice-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e '.[dev]'
+      - run: pytest -q
