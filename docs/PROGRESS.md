@@ -10,7 +10,7 @@ Last updated: 2026-10-22 · Session 1
 | M1 Vertical slice | In progress | Fixture-worker path passes: tools/test/slice.test.ts (two designed voices, 4 aligned takes, export, server = CLI frames byte-identical) and apps/studio/e2e/studio.spec.ts (same flow in the Studio, preview pixels = server/CLI renderer). Real Qwen3-TTS run pending on the reference GPU. |
 | M2 Builder and assets | Not started | — |
 | M3 Direction | Not started | — |
-| M4 Agents | Not started | — |
+| M4 Agents | In progress | `frame mcp` with all FR-AGT-02 tools and FR-AGT-03 resources (packages/mcp/test); agent tagging, session revert and Studio activity log (apps/studio/e2e). AC-13 needs recipes and music (M3) |
 | M5 Catalog completion | Not started | — |
 | M6 Hardening | Not started | — |
 
@@ -293,10 +293,10 @@ H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output p
 3. Studio polish for UI-02: Problems panel,
    record in browser (FR-VOI-05), clip trim handles.
 4. AC-13 end-to-end with a real agent once recipes (M3) and music exist; until then the MCP test covers the path.
-5. Freeze the part contract (end of M1) and start the content track (M5) in parallel with M2.
+5. Part contract frozen (docs/rig/part-contract.md); content track (M5) runs in parallel with M2.
 6. M2: full character builder with part editing and character versions, part editor, importers and rigging
    assistant, packages (`.frameproj`, `.framechar`, `.framevoice`), asset library screens.
-7. CAT-10 coverage report generator and per-item preview sheets for CAT-06 review.
+7. Per-item visual review sheets for CAT-06 (the CAT-10 report generator exists: `pnpm catalog:coverage`).
 
 ## Open decisions and blockers
 - Decision 0007 (extra accent tokens for WCAG AA contrast) — owner review requested.
