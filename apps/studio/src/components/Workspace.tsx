@@ -316,6 +316,26 @@ function useShortcuts(setPanels: (fn: (p: { left: boolean; right: boolean; timel
       else if (!mod && (e.key === '1' || e.key === '2' || e.key === '3')) st.set({ mode: (['stage', 'direct', 'edit'] as const)[Number(e.key) - 1]! });
       else if (e.key === '\\') setPanels((p) => ({ left: !p.left, right: !p.right, timeline: p.timeline }));
       else if (e.key === 'Escape') st.set({ selection: [] });
+      else if (!mod && st.state.scene && (e.key === 's' || e.key === 'S')) {
+        // Split the selected clips at the playhead (FR-TML-02).
+        const scene = st.state.project!.scenes[st.state.scene]!;
+        const t = st.state.time;
+        const ids = st.state.selection.filter((x) => x.kind === 'clip').map((x) => x.id).filter((id) => { const c = scene.clips.find((y) => y.id === id); return c && !c.line && t > c.start && t < c.end; });
+        if (ids.length) void st.exec(ids.map((id) => ({ name: 'clip.split', params: { scene: scene.id, id, at: t } })), ids.length === 1 ? 'Split clip' : `Split ${ids.length} clips`);
+      } else if (!mod && st.state.scene && (e.key === 'm' || e.key === 'M')) {
+        // Marker at the playhead (FR-TML-04).
+        const scene = st.state.project!.scenes[st.state.scene]!;
+        void st.exec([{ name: 'marker.add', params: { scene: scene.id, name: `Marker ${scene.markers.length + 1}`, at: st.state.time } }]);
+      } else if (!mod && st.state.scene && (e.key === 'i' || e.key === 'o')) {
+        // Loop in/out points (FR-TML-04).
+        const scene = st.state.project!.scenes[st.state.scene]!;
+        const t = st.state.time;
+        const cur = scene.loop ?? { start: 0, end: scene.duration };
+        const next = e.key === 'i' ? { start: t, end: Math.max(t + step, cur.end) } : { start: Math.min(cur.start, t - step), end: t };
+        void st.exec([{ name: 'scene.setLoop', params: { id: scene.id, start: Math.max(0, next.start), end: next.end } }], e.key === 'i' ? 'Set loop in' : 'Set loop out');
+      } else if (!mod && (e.key === 'k' || e.key === 'K')) st.set({ playing: false });
+      else if (!mod && (e.key === 'l' || e.key === 'L')) st.set({ playing: true });
+      else if (!mod && (e.key === 'j' || e.key === 'J')) seek(st.state.time - 48000);
     };
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);

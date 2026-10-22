@@ -256,6 +256,44 @@ test('a speech bubble added for the selected character uses the line they speak 
   await previewMatchesServer(page, 6 * 48000);
 });
 
+test('timeline editing: a trim snaps to a marker, S splits at the playhead, I/O set the loop (FR-TML-02/04)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  let st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const point = st.scenes[sid].clips.find((c: { asset?: string }) => c.asset === 'act.point-at@1');
+  // Marker at 9 s with the keyboard.
+  await page.locator('body').click({ position: { x: 5, y: 895 } });
+  for (let i = 0; i < 9; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.keyboard.press('m');
+  await expect.poll(async () => (await state()).scenes[sid].markers.length).toBe(1);
+  await page.getByRole('button', { name: 'Zoom to fit' }).click();
+  // Drag the end of Leo's point-at clip (ends at 7.8 s) toward the marker: it snaps to 9 s.
+  const chip = page.getByRole('button', { name: /^Acting: Point at/ }).first();
+  await chip.scrollIntoViewIfNeeded();
+  const box = (await chip.boundingBox())!;
+  const marker = (await page.getByRole('button', { name: 'Marker Marker 1' }).boundingBox())!;
+  await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(marker.x + marker.width / 2 + 3, box.y + box.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state()).scenes[sid].clips.find((c: { id: string }) => c.id === point.id).end).toBe(9 * 48000);
+  // Split it at 8.5 s with S.
+  await page.keyboard.press('Shift+ArrowLeft');
+  for (let i = 0; i < 12; i++) await page.keyboard.press('ArrowRight');
+  await chip.click();
+  await page.keyboard.press('s');
+  await expect.poll(async () => (await state()).scenes[sid].clips.filter((c: { asset?: string }) => c.asset === 'act.point-at@1').length).toBe(2);
+  // Loop in at 8.5 s, out at 9.5 s.
+  await page.keyboard.press('i');
+  for (let i = 0; i < 24; i++) await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('o');
+  await expect.poll(async () => (await state()).scenes[sid].loop).toEqual({ start: 8.5 * 48000, end: 9.5 * 48000 });
+  st = await state();
+  expect(st.scenes[sid].markers[0].at).toBe(9 * 48000);
+});
+
 test('agent changes are tagged and a person reverts the agent session from Activity (FR-AGT-04/05, AC-13)', async ({ page }) => {
   await openProject(page, sample(false));
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);

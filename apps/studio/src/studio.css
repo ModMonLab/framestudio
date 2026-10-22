@@ -58,7 +58,11 @@
 .st-tl-ruler { position: relative; height: var(--size-ruler); border-bottom: 1px solid var(--color-divider); cursor: ew-resize; }
 .st-tl-ruler:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 .st-tick { position: absolute; top: 4px; font-family: var(--font-mono); font-size: 10px; color: var(--color-text3); padding-left: 3px; border-left: 1px solid var(--color-divider); height: 14px; line-height: 14px; }
-.st-marker { position: absolute; top: 2px; width: 8px; height: 8px; margin-left: -4px; background: var(--color-warning); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.st-marker { position: absolute; top: 2px; width: 10px; height: 10px; margin-left: -5px; padding: 0; border: 0; cursor: pointer; background: var(--color-warning); clip-path: polygon(0 0, 100% 0, 50% 100%); z-index: 2; }
+.st-trim { position: absolute; top: 0; bottom: 0; width: 6px; cursor: ew-resize; }
+.st-trim--start { left: 0; }
+.st-trim--end { right: 0; }
+.fr-clip:hover .st-trim { background: color-mix(in srgb, currentColor 25%, transparent); }
 .st-loop { position: absolute; top: 0; bottom: 0; background: var(--color-selected); }
 .st-tl-row { display: flex; }
 .st-tl-head { flex: none; position: sticky; left: 0; z-index: 2; height: var(--size-lane-row); display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4) 0 26px; background: var(--color-panel); border-right: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); color: var(--color-text2); box-sizing: border-box; }
