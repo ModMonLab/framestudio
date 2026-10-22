@@ -76,6 +76,37 @@ test('workspace opens a project, previews with the export renderer, edits throug
   expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
 });
 
+test('auto performance adds editable clips; a same-channel overlap is hatched and listed; dragging a clip moves it (FR-ACT-07/08, FR-CAM-07, AC-10)', async ({ page }) => {
+  await openProject(page, sample(true));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  let st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  await page.getByRole('button', { name: 'Auto performance' }).click();
+  await expect(page.getByText(/Added \d+ automatic clips/)).toBeVisible();
+  st = await state();
+  const autoClips = st.scenes[sid].clips.filter((c: { source: string }) => c.source === 'auto');
+  expect(autoClips.length).toBeGreaterThan(0);
+  // A second point-at overlapping Leo's on the same arm channel is a conflict: hatched, and blocks export.
+  const leo = st.scenes[sid].instances.find((i: { name: string }) => i.name === 'Leo Park').id;
+  const acting = st.scenes[sid].tracks.find((t: { owner: string; kind: string }) => t.owner === leo && t.kind === 'acting').id;
+  const r = await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'clip.add', params: { scene: sid, track: acting, start: 6 * 48000, end: 7 * 48000, asset: 'act.point-at@1' } }] } });
+  expect(r.ok()).toBe(true);
+  await expect(page.getByRole('button', { name: /point at, in conflict/i }).first()).toBeVisible();
+  const problems = (await (await page.request.get(`/api/projects/${pid}/validate`)).json()).problems;
+  expect(problems.some((p: { code: string; blocksExport: boolean }) => p.code === 'CHANNEL_CONFLICT' && p.blocksExport)).toBe(true);
+  // Drag the new clip to the right: it moves through clip.move and the conflict clears once it no longer overlaps.
+  const added = (await r.json()).commands[0].params.id;
+  const chip = page.getByRole('button', { name: /point at, in conflict/i }).last();
+  await chip.scrollIntoViewIfNeeded();
+  const box = (await chip.boundingBox())!;
+  await page.mouse.move(box.x + 5, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 5 + 200, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state()).scenes[sid].clips.find((c: { id: string }) => c.id === added).start).toBeGreaterThan(6 * 48000);
+});
+
 test('agent changes are tagged and a person reverts the agent session from Activity (FR-AGT-04/05, AC-13)', async ({ page }) => {
   await openProject(page, sample(false));
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);

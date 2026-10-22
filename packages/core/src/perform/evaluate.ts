@@ -10,7 +10,7 @@ import { hash32, prng } from '../ids.js';
 import { TICKS_PER_SECOND } from '../time.js';
 import { lineTakeState } from '../validate.js';
 import { applyOverrides, mouthTrackFromAlignment, mouthTrackFromEnvelope, shapeAt } from './lipsync.js';
-import { clipWeight, mirrorKeys, sample, type ActionData, type ExpressionData, type Key } from './data.js';
+import { clipWeight, mirrorKeys, postureAt, sample, type ActionData, type ExpressionData, type Key } from './data.js';
 import { resolveCharacter, type AssetResolver } from './character.js';
 import { captionItems, DEFAULT_CAPTION_STYLE, stripPauseMarkers, type CaptionStyle } from '../captions.js';
 
@@ -178,7 +178,7 @@ function setPath(pose: Pose, key: string, v: number | number[] | string, w: numb
   }
 }
 
-interface PerfResult {
+export interface PerfResult {
   pose: Pose;
   face: FaceState;
   mouth: MouthLetter | null;
@@ -235,12 +235,15 @@ const mouthCache = new WeakMap<object, Map<string, ReturnType<typeof mouthTrackF
 function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, assets: AssetResolver, fps: number): PerfResult {
   const ch = inst.character!;
   const seed = (scene.seed ^ hash32(inst.id)) >>> 0;
-  const pose: Pose = JSON.parse(JSON.stringify({ ...REST_POSE, posture: ch.posture }));
+  const actionOf = (r: string) => (assets.manifest(r)?.data as { action?: ActionData } | undefined)?.action;
+  // Posture persists after posture-changing actions end (sit down → seated until stand up, FR-ACT-03).
+  const pose: Pose = JSON.parse(JSON.stringify({ ...REST_POSE, posture: postureAt(scene, inst.id, ch.posture, t, actionOf) }));
   let face = { ...NEUTRAL_FACE };
   const overlays: Record<string, number> = {};
   const extraParts: string[] = [];
   let gaze: [number, number] = [0, 0];
   const s = sec(t);
+  const actionFace: [string, number, number, boolean][] = [];
 
   // Base expression (resting face, FR-EXP-05).
   if (ch.baseExpression) {
@@ -267,8 +270,16 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     const u = a.loop ? ((sec(t - c.start) * speed) / a.duration) % 1 : Math.min(1, sec(t - c.start) / durS);
     const keys = c.params.hand && a.hand && c.params.hand !== a.hand && a.hand !== 'both' ? mirrorKeys(a.keys) : a.keys;
     for (const [k, ks] of Object.entries(keys)) {
-      if (k.startsWith('face.') || k.startsWith('gaze.')) continue;
       const v = sample(ks as Key[], u);
+      if (k.startsWith('face.')) {
+        // Face controls written by an action (e.g. a wince during a shrug) apply after expressions.
+        if (typeof v === 'number') actionFace.push([k.slice(5), v, w, !!a.additive]);
+        continue;
+      }
+      if (k.startsWith('gaze.')) {
+        if (typeof v === 'number') gaze = k === 'gaze.x' ? [gaze[0] + (v - gaze[0]) * w, gaze[1]] : [gaze[0], gaze[1] + (v - gaze[1]) * w];
+        continue;
+      }
       if (v !== undefined) setPath(pose, k, v, w, !!a.additive);
     }
     if (a.resultPosture && u >= 0.999) pose.posture = a.resultPosture as Pose['posture'];
@@ -277,13 +288,34 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
 
   // Expressions (FR-EXP-01/04) with per-clip fine-tune overrides (FR-EXP-02).
   let restMouthW = 0;
+  let blinkForced = 0;
+  let blinkSuppressed = false;
   for (const c of activeClips(scene, inst.id, 'face', t)) {
+    // Blink clips add a blink (closing over the clip) or remove automatic blinks for their span (FR-EXP-03).
+    if (c.params.blink === true) {
+      const u = (t - c.start) / Math.max(1, c.end - c.start);
+      blinkForced = Math.max(blinkForced, Math.sin(Math.PI * u));
+      continue;
+    }
+    if (c.params.blink === false) {
+      blinkSuppressed = true;
+      continue;
+    }
     const e = c.asset ? (assets.manifest(c.asset)?.data as { expression?: ExpressionData } | undefined)?.expression : undefined;
     if (!e) continue;
     const intensity = ((c.params.intensity as number | undefined) ?? e.intensity ?? 70) / 100;
     const w = clipWeight(t, c.start, c.end, c.blendIn, c.blendOut) * intensity;
     const tuned: ExpressionData = { ...e, ...((c.params.tune as ExpressionData | undefined) ?? {}) };
     const target = faceFrom(tuned);
+    // Hold variation (FR-EXP-01): a small, seeded micro-movement of brows and mouth while the expression holds.
+    const hold = Number(c.params.hold ?? 0);
+    if (hold > 0) {
+      const ph = (hash32(c.id) % 1000) / 1000;
+      const k = Math.min(1, hold);
+      target.browInnerL += Math.sin(2 * Math.PI * (s / 2.3 + ph)) * 0.08 * k;
+      target.browInnerR += Math.sin(2 * Math.PI * (s / 2.3 + ph + 0.1)) * 0.08 * k;
+      target.mouthCurve += Math.sin(2 * Math.PI * (s / 3.1 + ph)) * 0.06 * k;
+    }
     face = mixFace(face, target, Math.min(1, w));
     if (w > restMouthW) {
       restMouthW = w;
@@ -297,8 +329,16 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     if (tuned.head) pose.head = { yaw: pose.head.yaw + (tuned.head.yaw ?? 0) * w, pitch: pose.head.pitch + (tuned.head.pitch ?? 0) * w, roll: pose.head.roll + (tuned.head.roll ?? 0) * w };
   }
 
-  // Blinks (FR-EXP-03): automatic unless the eyes are already closed.
-  if (ch.auto.blinks && face.eyeOpenL > 0.3) {
+  for (const [k, v, w, additive] of actionFace) {
+    const f = face as unknown as Record<string, number>;
+    if (typeof f[k] === 'number') f[k] = additive ? f[k]! + v * w : f[k]! + (v - f[k]!) * w;
+  }
+
+  // Blinks (FR-EXP-03): automatic unless the eyes are already closed or a clip removes them; blink clips add one.
+  if (blinkForced > 0) {
+    face.eyeOpenL *= 1 - blinkForced;
+    face.eyeOpenR *= 1 - blinkForced;
+  } else if (ch.auto.blinks && !blinkSuppressed && face.eyeOpenL > 0.3) {
     const b = blinkFactor(t, seed);
     if (b > 0) {
       face.eyeOpenL *= 1 - b;
@@ -346,6 +386,14 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     }
   }
   return { pose, face, mouth, gaze, overlays, speaking, extraParts };
+}
+
+/** Performance state of a character instance at t (pose, face, mouth, gaze) — for tests, readouts and tools. */
+export function performAt(state: ProjectState, sceneId: string, instanceId: string, t: number, assets: AssetResolver): PerfResult {
+  const scene = state.scenes[sceneId];
+  const inst = scene?.instances.find((i) => i.id === instanceId);
+  if (!scene || !inst?.character) throw new Error(`Character instance ${instanceId} not found`);
+  return perform(state, scene, inst, t, assets, state.project.frameRate);
 }
 
 /** Screen-space direction (−1…1) from an instance's head to a target. */

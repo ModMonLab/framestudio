@@ -11,3 +11,4 @@ export * from './import-image.js';
 export * from './import.js';
 export * from './artwork.js';
 export * from './user-library.js';
+export * from './auto-performance.js';

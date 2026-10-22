@@ -110,6 +110,7 @@ export const api = {
   },
   readArtwork: (pid: string, name: string, bytes: Uint8Array) => req<unknown>('POST', `/api/projects/${pid}/rigging/read?name=${encodeURIComponent(name)}`, bytes, { 'content-type': 'application/octet-stream' }),
   buildRig: (pid: string, body: Record<string, unknown>) => req<unknown>('POST', `/api/projects/${pid}/rigging/build`, body),
+  autoPerformance: (pid: string, scene: string, body: { instances?: string[]; kinds?: ('talking' | 'listening')[] } = {}) => req<{ revision: number; added: number; removed: number }>('POST', `/api/projects/${pid}/scenes/${scene}/auto-performance`, body),
   prefs: () => req<UserPrefs>('GET', '/api/user/prefs'),
   setPrefs: (p: Omit<UserPrefs, 'schemaVersion'>) => req<UserPrefs>('PUT', '/api/user/prefs', p),
   saveToLibrary: (pid: string, refs: string[]) => req<{ added: string[]; unchanged: string[] }>('POST', `/api/projects/${pid}/library/save`, { refs }),

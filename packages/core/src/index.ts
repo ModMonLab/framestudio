@@ -18,6 +18,7 @@ export * from './perform/lipsync.js';
 export * from './perform/data.js';
 export * from './perform/character.js';
 export * from './perform/evaluate.js';
+export * from './perform/auto.js';
 export * from './captions.js';
 export * from './audio.js';
 export * from './sync.js';

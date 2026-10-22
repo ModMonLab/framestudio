@@ -1,9 +1,10 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
 import { useMemo, useRef, useState } from 'react';
-import { Bot, ChevronRight, Lock, SkipBack } from 'lucide-react';
-import { formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
+import { AlertTriangle, Bot, ChevronRight, Lock, SkipBack, Sparkles } from 'lucide-react';
+import { conflictingClipIds, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
 import type { Clip, Scene, Track } from '@frame/schema';
-import { IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow } from '@frame/ui';
+import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts } from '@frame/ui';
+import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
 import { clipMenu, useContextMenu } from './ContextMenu.js';
@@ -22,7 +23,7 @@ interface Group {
 }
 
 export function Timeline() {
-  const { studio } = useCtx();
+  const { studio, assets } = useCtx();
   const project = useStudio(studio, (s) => s.project)!;
   const sceneId = useStudio(studio, (s) => s.scene);
   const time = useStudio(studio, (s) => s.time);
@@ -32,6 +33,9 @@ export function Timeline() {
   const [q, setQ] = useState('');
   const [pxPerSec, setPx] = useState(60);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [autoBusy, setAutoBusy] = useState(false);
+  const toasts = useToasts();
+  const pid = useStudio(studio, (s) => s.pid);
   const scroller = useRef<HTMLDivElement>(null);
   const scene = sceneId ? project.scenes[sceneId] : undefined;
   const fps = project.project.frameRate;
@@ -47,6 +51,9 @@ export function Timeline() {
       .map((x) => ({ ...x, tracks: x.tracks.filter((t) => (filter === 'all' || (filter === 'audio') === AUDIO.has(t.kind)) && (!q || t.name.toLowerCase().includes(q.toLowerCase()) || x.name.toLowerCase().includes(q.toLowerCase()))) }))
       .filter((x) => x.tracks.length > 0);
   }, [scene, filter, q]);
+
+  // Conflicting clips are hatched at edit time (FR-CAM-07): same-channel overlaps, same-speaker overlaps, shots, past end.
+  const conflicts = useMemo(() => (scene ? conflictingClipIds(scene, { manifest: (r) => assets.manifest(r) }) : new Set<string>()), [scene, assets]);
 
   if (!scene) return null;
   const width = Math.max(600, (scene.duration / 48000) * pxPerSec + 40);
@@ -65,6 +72,20 @@ export function Timeline() {
         <button type="button" className="st-play" aria-label={playing ? 'Pause' : 'Play'} aria-keyshortcuts="Space" onClick={() => studio.set({ playing: !playing })}>{playing ? <PauseFilled /> : <PlayFilled />}</button>
         <span className="fr-mono st-timecode" aria-live="off">{formatTimecode(time)} / {formatTimecode(scene.duration)}</span>
         <span className="fr-spacer" />
+        <Button
+          icon={<Sparkles size={13} />}
+          loading={autoBusy}
+          disabled={!scene.instances.some((i) => i.kind === 'character')}
+          disabledReason="Add a character first"
+          title="Generate talking gestures and listening reactions as editable clips (characters with automatic behaviour on)"
+          onClick={() => {
+            setAutoBusy(true);
+            api.autoPerformance(pid, scene.id, { kinds: ['talking', 'listening'] })
+              .then((r) => toasts.show({ tone: 'success', message: r.added ? `Added ${r.added} automatic clips${r.removed ? ` (replaced ${r.removed})` : ''}. Undo removes them.` : 'No lines to perform yet.' }))
+              .catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))
+              .finally(() => setAutoBusy(false));
+          }}
+        >Auto performance</Button>
         <div style={{ width: 170 }}><SearchField label="Filter tracks" placeholder="Filter tracks" value={q} onChange={setQ} /></div>
         <Segmented label="Track filter" value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'picture', label: 'Picture' }, { value: 'audio', label: 'Audio' }]} />
         <div style={{ width: 220 }}><SliderRow inline label="Zoom" value={pxPerSec} min={10} max={300} defaultValue={60} format={(v) => `${Math.round(v)}`} onChange={(v) => setPx(v)} /></div>
@@ -116,7 +137,7 @@ export function Timeline() {
                         void placeAsset(studio, h, { at, character: t.owner });
                       }}
                     >
-                      {t.kind === 'lipsync' ? <LipLane project={project} scene={scene} owner={t.owner} x={x} /> : scene.clips.filter((c) => c.track === t.id).map((c) => <ClipChip key={c.id} project={project} scene={scene} clip={c} track={t} x={x} pxPerSec={pxPerSec} selected={selIds.has(c.id)} />)}
+                      {t.kind === 'lipsync' ? <LipLane project={project} scene={scene} owner={t.owner} x={x} /> : scene.clips.filter((c) => c.track === t.id).map((c) => <ClipChip key={c.id} project={project} scene={scene} clip={c} track={t} x={x} pxPerSec={pxPerSec} selected={selIds.has(c.id)} conflict={conflicts.has(c.id)} />)}
                     </div>
                   </div>
                 ))}
@@ -164,13 +185,13 @@ function clipLabel(project: ProjectState, scene: Scene, c: Clip, track: Track): 
   return track.name;
 }
 
-function ClipChip({ project, scene, clip, track, x, pxPerSec, selected }: { project: ProjectState; scene: Scene; clip: Clip; track: Track; x: (t: number) => number; pxPerSec: number; selected: boolean }) {
+function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict }: { project: ProjectState; scene: Scene; clip: Clip; track: Track; x: (t: number) => number; pxPerSec: number; selected: boolean; conflict: boolean }) {
   const { studio } = useCtx();
   const openMenu = useContextMenu();
   const [drag, setDrag] = useState<{ x0: number; dx: number } | null>(null);
   const fps = project.project.frameRate;
   const state = clip.line ? lineTakeState(project, clip) : undefined;
-  const invalid = state === 'Missing' || state === 'Failed' || state === 'Outdated';
+  const invalid = conflict || state === 'Missing' || state === 'Failed' || state === 'Outdated';
   const generating = state === 'Generating' || state === 'Queued';
   const muted = clip.line?.muted || !clip.enabled;
   const label = clipLabel(project, scene, clip, track);
@@ -181,16 +202,16 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected }: { proj
     const dt = Math.round((drag.dx / pxPerSec) * fps) * (48000 / fps);
     setDrag(null);
     if (dt === 0 || track.lock) return;
-    void studio.exec([{ name: 'clip.move', params: { scene: scene.id, id: clip.id, start: Math.max(0, clip.start + dt) } }], `Move ${label.slice(0, 24)}`);
+    void studio.exec([{ name: 'clip.move', params: { scene: scene.id, ids: [clip.id], delta: Math.max(-clip.start, dt) } }], `Move ${label.slice(0, 24)}`);
   };
   return (
     <button
       type="button"
       className={`fr-clip st-cat--${CATEGORY[track.kind]} ${selected ? 'fr-clip--selected' : ''} ${invalid ? 'fr-clip--invalid' : ''} ${generating ? 'fr-clip--generating' : ''} ${muted ? 'fr-clip--muted' : ''}`}
       style={{ left: x(clip.start) + (drag?.dx ?? 0), width: Math.max(4, x(clip.end - clip.start)) }}
-      title={`${label}${state ? ` · ${state}` : ''}${agent ? ` · added by agent ${agent}` : ''}`}
+      title={`${label}${state ? ` · ${state}` : ''}${conflict ? ' · In conflict (see Problems)' : ''}${agent ? ` · added by agent ${agent}` : ''}`}
       aria-pressed={selected}
-      aria-label={`${track.name}: ${label}${state ? `, ${state}` : ''}${agent ? ', added by an agent' : ''}`}
+      aria-label={`${track.name}: ${label}${state ? `, ${state}` : ''}${conflict ? ', in conflict' : ''}${agent ? ', added by an agent' : ''}`}
       onPointerDown={(e) => {
         e.stopPropagation();
         studio.set({ selection: e.shiftKey ? [...studio.state.selection, { kind: 'clip', id: clip.id }] : [{ kind: 'clip', id: clip.id }] });
@@ -206,6 +227,7 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected }: { proj
         openMenu({ x: e.clientX || r.left, y: e.clientY || r.bottom, items: clipMenu(studio, clip.id), label: 'Clip actions' });
       }}
     >
+      {conflict && <AlertTriangle size={11} aria-hidden className="st-agent-mark" />}
       {agent && <Bot size={11} aria-hidden className="st-agent-mark" />}
       {generating ? 'Generating · ' : ''}{label}
     </button>

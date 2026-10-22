@@ -14,7 +14,7 @@ import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -269,7 +269,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const p = hub.get(req.params.pid);
       const lib = library(p);
       const locked = lockLookup();
-      const problems = validateProject(p.open.state, { assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), assetHash: (r) => { const m = locked(r)?.manifest; return m ? manifestHash(m) : undefined; } });
+      const problems = validateProject(p.open.state, { assetExists: (r) => lib.has(r), manifest: (r) => lib.manifest(r), mediaExists: (h) => p.open.store.verifyMedia(h), assetHash: (r) => { const m = locked(r)?.manifest; return m ? manifestHash(m) : undefined; } });
       return { revision: p.open.session.revision, problems };
     } catch (e) {
       return sendError(reply, e);
@@ -485,6 +485,22 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         dryRun: q.dryRun === 'true',
       });
       return res;
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- automatic performance (FR-ACT-07/08) */
+  // Regenerates talking gestures and listening reactions as editable `auto` clips for a scene's characters.
+  app.post<{ Params: { pid: string; sid: string }; Body: { instances?: string[]; kinds?: ('talking' | 'listening')[]; dryRun?: boolean } }>('/api/projects/:pid/scenes/:sid/auto-performance', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!p.open.state.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      const kinds = req.body?.kinds?.filter((k) => k === 'talking' || k === 'listening');
+      const cmds = autoPerformanceForLibrary(p.open.state, req.params.sid, library(p), { ...(req.body?.instances ? { instances: req.body.instances } : {}), ...(kinds?.length ? { kinds } : {}) });
+      if (!cmds.length) return { revision: p.open.session.revision, added: 0, removed: 0 };
+      const r = p.open.session.apply({ commands: cmds as never, source: sourceOf(req), label: 'Automatic performance' }, { dryRun: !!req.body?.dryRun });
+      return { revision: r.revision, added: cmds.filter((c) => c.name === 'clip.add').length, removed: cmds.filter((c) => c.name === 'clip.remove').reduce((n, c) => n + (c.params.ids as string[]).length, 0) };
     } catch (e) {
       return sendError(reply, e);
     }

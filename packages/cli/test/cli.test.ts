@@ -110,4 +110,29 @@ describe('frame CLI (FR-CLI-01..07)', () => {
     await frame(['versions', 'restore', v.json.result.id, '--project', 'P'], dir);
     expect((await frame(['info', '--json', '--project', 'P'], dir)).json.result.episodes[0].scenes[0].name).toBe('Scene 1');
   });
+
+  it('scene auto-performance generates editable talking and listening clips from the library (FR-ACT-07/08)', async () => {
+    const dir = tmp();
+    await frame(['init', 'Show.frame'], dir);
+    const cwd = path.join(dir, 'Show.frame');
+    const scene = (await frame(['scene', 'list', '--json'], cwd)).json.result.scenes[0].id as string;
+    const auto = { idle: true, listening: true, blinks: true, talkingGestures: true };
+    const add = (id: string, x: number) => ({ name: 'instance.add', params: { scene, id, kind: 'character', asset: 'chr.aiko-tanaka@1', name: id, transform: { x, y: 1000 }, character: { look: 'default', view: 'three', posture: 'standing', auto } } });
+    const cmds = [add('ins_ada00001', 600), add('ins_ben00001', 1300),
+      { name: 'line.add', params: { scene, speaker: 'ins_ada00001', text: 'We have a lot to talk about today, so let us begin.', start: 0, durationS: 5 } },
+      { name: 'line.add', params: { scene, speaker: 'ins_ben00001', text: 'Absolutely. I have been looking forward to this conversation.', start: 288000, durationS: 4 } }];
+    const file = path.join(dir, 'cmds.json');
+    fs.writeFileSync(file, JSON.stringify(cmds));
+    expect((await frame(['apply', file, '--json'], cwd)).code).toBe(0);
+    const r = await frame(['scene', 'auto-performance', scene, '--json'], cwd);
+    expect(r.code).toBe(0);
+    expect(r.json.result.problems.filter((p: any) => p.code === 'CHANNEL_CONFLICT' || p.code === 'POSTURE_MISMATCH')).toEqual([]);
+    const show = (await frame(['scene', 'show', scene, '--json'], cwd)).json.result;
+    const autoClips = show.clips.filter((c: any) => c.source === 'auto');
+    expect(autoClips.length).toBeGreaterThan(2);
+    // Running it again replaces the auto clips rather than piling up.
+    await frame(['scene', 'auto-performance', scene, '--json'], cwd);
+    const again = (await frame(['scene', 'show', scene, '--json'], cwd)).json.result.clips.filter((c: any) => c.source === 'auto');
+    expect(again.length).toBe(autoClips.length);
+  });
 });

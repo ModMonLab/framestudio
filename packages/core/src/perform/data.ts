@@ -124,3 +124,34 @@ export function mirrorKeys(keys: Record<string, Key[]>): Record<string, Key[]> {
   }
   return out;
 }
+
+/* ------------------------------------------------------------------ channels and postures (FR-ACT-02/03) */
+
+/** Minimal clip and track shapes used by the channel and posture helpers (scene clips satisfy them). */
+interface ClipLike { id: string; track: string; start: number; end: number; enabled: boolean; asset?: string; params: Record<string, unknown> }
+interface SceneLike { tracks: { id: string; owner: string; kind: string; mute: boolean }[]; clips: ClipLike[] }
+
+/** The action data of an asset ref, if it is an action. */
+export type ActionLookup = (ref: string) => ActionData | undefined;
+
+/** Channels a clip drives after `params.hand` mirroring (an R-handed gesture played with the left hand drives armL). */
+export function clipChannels(a: ActionData, params: Record<string, unknown>): ActionChannel[] {
+  const mirror = params.hand && a.hand && a.hand !== 'both' && params.hand !== a.hand;
+  if (!mirror) return a.channels;
+  return a.channels.map((c) => c.replace(/^(arm|hand)([LR])$/, (_s, p: string, s: string) => `${p}${s === 'L' ? 'R' : 'L'}`) as ActionChannel);
+}
+
+/**
+ * The character's posture at time t (FR-ACT-03): the instance's starting posture, changed by every posture-changing
+ * action (sit down, stand up) that has finished before t. Seeking anywhere gives the same answer (no drift).
+ */
+export function postureAt(scene: SceneLike, owner: string, start: string, t: number, actionOf: ActionLookup): string {
+  const tracks = new Set(scene.tracks.filter((tr) => tr.owner === owner && tr.kind === 'acting' && !tr.mute).map((tr) => tr.id));
+  let posture = start;
+  const done = scene.clips.filter((c) => c.enabled && tracks.has(c.track) && c.end <= t && c.asset).sort((a, b) => a.end - b.end);
+  for (const c of done) {
+    const r = actionOf(c.asset!)?.resultPosture;
+    if (r) posture = r;
+  }
+  return posture;
+}
