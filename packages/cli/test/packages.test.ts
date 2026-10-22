@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { runCli } from '../src/index.js';
 
 async function frame(args: string[], cwd: string, env: Record<string, string> = {}) {
@@ -54,7 +55,7 @@ describe('frame assets / char / package (FR-CLI-05, FR-IMP-04, FR-DAT-10/11)', (
   });
 
   it('validates manifests with the rig check', async () => {
-    const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../../content/assets/hair');
+    const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../content/assets/hair');
     const r = await frame(['assets', 'validate', root], process.cwd());
     expect(r.code).toBe(0);
     expect(r.json.result.checked).toBeGreaterThan(5);
