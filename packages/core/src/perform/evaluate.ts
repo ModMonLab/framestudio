@@ -106,9 +106,23 @@ export function cameraAt(scene: Scene, t: number, assets: AssetResolver, aspect?
       const amp = move.shake * (1 - u * 0.5) * ((c.params.intensity as number | undefined) ?? 1);
       shake = [(rnd() - 0.5) * amp, (rnd() - 0.5) * amp];
     }
-    if (move.target && c.params.target) {
-      const inst = scene.instances.find((i) => i.id === c.params.target);
-      if (inst) center = [center[0] + (inst.transform.x - center[0]) * k, center[1]];
+    // Targets are read where they are at t, so the camera keeps up with walking characters (FR-CAM-03).
+    const inst = typeof c.params.target === 'string' ? scene.instances.find((i) => i.id === c.params.target) : undefined;
+    const posAt = (at: number): [number, number] => {
+      if (!inst) return [0, 0];
+      if (inst.kind !== 'character') return [inst.transform.x, inst.transform.y];
+      const m = motionAt(scene, inst, at, (r) => (assets.manifest(r)?.data as { action?: ActionData } | undefined)?.action);
+      return [m.x, m.y];
+    };
+    if (move.follow && inst) {
+      // Follow: keep the framing the camera had on the target when the clip started.
+      const p0 = posAt(c.start);
+      const p = posAt(Math.min(t, c.end));
+      const w = Math.min(1, (t - c.start) / Math.max(1, Math.min(dur, 0.3 * TICKS_PER_SECOND)));
+      center = [center[0] + (p[0] - p0[0]) * w, center[1] + (p[1] - p0[1]) * w * 0.5];
+    } else if (move.target && inst) {
+      const p = posAt(t);
+      center = [center[0] + (p[0] - center[0]) * k, center[1]];
     }
   }
   return { cam, center, width, rotation, shake };
@@ -121,6 +135,8 @@ export interface CameraMove {
   roll?: number;
   shake?: number;
   target?: boolean;
+  /** Keep the target's starting framing while it moves (follow subject). */
+  follow?: boolean;
   ease?: 'linear' | 'inOut' | 'out' | 'in' | 'snap' | 'bounce';
 }
 
@@ -419,7 +435,7 @@ export function characterJointsAt(state: ProjectState, sceneId: string, instance
   const mo = ctx.motion(inst);
   const perf = perform(state, scene, inst, t, o.assets, state.project.frameRate, mo, ctx.posOf);
   const { spec } = resolveCharacter(man, inst.character.look, family, o.styles[family], o.assets, perf.extraParts);
-  const composed = composeCharacter(spec, { view: mo.moving && mo.view ? mo.view : inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
+  const composed = composeCharacter(spec, { view: mo.view ?? inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
   const k = inst.transform.scale;
   const out: Record<string, [number, number]> = {};
   for (const [name, j] of Object.entries(composed.joints)) out[name] = [mo.x + j.p[0] * k, mo.y + j.p[1] * k];
@@ -570,7 +586,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
     const mo = motions.motion(inst);
     const perf = perform(state, scene, inst, t, o.assets, fps, mo, motions.posOf);
     const { spec, missing } = resolveCharacter(man, inst.character.look, family, style, o.assets, perf.extraParts);
-    const composed = composeCharacter(spec, { view: mo.moving && mo.view ? mo.view : inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
+    const composed = composeCharacter(spec, { view: mo.view ?? inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
     const r = { composed, perf, missing };
     composedCache.set(inst.id, r);
     return r;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { characterJointsAt, holderAt, motionAt, propStateAt, scheduleSceneAudio, seatCommands, soundCueCommands, createProjectState, evaluateFrame, performAt, ProjectSession, secondsToTicks, sequentialIds, trackFor, validateProject, type ProjectState } from '@frame/core';
+import { cameraAt, characterJointsAt, holderAt, motionAt, turnView, propStateAt, scheduleSceneAudio, seatCommands, soundCueCommands, createProjectState, evaluateFrame, performAt, ProjectSession, secondsToTicks, sequentialIds, trackFor, validateProject, type ProjectState } from '@frame/core';
 import { bundledLibrary, loadStyles } from '@frame/assets/node';
 import { autoCoverageForLibrary, bundledMediaFile, recipeCommandsForLibrary } from '@frame/io';
 import type { Command } from '@frame/schema';
@@ -229,5 +229,31 @@ describe('M3 acceptance paths', () => {
     expect(holderAt(sc(), mug, s(t + 0.7), actionOf)?.holder.id).toBe(aiko);
     expect(holderAt(sc(), mug, s(t + 2), actionOf)?.holder.id).toBe(maya);
     expect(holderAt(sc(), mug, s(t + 6), actionOf)?.holder.id).toBe(maya);
+  });
+
+  it('FR-CHR-04 / FR-CAM-03: walking turns through adjacent views; a turn clip passes front → back through ¾ and side; a follow move keeps a walker framed', () => {
+    const { scene, apply, sc } = project();
+    const who = apply([{ name: 'instance.add', params: { scene, kind: 'character', asset: 'chr.maya-bennett@1', name: 'Walker', transform: { x: 300, y: 1000 }, character: { look: 'on-air', view: 'front', posture: 'standing', auto: quiet } } }]).commands[0]!.params.id as string;
+    const acting = trackFor(sc(), who, 'acting')!.id;
+    apply([
+      { name: 'clip.add', params: { scene, track: acting, start: 0, end: s(4), asset: 'act.walk@1', params: { path: [[1500, 1000]] } } },
+      { name: 'clip.add', params: { scene, track: acting, start: s(5), end: s(6), params: { view: 'back' } } },
+      { name: 'clip.add', params: { scene, track: sc().tracks.find((t) => t.kind === 'camera-move')!.id, start: 0, end: s(4), asset: 'cam.follow-subject@1', params: { target: who } } },
+    ]);
+    expect(turnView('front', 'back', 0.3)).toBe('three');
+    expect(turnView('front', 'back', 0.6)).toBe('side');
+    const actionOf = (r: string) => (lib.manifest(r)?.data as { action?: never } | undefined)?.action;
+    const inst = () => sc().instances.find((i) => i.id === who)!;
+    const views = [0.02, 0.15, 2, 3.9, 4.5, 5.3, 5.6, 5.9, 7].map((x) => motionAt(sc(), inst(), s(x), actionOf).view);
+    expect(views).toEqual(['front', 'three', 'side', 'three', 'front', 'three', 'side', 'back', 'back']);
+    // The follow move keeps the walker at the same place in frame while it crosses the stage.
+    const offset = (x: number) => {
+      const cam = cameraAt(sc(), s(x), assets);
+      return motionAt(sc(), inst(), s(x), actionOf).x - cam.center[0];
+    };
+    const o1 = offset(1);
+    expect(Math.abs(offset(2) - o1)).toBeLessThan(1);
+    expect(Math.abs(offset(3.5) - o1)).toBeLessThan(1);
+    expect(motionAt(sc(), inst(), s(3.5), actionOf).x - motionAt(sc(), inst(), s(1), actionOf).x).toBeGreaterThan(500);
   });
 });
