@@ -82,10 +82,11 @@ function PartPicker({ c, kind, partKey, label, optional, tiles }: { c: PropsCont
   if (!items.length && !optional) return <EmptyState title={`No ${label.toLowerCase()} in the library`}>Import or create one in the part editor.</EmptyState>;
   if (!items.length) return <><RadioList label={label} items={[{ value: '', label: 'None' }]} value="" onChange={set} /><Note>The library has no {label.toLowerCase()} yet.</Note></>;
   const opts = [...(optional ? [{ value: '', label: 'None' }] : []), ...items.map((i) => ({ value: i.ref, label: i.name, ...(i.group ? { meta: i.group } : {}) }))];
+  const editLink = value ? <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(c.pid)}/part/${encodeURIComponent(value)}`)}>Edit this part…</Button> : null;
   if (tiles && items.every((i) => i.preview)) {
-    return <TileGrid label={label} value={value} onChange={set} tiles={opts.map((o) => ({ value: o.value, label: o.label, preview: o.value ? <img src={thumb(c.pid, o.value, c.family)} alt="" width={64} height={64} loading="lazy" /> : <span className="fr-faint">—</span> }))} />;
+    return <><TileGrid label={label} value={value} onChange={set} tiles={opts.map((o) => ({ value: o.value, label: o.label, preview: o.value ? <img src={thumb(c.pid, o.value, c.family)} alt="" width={64} height={64} loading="lazy" /> : <span className="fr-faint">—</span> }))} />{editLink}</>;
   }
-  return <RadioList label={label} items={opts} value={value} onChange={set} />;
+  return <><RadioList label={label} items={opts} value={value} onChange={set} />{editLink}</>;
 }
 
 /** Sliders and options from control assets of one kind (Catalog A3b, A4b, A9b). */

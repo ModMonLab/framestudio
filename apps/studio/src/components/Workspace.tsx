@@ -16,6 +16,7 @@ import { ProblemsButton } from './ProblemsButton.js';
 import { ActivityButton } from './ActivityButton.js';
 import { VoiceDesigner } from './VoiceDesigner.js';
 import { Builder } from './Builder.js';
+import { PartEditor } from './PartEditor.js';
 import { VersionsDialog } from './VersionsDialog.js';
 import { api } from '../lib/api.js';
 import { usePlayback } from '../lib/playback.js';
@@ -40,7 +41,7 @@ export function useCtx(): Ctx {
 const SAVE_LABEL = { saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', error: 'Not saved' } as const;
 const SAVE_TONE = { saved: 'success', saving: 'info', unsaved: 'warning', error: 'danger' } as const;
 
-export function Workspace({ pid, builder }: { pid: string; builder?: { scene: string; instance: string } }) {
+export function Workspace({ pid, builder, part }: { pid: string; builder?: { scene: string; instance: string }; part?: string }) {
   const studio = useMemo(() => new Studio(pid), [pid]);
   const assets = useMemo(() => new AssetCache(pid), [pid]);
   const [failed, setFailed] = useState<string>();
@@ -91,7 +92,7 @@ export function Workspace({ pid, builder }: { pid: string; builder?: { scene: st
   const ctx: Ctx = { studio, assets, openExport: () => setExportOpen(true), openVoiceDesigner: (i) => setVoiceFor(i), openVersions: () => setVersionsOpen(true), importPackage: () => pkgInput.current?.click() };
   return (
     <StudioCtx.Provider value={ctx}>
-      <ContextMenuHost>{builder ? <Builder scene={builder.scene} instance={builder.instance} /> : <Shell />}</ContextMenuHost>
+      <ContextMenuHost>{part ? <PartEditor key={part} partRef={part} /> : builder ? <Builder scene={builder.scene} instance={builder.instance} /> : <Shell />}</ContextMenuHost>
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <VoiceDesigner open={voiceFor !== null} instance={voiceFor ?? undefined} onClose={() => setVoiceFor(null)} />
       <VersionsDialog pid={pid} open={versionsOpen} onClose={() => setVersionsOpen(false)} />

@@ -161,3 +161,13 @@
 .st-rig__previews canvas { width: 120px; height: 160px; background: repeating-conic-gradient(var(--color-subtle) 0 25%, var(--color-canvas) 0 50%) 0 0 / 16px 16px; border-radius: var(--radius-sm); }
 .st-assets-scope { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--color-divider); }
 .st-panel-foot--wrap { flex-wrap: wrap; }
+/* Part editor (SRS §8.2) */
+.st-parted__canvas { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: var(--space-6); padding: var(--space-6); overflow: auto; }
+.st-parted__stage { position: relative; flex: none; background: repeating-conic-gradient(var(--color-subtle) 0 25%, var(--color-canvas) 0 50%) 0 0 / 16px 16px; border-radius: var(--radius-sm); box-shadow: var(--shadow-stage); }
+.st-parted__stage canvas, .st-parted__overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+.st-parted__overlay { touch-action: none; cursor: crosshair; }
+.st-pt { fill: var(--color-panel); stroke: var(--color-accent); stroke-width: 1.5; cursor: grab; }
+.st-pt:focus-visible { outline: none; stroke: var(--color-focus); stroke-width: 3; }
+.st-pt--sel { fill: var(--color-accent); }
+.st-parted__onchar { margin: 0; display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+.st-parted__onchar canvas { width: 220px; height: 300px; background: repeating-conic-gradient(var(--color-subtle) 0 25%, var(--color-canvas) 0 50%) 0 0 / 16px 16px; border-radius: var(--radius-sm); }

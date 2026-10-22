@@ -114,6 +114,7 @@ export const api = {
   setPrefs: (p: Omit<UserPrefs, 'schemaVersion'>) => req<UserPrefs>('PUT', '/api/user/prefs', p),
   saveToLibrary: (pid: string, refs: string[]) => req<{ added: string[]; unchanged: string[] }>('POST', `/api/projects/${pid}/library/save`, { refs }),
   adopt: (pid: string, refs: string[]) => req<{ added: string[]; revision: number }>('POST', `/api/projects/${pid}/library/adopt`, { refs }),
+  savePart: (pid: string, body: { from: string; name: string; data: unknown; draft?: boolean; asNew?: boolean; changes?: string }) => req<{ ref: string; isNew: boolean; draft: boolean; revision: number }>('POST', `/api/projects/${pid}/parts`, body),
   versions: (pid: string) => req<{ versions: { id: string; name: string; createdAt: string; revision: number }[] }>('GET', `/api/projects/${pid}/versions`),
   saveVersion: (pid: string, name: string) => req<{ id: string; name: string; createdAt: string; revision: number }>('POST', `/api/projects/${pid}/versions`, { name }),
   compareVersion: (pid: string, vid: string) => req<VersionComparison>('GET', `/api/projects/${pid}/versions/${vid}/compare`),

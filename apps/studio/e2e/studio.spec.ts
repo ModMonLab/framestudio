@@ -315,3 +315,32 @@ test('favourites, collections and the user library in the Assets panel (FR-AST-0
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
 });
+
+test('part editor: edit points of a library hairstyle, check the rig and save a new part (FR-PED-01/02/05)', async ({ page }) => {
+  await openProject(page, sample(false));
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Search assets' }).fill('afro medium');
+  await page.getByRole('button', { name: /^Afro medium/ }).click();
+  await page.getByRole('button', { name: 'Open in part editor' }).click();
+  await expect(page.getByRole('img', { name: /front view, flat artwork in head space/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Rig check passed').first()).toBeVisible();
+  const save = page.getByRole('button', { name: 'Save as new part' });
+  await expect(save).toBeDisabled();
+  // Nudge a control point with the keyboard (an accessible alternative to dragging).
+  const pt = page.getByRole('button', { name: /^Point / }).first();
+  await pt.focus();
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowUp');
+  await expect(page.getByText(/· edited/)).toBeVisible();
+  await page.screenshot({ path: process.env.FRAME_DEBUG_PNG ? `${process.env.FRAME_DEBUG_PNG}-parted.png` : test.info().outputPath('parted.png') });
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(page.getByText(/^Saved .* as a new part$/)).toBeVisible();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const custom = Object.values(st.assets as Record<string, { kind: string; name: string; provenance: { notes: string } }>).find((a) => a.kind === 'hair')!;
+  expect(custom.name).toBe('Afro medium (custom)');
+  expect(custom.provenance.notes).toContain('hair.afro-medium@1');
+  await expect(page.getByText('v1', { exact: true })).toBeVisible();
+});

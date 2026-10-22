@@ -34,6 +34,9 @@ const FILTERS: Record<string, { title: string; kinds?: string[]; empty: string }
   templates: { title: 'Templates', kinds: ['tpl'], empty: 'Templates are not in the library yet. They arrive with the templates content set.' },
 };
 
+/** Character parts and garments that open in the part editor (FR-PED-01). */
+const PART_KINDS = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'feet', 'top', 'outer', 'bottom', 'dress', 'shoe', 'acc', 'skin-detail', 'makeup']);
+
 /** Kinds that can be placed or applied from this panel. */
 const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img']);
 
@@ -117,10 +120,11 @@ export function AssetsPanel({ filter }: { filter: string }) {
               name={h.name}
               meta={h.group && h.group !== cat ? h.group : h.ref.split('@')[0]}
               thumbnail={h.preview ? <img src={`/api/library/thumbnail?ref=${encodeURIComponent(h.ref)}&family=${project.project.styleFamily}&w=60&project=${encodeURIComponent(pid)}`} width={30} height={30} alt="" loading="lazy" /> : undefined}
-              disabledReason={reason(h)}
+              // Parts and garments are picked for editing (part editor) even though they are applied in the builder.
+              disabledReason={PART_KINDS.has(h.kind) && !h.incompatible ? undefined : reason(h)}
               selected={picked === h.ref}
               onClick={() => setPicked(h.ref)}
-              onDoubleClick={() => void apply(h)}
+              onDoubleClick={() => !reason(h) && void apply(h)}
               draggable={!reason(h)}
               onDragStart={(e) => { e.dataTransfer.setData(DRAG_TYPE, JSON.stringify(h)); e.dataTransfer.effectAllowed = 'copy'; }}
             />
@@ -151,6 +155,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
               void savePrefs({ favourites: prefs.favourites, collections: [...prefs.collections, { id: `c${Date.now().toString(36)}`, name: name.trim(), items: [id] }] });
             } else void savePrefs({ favourites: prefs.favourites, collections: prefs.collections.map((c) => (c.id === v ? { ...c, items: c.items.includes(id) ? c.items.filter((x) => x !== id) : [...c.items, id] } : c)) });
           }} options={[...prefs.collections.map((c) => ({ value: c.id, label: `${c.items.includes(idOf(pickedHit.ref)) ? '✓ ' : ''}${c.name}` })), { value: '__new', label: 'New collection…' }]} /></span>}
+          {PART_KINDS.has(pickedHit.kind) && <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/part/${encodeURIComponent(pickedHit.ref)}`)}>Open in part editor</Button>}
           {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Save to my library</Button>}
           <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' ? 'Add at playhead' : pickedHit.kind === 'txt' ? 'Use for captions' : 'Add to scene'}</Button>
         </div>

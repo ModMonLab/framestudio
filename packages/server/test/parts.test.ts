@@ -29,7 +29,7 @@ describe('part editor saves (FR-PED-02/05)', () => {
     const hair = (await api('GET', `/api/library/manifest?ref=hair.afro@1&project=${pid}`)).json;
     const data = JSON.parse(JSON.stringify(hair.data));
     const front = data.families.flat.views.front;
-    const k = Object.keys(front.points)[0];
+    const k = Object.keys(front.points)[0]!;
     front.points[k].p = [front.points[k].p[0] + 0.05, front.points[k].p[1]];
     const saved = await api('POST', `/api/projects/${pid}/parts`, { from: 'hair.afro@1', name: 'Afro (tall)', data });
     expect(saved.json).toMatchObject({ isNew: true, draft: false });
