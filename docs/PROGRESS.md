@@ -1,7 +1,7 @@
 # Frame — implementation progress
-Last updated: 2026-10-22 · Session 4
+Last updated: 2026-10-22 · Session 5
 
-## Current milestone: M3 — Direction (M2 automated exits pass; owner runs pending. M1 real-engine run pending on the reference GPU)
+## Current milestone: M3 Direction and M4 Agents — automated paths pass; owner runs pending (M1 real-engine run on the reference GPU; M2–M4 walkthroughs)
 
 ## Status by milestone
 | Milestone | Status | Exit evidence |
@@ -9,8 +9,8 @@ Last updated: 2026-10-22 · Session 4
 | M0 Foundations | Done | Schemas published (`frame schema <type>`, packages/schema); component stories in both themes (apps/gallery, 40 screenshots + axe); `frame init` + `frame validate` (packages/cli/test/cli.test.ts); CI workflow with golden-frame harness (packages/render/test) |
 | M1 Vertical slice | In progress | Fixture-worker path passes: tools/test/slice.test.ts (two designed voices, 4 aligned takes, export, server = CLI frames byte-identical) and apps/studio/e2e/studio.spec.ts (same flow in the Studio, preview pixels = server/CLI renderer). Real Qwen3-TTS run pending on the reference GPU. |
 | M2 Builder and assets | In progress | Packages (packages/io/test/package.test.ts, cli + server package tests), character versions and update usages (packages/server/test/versions.test.ts, AC-11 path), editable builder with compare (Studio e2e “character builder…”), imports and rigging assistant for characters, props and sets (packages/io/test/import.test.ts, rigging.test.ts, Studio e2e, AC-12 path), part editor (Studio e2e “part editor…”), user library, favourites and collections, full-page library (Studio e2e), AC-02 and AC-20 automated paths (tools/test/m2-acceptance.test.ts). Pending for exit: owner runs of AC-02/AC-11/AC-12 (artist PSD) and AC-20 on a second OS; hand-pose supply; FR-PED-03 |
-| M3 Direction | In progress | Expressions, actions, channels/postures, locomotion, gaze, seating, object interactions, sound cues, recipes, camera framings/moves, shot recipes and coverage: packages/core/test/perform.test.ts, recipes.test.ts, tools/test/m3-acceptance.test.ts (AC-06/07/08 paths), Studio e2e. Effects, atmosphere and transitions (m3-effects.test.ts), bubbles/titles/world text (m3-text.test.ts), templates and replace cast (m3-templates.test.ts, AC-22 path), view turns and follow moves, trim/split/markers, music, cues and ambience (content-audio.test.ts). Pending: ripple and remaining timeline items, motion principles and pose editing (FR-ACT-09/10), AC-09 lip-sync corpus, owner runs of AC-06..08/22/23 |
-| M4 Agents | In progress | `frame mcp` with all FR-AGT-02 tools and FR-AGT-03 resources (packages/mcp/test); agent tagging, session revert and Studio activity log (apps/studio/e2e). AC-13 needs recipes and music (M3) |
+| M3 Direction | In progress | Automated paths for every M3 requirement: perform.test.ts, recipes.test.ts, timeline.test.ts, m3-acceptance (AC-06/07/08), m3-effects, m3-text (AC-23), m3-templates (AC-22), m3-identity, m3-motion, lipsync-accuracy (AC-09), content-audio, Studio e2e. Pending for exit: owner runs of AC-06..10/22/23 with real takes; scrub audio, pinch zoom, props timeline group |
+| M4 Agents | In progress | `frame mcp` with the FR-AGT-02 tools plus apply_recipe, auto_coverage, apply_template, add_sound; FR-AGT-03 resources; agent tagging, session revert and Studio activity log; AC-13 through MCP (packages/mcp/test/mcp.test.ts: 3 scenes, 2 characters, takes, recipes, shots, music, conflict, frame and video). Pending: an owner run with a real agent from a written brief |
 | M5 Catalog completion | Not started | — |
 | M6 Hardening | Not started | — |
 
@@ -38,7 +38,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-DAT-10 | Done | packages/io/test/package.test.ts (malicious archives); cli/test/packages.test.ts; server/test/packages.test.ts; decision 0017 | Packages are zip archives with a `manifest — Declared paths only, safe names, type allow-list, size limits, hashes verified, nothing executed |
 | FR-DAT-11 | Done | package.test.ts “refuses different content … new ID” | Importing a package never overwrites existing assets of the same `id@v — Identical skipped; conflicts refused or imported under new user IDs with references rewritten |
 | FR-DAT-12 | In progress | `frame schema <type>`; packages/schema | Every format has a published JSON Schema in `@frame/schema` and docume — docs/formats/ pending |
-| FR-PRJ-01 | In progress | `frame init`; templates add complete scenes (tools/test/m3-templates.test.ts) | Create — Project-level templates and package sources pending |
+| FR-PRJ-01 | In progress | Home “New project” form; POST /api/projects/create `template`; `frame init --template --cast`; m3-templates.test.ts; Studio e2e “a new project starts from a template…” | Create — Empty or from a production template; from a project package pending |
 | FR-PRJ-02 | Done | session.test.ts (duplicate/delete); cli episode group | Episodes |
 | FR-PRJ-03 | Done | session.test.ts (duration safety); cli scene group | Scenes — Tree drag reorder in Studio M1 |
 | FR-PRJ-04 | Not started | — | Notes and script |
@@ -74,9 +74,9 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-CHR-08 | Done | scene-render.test.ts lip sync with expressions; FaceState + mouth letter composited | Expressions and mouth |
 | FR-CHR-09 | In progress | looks in character data; instances reference id@version + look; builder looks section | Identity vs appearance — Look switching clips (FR-WRD-03) pending |
 | FR-CHR-10 | Done | server/test/versions.test.ts; core/test/versions.test.ts; Studio e2e builder save | Versioning — New immutable version (or new character from a library one); update one instance, a scene or the project, undoable |
-| FR-CHR-11 | Not started | — | Inclusive options |
+| FR-CHR-11 | Done | tools/content/parts/identity.ts; PartData.variant (decision 0020); tools/test/m3-identity.test.ts | Inclusive options — All 12 A20 options; wheelchair users stay seated and roll (act.push-wheelchair or any locomotion clip); limb difference and prosthetics; pregnancy and albinism variants |
 | FR-BLD-01 | Done | apps/studio/src/components/Builder.tsx; Studio e2e “character builder…” (axe) | Layout — Parts tree with search over current values and changed dots, live canvas, turnaround, test bar, properties panel |
-| FR-BLD-02 | In progress | BuilderProperties.tsx | Sections — All sections present with library-driven options; accessories, makeup, facial hair and patterns wait for content; voice auditions pending |
+| FR-BLD-02 | In progress | BuilderProperties.tsx; accessories (C1), skin details (A13), makeup (A14) and identity options (A20) now in the library | Sections — Facial hair and patterns wait for content; voice auditions pending |
 | FR-BLD-03 | Done | Builder preview uses the export renderer in both families and every view; turnaround sheet; “Compare” saved vs. draft | Live preview |
 | FR-BLD-04 | Done | Builder test bar: any expression, any action, lip-sync test with mouth readout | Testing |
 | FR-BLD-05 | In progress | Randomise (parts, build, colours); “Describe a character” states its prerequisite | Randomise and suggest — Constraint choices (life stage, palette) in the UI pending |
@@ -105,8 +105,8 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-ACT-06 | Done | tools/test/m3-acceptance.test.ts AC-07 and AC-06 path (hold windows, hand-over → receive) | Object interactions |
 | FR-ACT-07 | Done | packages/core/test/perform.test.ts auto clips; evaluate.ts idle/listening; Studio e2e “auto performance…” | Idle and listening behaviour — Generated as editable auto clips; bake keeps them |
 | FR-ACT-08 | Done | core/perform/auto.ts; CLI test; Studio e2e | Talking gestures — Gesture size from performance defaults; line energy not used yet |
-| FR-ACT-09 | Not started | — | Motion principles |
-| FR-ACT-10 | Not started | — | Pose editing |
+| FR-ACT-09 | Done | data.ts samplePrincipled/keySpeed; tools/test/m3-motion.test.ts; Properties “Motion” section | Motion principles — Anticipation, overshoot and squash/stretch per action clip, computed from the action’s own curves |
+| FR-ACT-10 | Done | clip.params.pose offsets; tools/test/m3-motion.test.ts; Properties “Pose editor (advanced)”, hidden by default | Pose editing — Named controls keyed at clip-relative times and interpolated |
 | FR-RCP-01 | Done | packages/core/test/recipes.test.ts; tools/test/m3-acceptance.test.ts AC-06 path; Studio e2e “applies a line-anchored recipe…” | Apply any Catalog G1 recipe to one or more characters — 18 recipes authored from existing assets |
 | FR-RCP-02 | Done | recipes.test.ts (one group id, moves as one); clip.ungroup in the clip menu | Applying a recipe expands into ordinary clips on the right tracks (act |
 | FR-RCP-03 | Done | recipes.test.ts (word anchors: aligned words, else estimated) | Recipes anchored to a line align to that line's words (e |
@@ -129,17 +129,17 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-CAM-07 | Done | validate.ts (channels from manifests, speakers, shots, past end); Studio timeline hatching (e2e “auto performance…”) | Conflict rules |
 | FR-FX-01 | Done | core/perform/fx.ts; tools/test/m3-effects.test.ts; Studio e2e “atmosphere, effects and a shot transition…” | Apply Catalog K1 effects as clips attached to screen, stage point, obj — 24 K1 effects as clips attached to the screen, a stage point or an object; silhouette and freeze |
 | FR-FX-02 | Done | tools/test/m3-effects.test.ts; Studio e2e | Atmosphere (Catalog J1) as scene layers with intensity, colour and tim — 42 J1 atmospheres (weather, light, grades) with intensity, colour, timing; seeded particles |
-| FR-FX-03 | Done | shot `transition`/`transitionS`; m3-effects.test.ts; Studio e2e | Transitions (Catalog K2) between shots and between scenes with duratio — 17 K2 transitions between shots; between scenes pending with the episode view (FR-TML-09) |
+| FR-FX-03 | Done | shot `transition`/`transitionS`; EvalOptions.before; m3-effects.test.ts; m3-templates.test.ts “blends from the previous scene”; Studio e2e | Transitions (Catalog K2) between shots and between scenes with duratio — 17 K2 transitions between shots and between scenes (episode exports and the Studio preview) |
 | FR-FX-04 | Done | Studio e2e previewMatchesServer with atmosphere, effect and transition; m3-effects determinism checks | Effects and atmosphere render identically in preview and export (NFR-0 |
-| FR-TML-01 | Not started | — | Structure |
-| FR-TML-02 | In progress | Timeline.tsx trim handles with snapping (frames, playhead, markers, clip edges); S split; Studio e2e “timeline editing…” | Editing — Ripple toggle, marquee and word-boundary snapping pending |
-| FR-TML-03 | Not started | — | Media trimming |
-| FR-TML-04 | In progress | M adds a marker, click seeks, right-click deletes; I/O loop; Studio e2e “timeline editing…” | Markers and regions — Marker renaming pending |
-| FR-TML-05 | In progress | Play/pause, J/K/L, frame step, I/O loop (Workspace shortcuts) | Playback — Episode playback and play-from-selection pending |
-| FR-TML-06 | Not started | — | Sync |
-| FR-TML-07 | Not started | — | Track controls |
-| FR-TML-08 | In progress | Zoom to fit button; zoom slider | Zoom and navigation — Zoom to selection and mini-map pending |
-| FR-TML-09 | Not started | — | Episode view |
+| FR-TML-01 | In progress | Timeline.tsx groups: Camera, one per character, Effects and text, Sound; collapsed groups show summary strips | Structure — A separate Props group pending |
+| FR-TML-02 | Done | Timeline.tsx; packages/core/test/timeline.test.ts; Studio e2e “timeline editing…” and “box selection…” | Editing — Select, Shift multi-select, box select, group moves, trim, split, duplicate, delete, ripple toggle, snapping to frames/clip edges/playhead/markers/word boundaries, numeric start and length |
+| FR-TML-03 | Done | clip.trim moves the source in-point of media and lines; never stretches | Media trimming |
+| FR-TML-04 | Done | marker.add/update/remove; double-click renames; I/O loop region; Studio e2e | Markers and regions |
+| FR-TML-05 | In progress | Play/pause, J/K/L, frame step, I/O loop, Shift+Space plays from the selection, Play episode crosses scenes | Playback — Scrub with audio pending |
+| FR-TML-06 | Not verified | One production clock drives picture, audio, lip sync and captions (playback.ts) | Sync — A/V offset ≤ 40 ms needs the reference machine |
+| FR-TML-07 | Done | Track header: mute, solo, lock, hide (hidden tracks do not draw); menu: rename and gain; text filter and All/Picture/Audio switch | Track controls |
+| FR-TML-08 | In progress | Zoom to fit, zoom to selection, zoom slider, overview strip on scenes over 90 s | Zoom and navigation — Pinch zoom pending |
+| FR-TML-09 | Done | EpisodeView.tsx: scene cards with thumbnails, reorder, transition into each scene; Studio e2e “…episode view…” (axe) | Episode view |
 | FR-SND-01 | Done | Assets panel adds music/ambience (looping to scene end), SFX and cues; content-audio.test.ts; templates place music and ambience | Add music, ambience and SFX from Catalog N or imports — 12 music beds, 12 cues, 20 ambience loops, 20 SFX (see CAT-08) |
 | FR-SND-02 | In progress | audio-captions.test.ts fades/pan; io/audio.ts limit(); export.test.ts peak ≤ −1 dBFS | Gain (dB), pan, fade in/out with curve, mute/solo per clip and track — Gain/pan/fades/mute/solo/limiter done; clip gain UI pending |
 | FR-SND-03 | In progress | audio-captions.test.ts ducking + duckCurve | Ducking — Automatic ducking with attack/release; curve display on timeline pending |
@@ -153,7 +153,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-TXT-05 | Done | worldTextItems; m3-text.test.ts (moves with the camera) | World text (signs, screens) renders in scene space and moves with the — Signs, screens, chalkboards in scene space |
 | FR-TXT-06 | Done | audio-captions.test.ts SRT/VTT; export.test.ts files | Export subtitles as SRT and WebVTT (FR-RND-06) — SRT and WebVTT share pages with burn-in |
 | FR-TPL-01 | Done | tools/test/m3-templates.test.ts (all 16 P1 templates, 3 aspect ratios); `frame template apply`; Studio e2e “a template starts a new scene…” | Catalog P1 templates create complete projects or scenes — Templates add a scene with set, cast, framed cameras, shots, music, titles; suggested script in the scene notes |
-| FR-TPL-02 | In progress | templateFromScene; POST …/templates/save; `frame template save`; Scene menu “Save scene as template…”; m3-templates.test.ts round trip | Users can save any project or scene as a template (with optional place — Scenes save as templates with characters as roles; project-level templates pending |
+| FR-TPL-02 | Done | templateFromScenes; POST …/templates/save scope=episode; `frame template save --episode`; Scene menu; m3-templates.test.ts | Users can save any project or scene as a template (with optional place — Scenes or whole episodes; cast roles shared across scenes; caption style kept |
 | FR-TPL-03 | Done | replaceCastCommands; `frame cast replace`; Layers context menu “Replace cast…”; m3-templates.test.ts; Studio e2e | "Replace cast" swaps a template's characters with the user's character — Clips, gaze and shots stay with the instance; cameras framed on it are reframed |
 | FR-DLG-01 | In progress | Studio Audio tab “Add line at playhead”; CLI apply line.add | Lines are created from the timeline, the Script view, a character's Di — Script view pending |
 | FR-DLG-02 | Not started | — | A line has one canonical record (speaker, text, revision, delivery, ch |
@@ -183,12 +183,12 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-VWK-06 | Done | test_api.py token + network-bind refusal | Exposure |
 | FR-VWK-07 | In progress | `frame-voice-worker doctor` | Installation — Needs a run on the reference machine |
 | FR-VWK-08 | Done | `fetch-models` refuses without --accept-licences; LICENSES.md | Licences |
-| FR-LIP-01 | In progress | lipsync.ts mapping; slice.test.ts (alignment → >3 mouth shapes) | Pipeline — WhisperX path not verified without GPU |
+| FR-LIP-01 | In progress | lipsync.ts mapping; slice.test.ts; lipsync-accuracy.test.ts | Pipeline — WhisperX path not verified without GPU |
 | FR-LIP-02 | Done | alignment.envelope + evaluate amplitude fallback; server.test.ts upload without worker | Fallback |
-| FR-LIP-03 | Not started | — | Composition |
-| FR-LIP-04 | Not started | — | Editing |
-| FR-LIP-05 | Not started | — | Views |
-| FR-LIP-06 | Not started | — | Accuracy |
+| FR-LIP-03 | Done | compose.ts mouth with expression; tools/test/lipsync-accuracy.test.ts “FR-LIP-03/05” | Composition |
+| FR-LIP-04 | Done | Lip-sync lane: click a block to change or reset its shape; line.setMouthOverrides; lipsync-accuracy.test.ts (edits survive re-alignment) | Editing |
+| FR-LIP-05 | Done | No mouth from behind; profile shapes in side view (lipsync-accuracy.test.ts) | Views |
+| FR-LIP-06 | In progress | lipSyncAccuracy/lipSyncSummary; `frame lipsync accuracy`; 50-line corpus: 100 % bilabials within ±1 frame, ≥ 99.5 % coverage at 24/25/30 fps on speech-like alignments | Accuracy — Owner run on generated, recorded and uploaded takes |
 | FR-RND-01 | Done | export.test.ts video frame vs CLI still; slice.test.ts server vs CLI byte-identical; studio e2e preview vs server pixel-identical | One renderer |
 | FR-RND-02 | Done | scene-render.test.ts determinism; seeded idle/blinks | Determinism |
 | FR-RND-03 | In progress | Studio CanvasView (half resolution while playing, “Preview quality” shown) | Preview — Interactive-rate numbers need AC-14 |
@@ -207,7 +207,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-CLI-06 | Done | cli.test.ts dry-run | Every mutating command accepts `--dry-run` and returns the list of res |
 | FR-CLI-07 | In progress | JSON envelope {ok,result|error} | Output of `--json` commands conforms to published schemas and is stabl — Output schemas to publish |
 | FR-AGT-01 | Done | `frame mcp` (`@frame/mcp`, SDK 1.31.0, decision 0016): stdio; embedded loopback server or `--server`. Evidence: `packages/mcp/test/stdio.test.ts` (real CLI process) | `frame mcp` starts a Model Context Protocol server exposing typed tools over the same engine and permissions as the CLI |
-| FR-AGT-02 | Done | All 17 tools + `create_project`; JSON Schema inputs; reference `docs/reference/mcp-tools.md` (generated, checked). Evidence: `packages/mcp/test/mcp.test.ts` (in CI with the fixture worker for design_voice/generate_takes/render_video) | Minimum tools |
+| FR-AGT-02 | Done | All 17 tools + create_project, apply_recipe, auto_coverage, apply_template, add_sound; JSON Schema inputs; docs/reference/mcp-tools.md (generated). Evidence: packages/mcp/test/mcp.test.ts | Minimum tools |
 | FR-AGT-03 | Done | `frame://schemas[/{type}]`, `frame://catalog` (refs, kinds, groups, capabilities), `frame://commands`, `frame://project/{id}/summary`; mcp.test.ts reads each | Resources |
 | FR-AGT-04 | Done | Engine guard on permissions; server tags every agent change `agent:<session>` (commands, characters, voices, takes); agent undo limited to its own step, no redo, no revert-source, renders only inside the project; person-only `POST /revert-source` reverts a session as one step. Evidence: mcp.test.ts | Safety and tagging |
 | FR-AGT-05 | Done | Studio Activity popover: agent sessions with their commands and "Revert session" (one undoable step), recent changes with source; agent-made clips marked in the timeline. Evidence: Studio e2e "agent changes are tagged…" (incl. axe on the popover) | Activity log |
@@ -226,7 +226,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | CAT-05 | In progress | coverage.md licence column | Licensing and provenance — Every bundled manifest records licence LicenseRef-Frame-Bundled and provenance |
 | CAT-06 | Not verified | — | Quality bar — Human visual review (owner); all items review: pending |
 | CAT-07 | In progress | catalog/*.yaml; packages/assets/test/catalog.test.ts | Content pipeline — Content pipeline pending |
-| CAT-08 | In progress | tools/content/sounds.ts, music.ts; tools/test/content-audio.test.ts (music −16 LUFS, ambience −30 LUFS, cues/SFX peak −3 dBFS, seamless loops) | Sound assets — Synthesised placeholders awaiting listening review: 12/20 music, 12/12 cues, 20/20 ambience, 20/60 SFX |
+| CAT-08 | In progress | tools/content/sounds.ts, music.ts; tools/test/content-audio.test.ts (music −16 LUFS, ambience −30 LUFS, cues/SFX peak −3 dBFS, seamless loops) | Sound assets — Synthesised placeholders awaiting a listening review: 20/20 music, 12/12 cues, 20/20 ambience, 60/60 SFX |
 | CAT-09 | Not started | — | Starter voices |
 | CAT-10 | Done | packages/assets/src/coverage.ts; packages/assets/test/coverage.test.ts; `pnpm catalog:coverage` → docs/catalog/coverage.md | Coverage report — Report exists; currently 0 % green (release needs 100 %) |
 | UI-01 | In progress | apps/studio (shell, rail, resizable panels, canvas, timeline, properties); studio e2e | The Studio implements the shell, modes, rail, panels, canvas, timeline — Panel collapse shortcuts exist (\\ and View menu); 125 % zoom check pending |
@@ -262,11 +262,11 @@ The Notes column starts with the requirement's short title from the SRS.
 | AC-06 | In progress | tools/test/m3-acceptance.test.ts AC-06 path; coffee-shop kit, rain, music and ambience now in the library | Scene from scratch — Real takes and the two exports pending (owner run) |
 | AC-07 | In progress | tools/test/m3-acceptance.test.ts AC-07 (mug with steam, contact cue, door, phone screen; mid-action seeks) | Interactive props — Studio walkthrough and listening check of the synthesised cues pending |
 | AC-08 | In progress | tools/test/m3-acceptance.test.ts AC-08 (curved entry, mark, turn, sit, gaze follow, sliding < 2 px, no drift) | Locomotion and gaze — Studio walkthrough pending |
-| AC-09 | Not started | — | Lip-sync accuracy |
+| AC-09 | In progress | tools/test/lipsync-accuracy.test.ts (corpus tools/test/fixtures/ac09-lines.json); `frame lipsync accuracy` | Lip-sync accuracy — Owner run with real takes |
 | AC-10 | In progress | perform.test.ts and session.test.ts conflicts; Studio e2e hatching + validate; export blocked (export.test.ts) | Conflicts and validation — “Show” links from blocked export and the fix-to-unblock walkthrough pending |
 | AC-11 | In progress | packages/server/test/versions.test.ts (two episodes, new version in one scene, reopen, snapshot restore) | Versions and reuse — Studio run of the full scenario pending |
 | AC-12 | In progress | rigging.test.ts (character, prop, set); Studio e2e “rigging assistant…”, “imports an SVG…”; import.test.ts | Import and rigging assistant — Hand-pose supply and a real artist PSD pending |
-| AC-13 | In progress | MCP path evidenced in `packages/mcp/test/mcp.test.ts` (create project, character, lines, dry run, conflict after human edit resolved by re-reading, voice → takes → frame and video) and Studio e2e (agent-tagged clips, session revert). Missing: recipes and music via MCP (recipes are M3), a 3-scene/2-character run by a real agent | Agent production |
+| AC-13 | In progress | packages/mcp/test/mcp.test.ts “AC-13: an agent produces a 3-scene episode…” (MCP only: 2 characters, voices, takes, recipes, shots, music, dry runs, conflict resolved, frame and video); Studio e2e (agent-tagged clips, session revert) | Agent production — A run by a real agent from a written brief |
 | AC-14 | Not started | — | Performance |
 | AC-15 | Not started | — | Determinism and sync |
 | AC-16 | In progress | crash.test.ts; store.test.ts disk-full retry | Reliability — External git merge pending |
@@ -281,24 +281,25 @@ The Notes column starts with the requirement's short title from the SRS.
 
 ## Catalog coverage
 Report: [docs/catalog/coverage.md](catalog/coverage.md) (`pnpm catalog:coverage`). **Green: 0 / 1254 (0 %)**;
-manifests present for 720 / 1254 (57.4 %). Nothing is green yet because no item has passed human visual review (CAT-06). All authored character parts pass
+manifests present for 862 / 1254 (68.7 %). Nothing is green yet because no item has passed human visual review (CAT-06). All authored character parts pass
 the static rig check (FR-AST-08); 426 of 446 manifests render previews in both families (hand poses pending). Lists with authored content:
-A1–A19 face/body parts and controls, B1–B5 wardrobe (part), E1 expressions (83), F1 actions (19 of 118), D1 cast (14),
-H1 props (10 of 142), I1 kits (8 of 16), J1 atmosphere (42 of 54), K1 effects (24 of 38), K2 transitions (17 of 18),
-N1 music (12 of 20), N2 cues (12), N3 ambience (20), N4 SFX (20 of 60), O1 text and graphics (36), P1 templates (16), R1 output presets (12).
+A1–A20 face/body parts, controls, skin details, makeup and identity options (A11 facial hair pending), B1–B5 wardrobe, C1 accessories (40),
+E1 expressions (83), F1 actions (34 of 118), D1 cast (14), H1 props (11 of 142), I1 kits (16), J1 atmosphere (42 of 54), K1 effects (24 of 38),
+K2 transitions (17 of 18), N1 music (20), N2 cues (12), N3 ambience (20), N4 SFX (60), O1 text and graphics (36), P1 templates (16), R1 output presets (12).
+Pending lists: A11 facial hair, B6 patterns, F1 actions (84), H1 props (131), J1 (12), K1 (14), K2 (1), L1 sets, Q1 starter voices (needs the worker).
 
 ## Next actions (ordered)
 1. Keep CI green. Pull requests run typecheck, lint, unit, visual and worker on Linux (a few minutes); the browser suite (slice) and Windows/macOS run on main, by hand, or with the `full-ci` label. Run the Studio e2e locally before pushing, and push in batches.
-2. M3 remainder: ripple, marquee, word-boundary snapping, zoom to selection and marker naming (FR-TML-02/04/08);
-   motion principles and pose editing (FR-ACT-09/10); project-level templates (FR-TPL-02, FR-PRJ-01); transitions
-   between scenes with the episode view (FR-TML-09); lip-sync accuracy corpus (AC-09).
-3. M3 content: remaining music (N1, 8), SFX (N4, 40), kits (I1, 8), effects (K1, 14) and atmosphere (J1, 12).
-4. M2 remainder: rigging pivot adjustment and hand-pose supply (FR-IMP-03); thumbnails for mouth shapes, eye/brow
+2. Owner runs (they decide the M1–M4 exits): M1 Qwen3-TTS on the reference GPU; AC-02/11/12/20 (M2); Studio walkthroughs
+   of AC-06..10/22/23 with real takes, including `frame lipsync accuracy` on generated, recorded and uploaded takes
+   of the AC-09 corpus; an AC-13 run by a real agent from a written brief; a listening review of all synthesised sound
+   and a visual review of content (CAT-06) (docs/acceptance/owner-checklist.md).
+3. M3/M4 small remainders: scrub with audio (FR-TML-05), pinch zoom (FR-TML-08), a Props group in the timeline
+   (FR-TML-01), projects from packages (FR-PRJ-01), clipboard (FR-PER-07).
+4. M5 content: F1 actions (84), H1 props (131), A11 facial hair, B6 patterns, J1/K1/K2 remainders, L1 sets, Q1
+   starter voices (with the worker).
+5. M2 remainder: rigging pivot adjustment and hand-pose supply (FR-IMP-03); thumbnails for mouth shapes, eye/brow
    states and controls (FR-AST-07); builder constraint choices and patterns (FR-BLD-05/07).
-5. Owner runs: M1 Qwen3-TTS on the reference GPU; AC-02/11/12/20 (M2); Studio walkthroughs of AC-06/07/08/22/23,
-   and a listening check of the synthesised music, cues, ambience and SFX (docs/acceptance/owner-checklist.md).
-6. Content track (M5): accessories (C1), skin details/makeup (A13/A14), facial hair (A11), starter voices (Q1). The
-   bundled looks of several cast members name accessories and skin details that are not built yet.
 
 ## Open decisions and blockers
 - Decision 0006: FR-VOI-03 interpretation (range bank via VoiceDesign + similarity check) — validated only by AC-03 on the reference machine.
@@ -309,7 +310,29 @@ N1 music (12 of 20), N2 cues (12), N3 ambience (20), N4 SFX (20 of 60), O1 text 
   prop that are not authored yet; the cast's starter voices (Q1) are not authored, so exports of derived characters
   list them as unresolved references.
 
-## Session report — 2026-10-22, session 4
+## Session report — 2026-10-22, session 5
+
+**Completed (with evidence)**
+- Accessories (40), skin details (20), makeup (12) and all 12 identity options; data-driven rig variants: wheelchair
+  users stay seated and roll, limb difference, prosthetics, body and palette variants (decision 0020;
+  tools/test/m3-identity.test.ts). The bundled cast now resolves with no missing parts.
+- Timeline: box selection, group moves, ripple, word snapping, zoom to selection, marker rename, track hide/gain,
+  overview strip, play from selection (packages/core/test/timeline.test.ts, Studio e2e).
+- Motion principles (anticipation, overshoot, squash/stretch) and an advanced pose editor (tools/test/m3-motion.test.ts).
+- Projects from templates, episode templates with shared cast, transitions between scenes, episode view and episode
+  playback (m3-templates.test.ts, Studio e2e with axe).
+- Lip-sync accuracy measures, a 50-line AC-09 corpus (100 % bilabials on time, ≥ 99.5 % coverage on speech-like
+  alignments), `frame lipsync accuracy`, mouth-block editing in the timeline.
+- Content: 8 more kits (I1 complete), 40 more SFX (N4 complete), 8 more music beds (N1 complete).
+- MCP: apply_recipe, auto_coverage, apply_template, add_sound; the AC-13 production path through MCP only.
+- CI made lighter: one run per change, superseded runs cancelled, browser suite and Windows/macOS on main.
+- Bugs found and fixed: Delete in the Studio and the Properties panel's numeric Start/Length sent invalid command
+  parameters; the seating e2e could map a drop through a canvas that was still resizing.
+
+**Not verified (needs the reference machine or people)**: NFR-06, AC-03, AC-17, AC-24, FR-VWK-02/04, FR-TML-06 A/V
+offset, CAT-06 visual review, a listening review of all synthesised sound, owner runs of AC-06..10/13/22/23.
+
+## Session report — 2026-10-22, session 4 (archived)
 
 **Completed (with evidence)**
 - Smooth view turns (adjacent views, walking turns in and out) and camera moves that follow a walking subject
