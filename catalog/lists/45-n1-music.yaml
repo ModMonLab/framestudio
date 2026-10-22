@@ -1,0 +1,72 @@
+list: N1
+order: 45
+part: N
+title: Music
+prefix: music
+columns:
+  - ID
+  - Track
+  - Mood · length
+detailKey: moodLength
+intro: Original or properly licensed tracks with loop points, intro/outro edits and stems where available.
+items:
+  - id: music.warm-intro
+    name: Warm intro
+    moodLength: Friendly · 0:42 loop
+  - id: music.morning-coffee
+    name: Morning coffee
+    moodLength: Light acoustic · 1:30
+  - id: music.upbeat-explainer
+    name: Upbeat explainer
+    moodLength: Corporate positive · 2:00
+  - id: music.curious-minds
+    name: Curious minds
+    moodLength: Playful pizzicato · 1:45
+  - id: music.late-night-talk
+    name: Late night talk
+    moodLength: Lo-fi · 2:30
+  - id: music.newsroom-theme
+    name: Newsroom theme
+    moodLength: News · 0:30
+  - id: music.breaking-news-sting
+    name: Breaking news sting
+    moodLength: News · 0:06
+  - id: music.quirky-comedy
+    name: Quirky comedy
+    moodLength: Comedic · 1:20
+  - id: music.sneaky-moment
+    name: Sneaky moment
+    moodLength: Comedic suspense · 0:50
+  - id: music.sad-piano
+    name: Sad piano
+    moodLength: Melancholy · 1:40
+  - id: music.hopeful-strings
+    name: Hopeful strings
+    moodLength: Uplifting · 2:00
+  - id: music.tension-pulse
+    name: Tension pulse
+    moodLength: Suspense · 1:10
+  - id: music.mystery-noir
+    name: Mystery noir
+    moodLength: Jazz noir · 1:50
+  - id: music.action-chase
+    name: Action chase
+    moodLength: Energetic · 1:00
+  - id: music.victory-fanfare
+    name: Victory fanfare
+    moodLength: Triumph · 0:12
+  - id: music.fantasy-adventure
+    name: Fantasy adventure
+    moodLength: Orchestral · 2:10
+  - id: music.calm-ambient
+    name: Calm ambient
+    moodLength: Ambient · 3:00
+  - id: music.retro-game
+    name: Retro game
+    moodLength: Chiptune · 1:15
+  - id: music.party-groove
+    name: Party groove
+    moodLength: Dance · 2:00
+  - id: music.credits-roll
+    name: Credits roll
+    moodLength: Warm closing · 1:30

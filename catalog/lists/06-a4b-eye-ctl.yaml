@@ -1,0 +1,45 @@
+list: A4b
+order: 6
+part: A
+title: Eye controls
+prefix: eye-ctl
+columns:
+  - ID
+  - Control
+  - Range or options
+detailKey: options
+intro: Sliders and options for any eye shape.
+items:
+  - id: eye-ctl.eye-size
+    name: Eye size
+    options: Small – Large
+  - id: eye-ctl.eye-spacing
+    name: Eye spacing
+    options: Close – Wide
+  - id: eye-ctl.eye-tilt
+    name: Eye tilt
+    options: Down – Up
+  - id: eye-ctl.eye-height
+    name: Eye height
+    options: Low – High
+  - id: eye-ctl.iris-size
+    name: Iris size
+    options: Small – Large
+  - id: eye-ctl.iris-colour
+    name: Iris colour
+    options: 16 presets plus custom
+  - id: eye-ctl.pupil-style
+    name: Pupil style
+    options: Round, Highlighted, Cartoon
+  - id: eye-ctl.eyelashes
+    name: Eyelashes
+    options: None, Subtle, Defined, Bold
+  - id: eye-ctl.lower-lash-line
+    name: Lower lash line
+    options: On, Off
+  - id: eye-ctl.eyelid-crease
+    name: Eyelid crease
+    options: None, Single, Double
+  - id: eye-ctl.heterochromia
+    name: Heterochromia
+    options: Off, On (independent iris colours)

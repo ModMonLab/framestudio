@@ -1,0 +1,159 @@
+list: M1
+order: 44
+part: M
+title: Camera language
+prefix: cam
+columns:
+  - ID
+  - Item
+  - Group
+detailKey: group
+intro: Framings and angles are camera presets; moves are timed camera clips; recipes coordinate framing, moves and timing.
+items:
+  - id: cam.extreme-wide
+    name: Extreme wide
+    group: Framing
+  - id: cam.wide
+    name: Wide
+    group: Framing
+  - id: cam.full
+    name: Full
+    group: Framing
+  - id: cam.medium-wide
+    name: Medium wide
+    group: Framing
+  - id: cam.medium
+    name: Medium
+    group: Framing
+  - id: cam.medium-close-up
+    name: Medium close-up
+    group: Framing
+  - id: cam.close-up
+    name: Close-up
+    group: Framing
+  - id: cam.extreme-close-up
+    name: Extreme close-up
+    group: Framing
+  - id: cam.two-shot
+    name: Two-shot
+    group: Framing
+  - id: cam.three-shot
+    name: Three-shot
+    group: Framing
+  - id: cam.over-the-shoulder
+    name: Over-the-shoulder
+    group: Framing
+  - id: cam.insert-detail
+    name: Insert detail
+    group: Framing
+  - id: cam.eye-level
+    name: Eye level
+    group: Angle
+  - id: cam.low-angle
+    name: Low angle
+    group: Angle
+  - id: cam.high-angle
+    name: High angle
+    group: Angle
+  - id: cam.dutch-tilt
+    name: Dutch tilt
+    group: Angle
+  - id: cam.pan
+    name: Pan
+    group: Move
+  - id: cam.tilt
+    name: Tilt
+    group: Move
+  - id: cam.push-in
+    name: Push in
+    group: Move
+  - id: cam.pull-out
+    name: Pull out
+    group: Move
+  - id: cam.slow-creep
+    name: Slow creep
+    group: Move
+  - id: cam.dolly-with-parallax
+    name: Dolly with parallax
+    group: Move
+  - id: cam.truck
+    name: Truck
+    group: Move
+  - id: cam.follow-subject
+    name: Follow subject
+    group: Move
+  - id: cam.reframe-between-subjects
+    name: Reframe between subjects
+    group: Move
+  - id: cam.rack-focus-blur
+    name: Rack focus blur
+    group: Move
+  - id: cam.crash-zoom
+    name: Crash zoom
+    group: Energy move
+  - id: cam.whip-pan
+    name: Whip pan
+    group: Energy move
+  - id: cam.shake-light
+    name: Shake light
+    group: Energy move
+  - id: cam.shake-medium
+    name: Shake medium
+    group: Energy move
+  - id: cam.shake-heavy
+    name: Shake heavy
+    group: Energy move
+  - id: cam.rumble
+    name: Rumble
+    group: Energy move
+  - id: cam.handheld-drift
+    name: Handheld drift
+    group: Energy move
+  - id: cam.snap-zoom
+    name: Snap zoom
+    group: Energy move
+  - id: cam.bounce-zoom
+    name: Bounce zoom
+    group: Energy move
+  - id: cam.hard-cut
+    name: Hard cut
+    group: Edit
+  - id: cam.match-cut
+    name: Match cut
+    group: Edit
+  - id: cam.jump-cut
+    name: Jump cut
+    group: Edit
+  - id: cam.reaction-cut
+    name: Reaction cut
+    group: Edit
+  - id: cam.cutaway
+    name: Cutaway
+    group: Edit
+  - id: cam.split-screen
+    name: Split screen
+    group: Edit
+  - id: cam.picture-in-picture
+    name: Picture in picture
+    group: Edit
+  - id: cam.freeze-with-title
+    name: Freeze with title
+    group: Edit
+  - id: cam.dramatic-reveal-shot
+    name: Dramatic reveal shot
+    group: Shot recipe
+  - id: cam.comedic-beat-shot
+    name: Comedic beat shot
+    group: Shot recipe
+  - id: cam.interview-two-shot
+    name: Interview two-shot
+    group: Shot recipe
+  - id: cam.reaction-ping-pong
+    name: Reaction ping-pong
+    group: Shot recipe
+  - id: cam.establishing-pan
+    name: Establishing pan
+    group: Shot recipe
+  - id: cam.walk-and-talk-follow
+    name: Walk and talk follow
+    group: Shot recipe

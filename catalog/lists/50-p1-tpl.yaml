@@ -1,0 +1,60 @@
+list: P1
+order: 50
+part: P
+title: Production templates
+prefix: tpl
+columns:
+  - ID
+  - Template
+  - Contents
+detailKey: contents
+intro: "Complete, directable starting points: cast, looks, set, cameras, sample performances, audio and output settings. Replace any piece and keep the rest."
+items:
+  - id: tpl.two-person-podcast
+    name: Two-person podcast
+    contents: 2 hosts, podcast studio, 3 cameras, intro music, captions
+  - id: tpl.solo-podcast
+    name: Solo podcast
+    contents: 1 host, solo set, 2 cameras, lower third
+  - id: tpl.panel-discussion
+    name: Panel discussion
+    contents: 4 guests, panel set, 5 cameras
+  - id: tpl.interview
+    name: Interview
+    contents: Host and guest, office, over-the-shoulder coverage
+  - id: tpl.classroom-explainer
+    name: Classroom explainer
+    contents: Teacher, classroom, board graphics
+  - id: tpl.product-explainer
+    name: Product explainer
+    contents: Presenter, plain backdrop, callouts, chart graphic
+  - id: tpl.comedy-exchange
+    name: Comedy exchange
+    contents: 2 characters, coffee shop, comedic beat recipes
+  - id: tpl.sitcom-scene
+    name: Sitcom scene
+    contents: 3 characters, living room, laugh track
+  - id: tpl.news-segment
+    name: News segment
+    contents: Anchor, newsroom, breaking news bar, weather wall
+  - id: tpl.character-introduction
+    name: Character introduction
+    contents: 1 character, turnaround reveal, name card
+  - id: tpl.social-short-portrait
+    name: Social short portrait
+    contents: 1 character, portrait framing, bold captions
+  - id: tpl.story-scene
+    name: Story scene
+    contents: 2 characters, park, music and ambience
+  - id: tpl.mystery-scene
+    name: Mystery scene
+    contents: Detective and suspect, office at night, noir grade
+  - id: tpl.customer-support-demo
+    name: Customer support demo
+    contents: Agent and customer, split screen
+  - id: tpl.announcement
+    name: Announcement
+    contents: Presenter, stage, confetti and fanfare
+  - id: tpl.bedtime-story
+    name: Bedtime story
+    contents: Narrator, bedroom, soft music

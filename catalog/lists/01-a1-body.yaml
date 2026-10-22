@@ -1,0 +1,48 @@
+list: A1
+order: 1
+part: A
+title: Body bases
+prefix: body
+columns:
+  - ID
+  - Build
+  - Notes
+detailKey: notes
+intro: Starting silhouettes. Each sets proportion sliders; all remain adjustable. Every base supports all 4 views and both families.
+items:
+  - id: body.slim
+    name: Slim
+    notes: Narrow shoulders and hips
+  - id: body.average
+    name: Average
+    notes: Default proportions
+  - id: body.athletic
+    name: Athletic
+    notes: Broad shoulders, defined waist
+  - id: body.broad
+    name: Broad
+    notes: Wide shoulders and chest
+  - id: body.stocky
+    name: Stocky
+    notes: Compact, wide frame, shorter limbs
+  - id: body.curvy
+    name: Curvy
+    notes: Defined waist, full hips and bust
+  - id: body.heavyset
+    name: Heavyset
+    notes: Large round torso
+  - id: body.lanky
+    name: Lanky
+    notes: Long limbs, narrow frame
+  - id: body.petite
+    name: Petite
+    notes: Small frame, short stature
+  - id: body.elderly
+    name: Elderly
+    notes: Slight stoop, softer posture
+  - id: body.muscular
+    name: Muscular
+    notes: Exaggerated upper-body mass
+  - id: body.pear
+    name: Pear
+    notes: Narrow shoulders, wide hips

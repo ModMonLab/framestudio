@@ -1,0 +1,41 @@
+list: B2
+order: 25
+part: B
+title: Outerwear
+prefix: outer
+columns:
+  - ID
+  - Garment
+  - Notes
+detailKey: notes
+intro: Layers over tops; open or closed states where applicable.
+items:
+  - id: outer.blazer
+    name: Blazer
+  - id: outer.suit-jacket
+    name: Suit jacket
+  - id: outer.denim-jacket
+    name: Denim jacket
+  - id: outer.leather-jacket
+    name: Leather jacket
+  - id: outer.bomber-jacket
+    name: Bomber jacket
+  - id: outer.parka
+    name: Parka
+    notes: Hood option
+  - id: outer.trench-coat
+    name: Trench coat
+  - id: outer.raincoat
+    name: Raincoat
+  - id: outer.puffer-jacket
+    name: Puffer jacket
+  - id: outer.vest
+    name: Vest
+  - id: outer.lab-coat
+    name: Lab coat
+  - id: outer.apron
+    name: Apron
+  - id: outer.hi-vis-vest
+    name: Hi-vis vest
+  - id: outer.cape
+    name: Cape

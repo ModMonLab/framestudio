@@ -1,0 +1,132 @@
+list: C1
+order: 31
+part: C
+title: Accessories
+prefix: acc
+columns:
+  - ID
+  - Accessory
+  - Anchor
+detailKey: anchor
+intro: Attach to rig anchors (head, ears, neck, wrists, hands, back, waist) and follow every view.
+items:
+  - id: acc.round-glasses
+    name: Round glasses
+    anchor: Face
+  - id: acc.rectangular-glasses
+    name: Rectangular glasses
+    anchor: Face
+  - id: acc.cat-eye-glasses
+    name: Cat-eye glasses
+    anchor: Face
+  - id: acc.sunglasses
+    name: Sunglasses
+    anchor: Face
+  - id: acc.reading-glasses-on-nose
+    name: Reading glasses on nose
+    anchor: Face
+  - id: acc.monocle
+    name: Monocle
+    anchor: Face
+  - id: acc.baseball-cap
+    name: Baseball cap
+    anchor: Head
+  - id: acc.beanie
+    name: Beanie
+    anchor: Head
+  - id: acc.fedora
+    name: Fedora
+    anchor: Head
+  - id: acc.sun-hat
+    name: Sun hat
+    anchor: Head
+  - id: acc.hard-hat
+    name: Hard hat
+    anchor: Head
+  - id: acc.headband
+    name: Headband
+    anchor: Head
+  - id: acc.bandana
+    name: Bandana
+    anchor: Head
+  - id: acc.headphones
+    name: Headphones
+    anchor: Head
+  - id: acc.headset-with-mic
+    name: Headset with mic
+    anchor: Head
+  - id: acc.earbuds
+    name: Earbuds
+    anchor: Ears
+  - id: acc.stud-earrings
+    name: Stud earrings
+    anchor: Ears
+  - id: acc.hoop-earrings
+    name: Hoop earrings
+    anchor: Ears
+  - id: acc.drop-earrings
+    name: Drop earrings
+    anchor: Ears
+  - id: acc.necklace-chain
+    name: Necklace chain
+    anchor: Neck
+  - id: acc.pendant
+    name: Pendant
+    anchor: Neck
+  - id: acc.scarf
+    name: Scarf
+    anchor: Neck
+  - id: acc.tie
+    name: Tie
+    anchor: Neck
+  - id: acc.bow-tie
+    name: Bow tie
+    anchor: Neck
+  - id: acc.lanyard-badge
+    name: Lanyard badge
+    anchor: Neck
+  - id: acc.wristwatch
+    name: Wristwatch
+    anchor: Wrist
+  - id: acc.smartwatch
+    name: Smartwatch
+    anchor: Wrist
+  - id: acc.bracelet
+    name: Bracelet
+    anchor: Wrist
+  - id: acc.rings
+    name: Rings
+    anchor: Hand
+  - id: acc.gloves
+    name: Gloves
+    anchor: Hand
+  - id: acc.backpack
+    name: Backpack
+    anchor: Back
+  - id: acc.messenger-bag
+    name: Messenger bag
+    anchor: Shoulder
+  - id: acc.tote-bag
+    name: Tote bag
+    anchor: Shoulder
+  - id: acc.handbag
+    name: Handbag
+    anchor: Hand
+  - id: acc.belt
+    name: Belt
+    anchor: Waist
+  - id: acc.face-mask
+    name: Face mask
+    anchor: Face
+  - id: acc.nose-ring
+    name: Nose ring
+    anchor: Face
+  - id: acc.lip-piercing
+    name: Lip piercing
+    anchor: Face
+  - id: acc.eyebrow-piercing
+    name: Eyebrow piercing
+    anchor: Face
+  - id: acc.hair-clip
+    name: Hair clip
+    anchor: Head

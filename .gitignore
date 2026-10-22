@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+test-results/
+playwright-report/
+/tmp/
+.venv/
+__pycache__/
+*.pyc
+services/voice-worker/.cache/
+.frame-cache/

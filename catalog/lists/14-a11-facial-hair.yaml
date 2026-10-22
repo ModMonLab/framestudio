@@ -1,0 +1,42 @@
+list: A11
+order: 14
+part: A
+title: Facial hair
+prefix: facial-hair
+columns:
+  - ID
+  - Style
+  - Notes
+detailKey: notes
+intro: Follows jaw and mouth shapes, including speech shapes.
+items:
+  - id: facial-hair.none
+    name: None
+  - id: facial-hair.stubble
+    name: Stubble
+  - id: facial-hair.short-beard
+    name: Short beard
+  - id: facial-hair.full-beard
+    name: Full beard
+  - id: facial-hair.long-beard
+    name: Long beard
+  - id: facial-hair.goatee
+    name: Goatee
+  - id: facial-hair.van-dyke
+    name: Van Dyke
+  - id: facial-hair.chin-strap
+    name: Chin strap
+  - id: facial-hair.mutton-chops
+    name: Mutton chops
+  - id: facial-hair.moustache
+    name: Moustache
+  - id: facial-hair.handlebar
+    name: Handlebar
+  - id: facial-hair.pencil-moustache
+    name: Pencil moustache
+  - id: facial-hair.horseshoe
+    name: Horseshoe
+  - id: facial-hair.soul-patch
+    name: Soul patch
+  - id: facial-hair.sideburns
+    name: Sideburns

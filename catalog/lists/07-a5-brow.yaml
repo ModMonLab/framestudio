@@ -1,0 +1,48 @@
+list: A5
+order: 7
+part: A
+title: Eyebrows
+prefix: brow
+columns:
+  - ID
+  - Style
+  - Notes
+detailKey: notes
+intro: All brows support every brow state (A19).
+items:
+  - id: brow.straight
+    name: Straight
+    notes: Default
+  - id: brow.soft-arch
+    name: Soft arch
+    notes: Gentle curve
+  - id: brow.high-arch
+    name: High arch
+    notes: Pronounced arch
+  - id: brow.angled
+    name: Angled
+    notes: Sharp peak
+  - id: brow.thick
+    name: Thick
+    notes: Heavy
+  - id: brow.thin
+    name: Thin
+    notes: Fine
+  - id: brow.bushy
+    name: Bushy
+    notes: Unruly hairs
+  - id: brow.unibrow
+    name: Unibrow
+    notes: Joined
+  - id: brow.feathered
+    name: Feathered
+    notes: Brushed-up texture
+  - id: brow.short
+    name: Short
+    notes: Stubby
+  - id: brow.rounded
+    name: Rounded
+    notes: Curved, even
+  - id: brow.scarred
+    name: Scarred
+    notes: Gap through brow

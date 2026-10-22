@@ -1,0 +1,72 @@
+list: N3
+order: 47
+part: N
+title: Ambience
+prefix: amb
+columns:
+  - ID
+  - Ambience
+  - Kit
+detailKey: kit
+intro: Seamless loops matched to location kits.
+items:
+  - id: amb.studio-room-tone
+    name: Studio room tone
+    kit: Podcast studio
+  - id: amb.living-room-hum
+    name: Living room hum
+    kit: Living room
+  - id: amb.kitchen-ambience
+    name: Kitchen ambience
+    kit: Kitchen
+  - id: amb.office-murmur
+    name: Office murmur
+    kit: Office
+  - id: amb.classroom-chatter
+    name: Classroom chatter
+    kit: Classroom
+  - id: amb.coffee-shop
+    name: Coffee shop
+    kit: Coffee shop
+  - id: amb.newsroom-bustle
+    name: Newsroom bustle
+    kit: Newsroom
+  - id: amb.city-street
+    name: City street
+    kit: City street
+  - id: amb.park-birds
+    name: Park birds
+    kit: Park
+  - id: amb.night-crickets
+    name: Night crickets
+    kit: Park
+  - id: amb.bedroom-quiet
+    name: Bedroom quiet
+    kit: Bedroom
+  - id: amb.hospital-ward
+    name: Hospital ward
+    kit: Hospital
+  - id: amb.auditorium-crowd
+    name: Auditorium crowd
+    kit: Stage and auditorium
+  - id: amb.library-hush
+    name: Library hush
+    kit: Library
+  - id: amb.gym-ambience
+    name: Gym ambience
+    kit: Gym
+  - id: amb.train-carriage
+    name: Train carriage
+    kit: Train interior
+  - id: amb.enchanted-forest
+    name: Enchanted forest
+    kit: Fantasy forest
+  - id: amb.rain-on-window
+    name: Rain on window
+    kit: Any
+  - id: amb.thunderstorm
+    name: Thunderstorm
+    kit: Any
+  - id: amb.wind
+    name: Wind
+    kit: Any

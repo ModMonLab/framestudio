@@ -1,0 +1,30 @@
+list: A2
+order: 2
+part: A
+title: Life stages
+prefix: stage
+columns:
+  - ID
+  - Stage
+  - Head-to-body ratio (Flat / Illustrated)
+detailKey: headRatio
+intro: Set head-to-body ratio and default proportion ranges; combine with any body base.
+items:
+  - id: stage.toddler
+    name: Toddler
+    headRatio: 1:2.5 / 1:4
+  - id: stage.child
+    name: Child
+    headRatio: 1:3 / 1:5
+  - id: stage.teen
+    name: Teen
+    headRatio: 1:3.5 / 1:6.5
+  - id: stage.young-adult
+    name: Young adult
+    headRatio: 1:4 / 1:7
+  - id: stage.adult
+    name: Adult
+    headRatio: 1:4 / 1:7.5
+  - id: stage.senior
+    name: Senior
+    headRatio: 1:4 / 1:7

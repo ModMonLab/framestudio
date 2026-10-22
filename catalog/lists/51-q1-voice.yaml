@@ -1,0 +1,60 @@
+list: Q1
+order: 51
+part: Q
+title: Starter voices
+prefix: voice
+columns:
+  - ID
+  - Voice
+  - Description
+detailKey: description
+intro: Designed with the local voice engine and shipped as voice assets (description, reference clips, emotional range bank of five, engine data). Creators can duplicate and redesign them. No real person’s voice is cloned.
+items:
+  - id: voice.warm-host
+    name: Warm host
+    description: Late-20s woman, warm mid-range, bright and curious
+  - id: voice.dry-wit
+    name: Dry wit
+    description: Early-30s man, relaxed baritone, understated
+  - id: voice.calm-presenter
+    name: Calm presenter
+    description: 40s, measured, clear, reassuring
+  - id: voice.energetic-teacher
+    name: Energetic teacher
+    description: 30s woman, upbeat, articulate
+  - id: voice.teen
+    name: Teen
+    description: 16-year-old, casual, quick
+  - id: voice.wise-elder
+    name: Wise elder
+    description: 70s woman, gentle, slightly husky
+  - id: voice.comic
+    name: Comic
+    description: 20s man, animated, expressive timing
+  - id: voice.designer
+    name: Designer
+    description: 30s woman, soft, thoughtful
+  - id: voice.anchor
+    name: Anchor
+    description: 50s man, authoritative broadcast voice
+  - id: voice.doctor
+    name: Doctor
+    description: 40s woman, calm and precise
+  - id: voice.child
+    name: Child
+    description: 9-year-old, bright, playful
+  - id: voice.founder
+    name: Founder
+    description: 30s woman, confident, fast
+  - id: voice.streamer
+    name: Streamer
+    description: 20s man, excitable, friendly
+  - id: voice.detective
+    name: Detective
+    description: 40s woman, low, deliberate
+  - id: voice.narrator
+    name: Narrator
+    description: Neutral storyteller, rich and warm
+  - id: voice.announcer
+    name: Announcer
+    description: Big, theatrical, promotional

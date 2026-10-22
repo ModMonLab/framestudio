@@ -1,0 +1,54 @@
+list: B1
+order: 24
+part: B
+title: Tops
+prefix: top
+columns:
+  - ID
+  - Garment
+  - Notes
+detailKey: notes
+intro: Garments follow the rig; each declares layering, sleeve length and pattern support.
+items:
+  - id: top.t-shirt
+    name: T-shirt
+    notes: Short sleeve
+  - id: top.long-sleeve-tee
+    name: Long-sleeve tee
+  - id: top.v-neck-tee
+    name: V-neck tee
+  - id: top.tank-top
+    name: Tank top
+  - id: top.polo
+    name: Polo
+  - id: top.button-up-shirt
+    name: Button-up shirt
+    notes: Sleeves rolled option
+  - id: top.blouse
+    name: Blouse
+  - id: top.ribbed-sweater
+    name: Ribbed sweater
+  - id: top.crewneck-sweater
+    name: Crewneck sweater
+  - id: top.turtleneck
+    name: Turtleneck
+  - id: top.cardigan
+    name: Cardigan
+    notes: Open or buttoned
+  - id: top.hoodie
+    name: Hoodie
+    notes: Hood up or down
+  - id: top.sweatshirt
+    name: Sweatshirt
+  - id: top.crop-top
+    name: Crop top
+  - id: top.graphic-tee
+    name: Graphic tee
+    notes: Print slot
+  - id: top.henley
+    name: Henley
+  - id: top.flannel-shirt
+    name: Flannel shirt
+  - id: top.uniform-shirt
+    name: Uniform shirt
+    notes: Badge slot

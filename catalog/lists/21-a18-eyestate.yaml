@@ -1,0 +1,40 @@
+list: A18
+order: 21
+part: A
+title: Eye states
+prefix: eyestate
+columns:
+  - ID
+  - State
+  - Notes
+detailKey: notes
+intro: Control states blended by expressions and blinks.
+items:
+  - id: eyestate.open
+    name: Open
+    notes: Default
+  - id: eyestate.wide
+    name: Wide
+    notes: Surprise, fear
+  - id: eyestate.narrowed
+    name: Narrowed
+    notes: Suspicion, anger
+  - id: eyestate.squint
+    name: Squint
+    notes: Smile, bright light
+  - id: eyestate.half-closed
+    name: Half closed
+    notes: Tired, bored
+  - id: eyestate.closed
+    name: Closed
+    notes: Blink, joy
+  - id: eyestate.closed-happy
+    name: Closed happy
+    notes: Arched closed eyes
+  - id: eyestate.wink-left
+    name: Wink left
+  - id: eyestate.wink-right
+    name: Wink right
+  - id: eyestate.looking-down
+    name: Looking down
+    notes: Lids follow gaze

@@ -1,0 +1,31 @@
+list: A10
+order: 13
+part: A
+title: Fringes
+prefix: fringe
+columns:
+  - ID
+  - Fringe
+  - Notes
+detailKey: notes
+intro: Combine with compatible hairstyles.
+items:
+  - id: fringe.none
+    name: None
+  - id: fringe.straight
+    name: Straight
+    notes: Blunt
+  - id: fringe.side-swept
+    name: Side swept
+  - id: fringe.curtain
+    name: Curtain
+    notes: Parted
+  - id: fringe.wispy
+    name: Wispy
+  - id: fringe.choppy
+    name: Choppy
+  - id: fringe.curled
+    name: Curled
+  - id: fringe.long-over-eye
+    name: Long over eye
+    notes: Covers one eye (gaze adapts)

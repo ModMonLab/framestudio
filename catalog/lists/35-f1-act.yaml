@@ -1,0 +1,366 @@
+list: F1
+order: 35
+part: F
+title: Performance clips
+prefix: act
+columns:
+  - ID
+  - Action
+  - Group
+detailKey: group
+intro: Each action declares channels it drives (root, posture, torso, head, arms, hands, face), supported views and postures, loop behaviour, default duration, parameters (targets, intensity, speed, hand) and blend rules.
+items:
+  - id: act.breathe
+    name: Breathe
+    group: Idle
+  - id: act.shift-weight
+    name: Shift weight
+    group: Idle
+  - id: act.look-around
+    name: Look around
+    group: Idle
+  - id: act.fidget-hands
+    name: Fidget hands
+    group: Idle
+  - id: act.tap-foot
+    name: Tap foot
+    group: Idle
+  - id: act.arms-crossed
+    name: Arms crossed
+    group: Idle
+  - id: act.hands-in-pockets
+    name: Hands in pockets
+    group: Idle
+  - id: act.seated-relaxed
+    name: Seated relaxed
+    group: Idle
+  - id: act.seated-lean-in
+    name: Seated lean in
+    group: Idle
+  - id: act.impatient
+    name: Impatient
+    group: Idle
+  - id: act.calm-talk
+    name: Calm talk
+    group: Talking
+  - id: act.emphatic-talk
+    name: Emphatic talk
+    group: Talking
+  - id: act.explain-with-hands
+    name: Explain with hands
+    group: Talking
+  - id: act.list-on-fingers
+    name: List on fingers
+    group: Talking
+  - id: act.beat-gesture
+    name: Beat gesture
+    group: Talking
+  - id: act.open-palms
+    name: Open palms
+    group: Talking
+  - id: act.hand-to-chest
+    name: Hand to chest
+    group: Talking
+  - id: act.chopping-emphasis
+    name: Chopping emphasis
+    group: Talking
+  - id: act.rolling-hand
+    name: Rolling hand
+    group: Talking
+  - id: act.presenting
+    name: Presenting
+    group: Talking
+  - id: act.storytelling-sweep
+    name: Storytelling sweep
+    group: Talking
+  - id: act.whisper-lean
+    name: Whisper lean
+    group: Talking
+  - id: act.rant
+    name: Rant
+    group: Talking
+  - id: act.counter-argument
+    name: Counter argument
+    group: Talking
+  - id: act.point-at
+    name: Point at
+    group: Deictic
+  - id: act.point-up
+    name: Point up
+    group: Deictic
+  - id: act.point-away
+    name: Point away
+    group: Deictic
+  - id: act.point-at-self
+    name: Point at self
+    group: Deictic
+  - id: act.beckon
+    name: Beckon
+    group: Deictic
+  - id: act.gesture-toward
+    name: Gesture toward
+    group: Deictic
+  - id: act.direct-over-there
+    name: Direct over there
+    group: Deictic
+  - id: act.thumb-over-shoulder
+    name: Thumb over shoulder
+    group: Deictic
+  - id: act.wave-hello
+    name: Wave hello
+    group: Emblem
+  - id: act.wave-goodbye
+    name: Wave goodbye
+    group: Emblem
+  - id: act.thumbs-up
+    name: Thumbs up
+    group: Emblem
+  - id: act.thumbs-down
+    name: Thumbs down
+    group: Emblem
+  - id: act.ok-sign
+    name: OK sign
+    group: Emblem
+  - id: act.shush
+    name: Shush
+    group: Emblem
+  - id: act.salute
+    name: Salute
+    group: Emblem
+  - id: act.peace-sign
+    name: Peace sign
+    group: Emblem
+  - id: act.facepalm
+    name: Facepalm
+    group: Emblem
+  - id: act.shrug
+    name: Shrug
+    group: Emblem
+  - id: act.cross-fingers
+    name: Cross fingers
+    group: Emblem
+  - id: act.fist-pump
+    name: Fist pump
+    group: Emblem
+  - id: act.nod
+    name: Nod
+    group: Listening
+  - id: act.slow-nod
+    name: Slow nod
+    group: Listening
+  - id: act.head-shake
+    name: Head shake
+    group: Listening
+  - id: act.head-tilt
+    name: Head tilt
+    group: Listening
+  - id: act.mm-hmm
+    name: Mm-hmm
+    group: Listening
+  - id: act.lean-back
+    name: Lean back
+    group: Listening
+  - id: act.chin-rest
+    name: Chin rest
+    group: Listening
+  - id: act.take-notes
+    name: Take notes
+    group: Listening
+  - id: act.follow-speaker
+    name: Follow speaker
+    group: Listening
+  - id: act.hold-back-laugh
+    name: Hold back laugh
+    group: Listening
+  - id: act.double-take
+    name: Double take
+    group: Reaction
+  - id: act.flinch
+    name: Flinch
+    group: Reaction
+  - id: act.recoil
+    name: Recoil
+    group: Reaction
+  - id: act.jump-scare
+    name: Jump scare
+    group: Reaction
+  - id: act.gasp-with-hands
+    name: Gasp with hands
+    group: Reaction
+  - id: act.laugh
+    name: Laugh
+    group: Reaction
+  - id: act.belly-laugh
+    name: Belly laugh
+    group: Reaction
+  - id: act.cringe
+    name: Cringe
+    group: Reaction
+  - id: act.head-in-hands
+    name: Head in hands
+    group: Reaction
+  - id: act.slump
+    name: Slump
+    group: Reaction
+  - id: act.celebrate
+    name: Celebrate
+    group: Reaction
+  - id: act.spit-take
+    name: Spit take
+    group: Reaction
+  - id: act.collapse-onto-table
+    name: Collapse onto table
+    group: Reaction
+  - id: act.freeze
+    name: Freeze
+    group: Reaction
+  - id: act.chin-stroke
+    name: Chin stroke
+    group: Thinking
+  - id: act.scratch-head
+    name: Scratch head
+    group: Thinking
+  - id: act.look-up-thinking
+    name: Look up thinking
+    group: Thinking
+  - id: act.tap-temple
+    name: Tap temple
+    group: Thinking
+  - id: act.pace-thinking
+    name: Pace thinking
+    group: Thinking
+  - id: act.eureka-point
+    name: Eureka point
+    group: Thinking
+  - id: act.look-at
+    name: Look at
+    group: Gaze
+  - id: act.look-away
+    name: Look away
+    group: Gaze
+  - id: act.glance-and-return
+    name: Glance and return
+    group: Gaze
+  - id: act.avoid-eye-contact
+    name: Avoid eye contact
+    group: Gaze
+  - id: act.scan-room
+    name: Scan room
+    group: Gaze
+  - id: act.stare-down
+    name: Stare down
+    group: Gaze
+  - id: act.walk
+    name: Walk
+    group: Locomotion
+  - id: act.brisk-walk
+    name: Brisk walk
+    group: Locomotion
+  - id: act.sneak
+    name: Sneak
+    group: Locomotion
+  - id: act.run
+    name: Run
+    group: Locomotion
+  - id: act.stroll
+    name: Stroll
+    group: Locomotion
+  - id: act.limp
+    name: Limp
+    group: Locomotion
+  - id: act.march
+    name: March
+    group: Locomotion
+  - id: act.enter
+    name: Enter
+    group: Locomotion
+  - id: act.exit
+    name: Exit
+    group: Locomotion
+  - id: act.turn-around
+    name: Turn around
+    group: Locomotion
+  - id: act.stop-and-look
+    name: Stop and look
+    group: Locomotion
+  - id: act.trip
+    name: Trip
+    group: Locomotion
+  - id: act.sit-down
+    name: Sit down
+    group: Posture
+  - id: act.stand-up
+    name: Stand up
+    group: Posture
+  - id: act.lean-on-surface
+    name: Lean on surface
+    group: Posture
+  - id: act.crouch
+    name: Crouch
+    group: Posture
+  - id: act.kneel
+    name: Kneel
+    group: Posture
+  - id: act.lie-down
+    name: Lie down
+    group: Posture
+  - id: act.get-up
+    name: Get up
+    group: Posture
+  - id: act.slouch
+    name: Slouch
+    group: Posture
+  - id: act.hold
+    name: Hold
+    group: Object
+  - id: act.pick-up
+    name: Pick up
+    group: Object
+  - id: act.put-down
+    name: Put down
+    group: Object
+  - id: act.drink-from-mug
+    name: Drink from mug
+    group: Object
+  - id: act.type
+    name: Type
+    group: Object
+  - id: act.use-phone
+    name: Use phone
+    group: Object
+  - id: act.read
+    name: Read
+    group: Object
+  - id: act.write
+    name: Write
+    group: Object
+  - id: act.hand-over
+    name: Hand over
+    group: Object
+  - id: act.receive
+    name: Receive
+    group: Object
+  - id: act.open-door
+    name: Open door
+    group: Object
+  - id: act.close-door
+    name: Close door
+    group: Object
+  - id: act.adjust-glasses
+    name: Adjust glasses
+    group: Object
+  - id: act.press-button
+    name: Press button
+    group: Object
+  - id: act.push-wheelchair
+    name: Push wheelchair
+    group: Access
+  - id: act.roll-forward
+    name: Roll forward
+    group: Access
+  - id: act.sign-hello
+    name: Sign hello
+    group: Access
+  - id: act.sign-thank-you
+    name: Sign thank you
+    group: Access

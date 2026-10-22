@@ -1,0 +1,48 @@
+list: N2
+order: 46
+part: N
+title: Musical cues and stings
+prefix: cue
+columns:
+  - ID
+  - Cue
+  - Use
+detailKey: use
+intro: Short cues for edits and beats.
+items:
+  - id: cue.comedy-sting
+    name: Comedy sting
+    use: Punchline
+  - id: cue.rimshot
+    name: Rimshot
+    use: Joke
+  - id: cue.sad-trombone
+    name: Sad trombone
+    use: Failure
+  - id: cue.dramatic-hit
+    name: Dramatic hit
+    use: Reveal
+  - id: cue.suspense-riser
+    name: Suspense riser
+    use: Build-up
+  - id: cue.whoosh-transition
+    name: Whoosh transition
+    use: Transition
+  - id: cue.ta-da
+    name: Ta-da
+    use: Success
+  - id: cue.record-scratch
+    name: Record scratch
+    use: Interruption
+  - id: cue.harp-gliss
+    name: Harp gliss
+    use: Dream, flashback
+  - id: cue.magic-chime
+    name: Magic chime
+    use: Sparkle, idea
+  - id: cue.gong
+    name: Gong
+    use: Announcement
+  - id: cue.heartbeat
+    name: Heartbeat
+    use: Tension

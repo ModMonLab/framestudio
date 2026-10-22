@@ -1,0 +1,60 @@
+list: I1
+order: 38
+part: I
+title: Location kits
+prefix: kit
+columns:
+  - ID
+  - Kit
+  - Contents summary
+detailKey: contents
+intro: Each kit bundles compatible background, set pieces, floor, foreground, animated scenery, palettes and suggested character marks, in both families. Every kit ships with at least two ready-made sets (I2).
+items:
+  - id: kit.podcast-studio
+    name: Podcast studio
+    contents: Acoustic walls, desk, mics, on-air sign, lamps, 2–4 seat marks
+  - id: kit.living-room
+    name: Living room
+    contents: Sofa, coffee table, TV, window, plants, rug
+  - id: kit.kitchen
+    name: Kitchen
+    contents: Counter, appliances, table, window, shelves
+  - id: kit.office
+    name: Office
+    contents: Desks, monitors, whiteboard, meeting table, plants
+  - id: kit.classroom
+    name: Classroom
+    contents: Desks, board, lectern, posters, windows
+  - id: kit.coffee-shop
+    name: Coffee shop
+    contents: Counter, coffee machine, tables, chalkboard menu, window street
+  - id: kit.newsroom
+    name: Newsroom
+    contents: Anchor desk, screens, logo wall, studio lights
+  - id: kit.city-street
+    name: City street
+    contents: Buildings, shopfronts, street lamps, traffic, crosswalk
+  - id: kit.park
+    name: Park
+    contents: Trees, path, benches, lake, sky
+  - id: kit.bedroom
+    name: Bedroom
+    contents: Bed, desk, window, wardrobe, posters
+  - id: kit.hospital
+    name: Hospital
+    contents: Bed, monitors, curtains, corridor
+  - id: kit.stage-and-auditorium
+    name: Stage and auditorium
+    contents: Stage, curtains, spotlights, seats, podium
+  - id: kit.library
+    name: Library
+    contents: Shelves, reading tables, lamps
+  - id: kit.gym
+    name: Gym
+    contents: Equipment, mirrors, mats
+  - id: kit.train-interior
+    name: Train interior
+    contents: Seats, windows with moving landscape
+  - id: kit.fantasy-forest
+    name: Fantasy forest
+    contents: Glowing plants, mushrooms, ruins, mist

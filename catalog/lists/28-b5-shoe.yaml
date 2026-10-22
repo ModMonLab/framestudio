@@ -1,0 +1,48 @@
+list: B5
+order: 28
+part: B
+title: Footwear
+prefix: shoe
+columns:
+  - ID
+  - Footwear
+  - Base
+detailKey: base
+intro: ""
+items:
+  - id: shoe.canvas-sneakers
+    name: Canvas sneakers
+    base: Sneaker
+  - id: shoe.running-shoes
+    name: Running shoes
+    base: Sneaker
+  - id: shoe.loafers
+    name: Loafers
+    base: Flat
+  - id: shoe.oxfords
+    name: Oxfords
+    base: Flat
+  - id: shoe.ballet-flats
+    name: Ballet flats
+    base: Flat
+  - id: shoe.sandals
+    name: Sandals
+    base: Flat
+  - id: shoe.slippers
+    name: Slippers
+    base: Flat
+  - id: shoe.ankle-boots
+    name: Ankle boots
+    base: Boot
+  - id: shoe.knee-boots
+    name: Knee boots
+    base: Boot
+  - id: shoe.work-boots
+    name: Work boots
+    base: Boot
+  - id: shoe.heels
+    name: Heels
+    base: Heel
+  - id: shoe.wedges
+    name: Wedges
+    base: Heel

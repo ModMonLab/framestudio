@@ -1,0 +1,42 @@
+list: B6
+order: 29
+part: B
+title: Fabric patterns
+prefix: pattern
+columns:
+  - ID
+  - Pattern
+  - Notes
+detailKey: notes
+intro: Apply to garments that declare pattern support; scale and colours adjustable.
+items:
+  - id: pattern.solid
+    name: Solid
+    notes: Default
+  - id: pattern.stripes
+    name: Stripes
+  - id: pattern.pinstripe
+    name: Pinstripe
+  - id: pattern.checks
+    name: Checks
+  - id: pattern.plaid
+    name: Plaid
+  - id: pattern.houndstooth
+    name: Houndstooth
+  - id: pattern.polka-dots
+    name: Polka dots
+  - id: pattern.floral
+    name: Floral
+  - id: pattern.camouflage
+    name: Camouflage
+  - id: pattern.denim-texture
+    name: Denim texture
+  - id: pattern.knit-texture
+    name: Knit texture
+  - id: pattern.leopard
+    name: Leopard
+  - id: pattern.paisley
+    name: Paisley
+  - id: pattern.custom-print
+    name: Custom print
+    notes: Imported image

@@ -1,0 +1,84 @@
+list: G1
+order: 36
+part: G
+title: Performance recipes
+prefix: rcp
+columns:
+  - ID
+  - Recipe
+  - Expands to
+detailKey: expandsTo
+intro: Recipes expand into ordinary editable clips with timing relationships. Multi-character recipes assign roles when applied.
+items:
+  - id: rcp.embarrassed-reply
+    name: Embarrassed reply
+    expandsTo: Look away, pause, blush, quiet line, glance back
+  - id: rcp.reveal-an-object
+    name: Reveal an object
+    expandsTo: Hold below frame, raise, look to listener, pause
+  - id: rcp.question-and-reaction
+    name: Question and reaction
+    expandsTo: Ask, listener raises brow, cut to listener
+  - id: rcp.interruption
+    name: Interruption
+    expandsTo: Speaker cut off mid-line, interrupter leans in, speaker reacts
+  - id: rcp.awkward-silence
+    name: Awkward silence
+    expandsTo: Both freeze, side eyes, ambient swell, one clears throat
+  - id: rcp.agree-and-disagree
+    name: Agree and disagree
+    expandsTo: Nod vs head shake with cross-cut
+  - id: rcp.handshake
+    name: Handshake
+    expandsTo: Approach, extend, shake, release
+  - id: rcp.hug
+    name: Hug
+    expandsTo: Approach, embrace, hold, release
+  - id: rcp.high-five
+    name: High five
+    expandsTo: Raise, slap with impact effect, sound cue
+  - id: rcp.hand-over-object
+    name: Hand over object
+    expandsTo: Offer, receive, both look at object
+  - id: rcp.comedic-beat
+    name: Comedic beat
+    expandsTo: Snap zoom, freeze 6 frames, sting cue
+  - id: rcp.dramatic-reveal
+    name: Dramatic reveal
+    expandsTo: Slow push in, silence, reaction close-up
+  - id: rcp.double-take-gag
+    name: Double take gag
+    expandsTo: Glance, look away, snap back, shocked face
+  - id: rcp.victory-moment
+    name: Victory moment
+    expandsTo: Fist pump, cheer sound, confetti
+  - id: rcp.sad-realisation
+    name: Sad realisation
+    expandsTo: Smile fades, look down, music drops
+  - id: rcp.nervous-answer
+    name: Nervous answer
+    expandsTo: Fidget, glance away, stammered pause, half smile
+  - id: rcp.sarcastic-reply
+    name: Sarcastic reply
+    expandsTo: Eye roll, deadpan line, raised eyebrow
+  - id: rcp.thinking-out-loud
+    name: Thinking out loud
+    expandsTo: Look up, chin stroke, eureka point
+  - id: rcp.entrance
+    name: Entrance
+    expandsTo: Enter from side, stop, look to camera, wave
+  - id: rcp.exit-in-a-huff
+    name: Exit in a huff
+    expandsTo: Turn, march off, door slam sound
+  - id: rcp.listen-and-nod
+    name: Listen and nod
+    expandsTo: Follow speaker, periodic nods and blinks
+  - id: rcp.explain-a-point
+    name: Explain a point
+    expandsTo: Presenting gesture, list on fingers, point to graphic
+  - id: rcp.phone-call
+    name: Phone call
+    expandsTo: Pick up phone, talk to phone, hang up
+  - id: rcp.coffee-break
+    name: Coffee break
+    expandsTo: Pick up mug, drink, sigh, put down

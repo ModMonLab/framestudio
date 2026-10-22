@@ -1,0 +1,38 @@
+list: A19
+order: 22
+part: A
+title: Brow states
+prefix: browstate
+columns:
+  - ID
+  - State
+  - Notes
+detailKey: notes
+intro: Control states blended by expressions.
+items:
+  - id: browstate.neutral
+    name: Neutral
+  - id: browstate.raised
+    name: Raised
+    notes: Surprise
+  - id: browstate.lowered
+    name: Lowered
+    notes: Anger, focus
+  - id: browstate.inner-raised
+    name: Inner raised
+    notes: Worry, sadness
+  - id: browstate.inner-lowered
+    name: Inner lowered
+    notes: Anger
+  - id: browstate.one-raised-left
+    name: One raised left
+    notes: Skepticism
+  - id: browstate.one-raised-right
+    name: One raised right
+    notes: Skepticism
+  - id: browstate.furrowed
+    name: Furrowed
+    notes: Concentration
+  - id: browstate.relaxed
+    name: Relaxed
+    notes: Contentment

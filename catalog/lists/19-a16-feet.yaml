@@ -1,0 +1,24 @@
+list: A16
+order: 19
+part: A
+title: Feet and footwear bases
+prefix: feet
+columns:
+  - ID
+  - Base
+  - Notes
+detailKey: notes
+intro: Footwear shapes the wardrobe draws on top of; all walk and stand actions support each.
+items:
+  - id: feet.barefoot
+    name: Barefoot
+  - id: feet.flat
+    name: Flat
+    notes: Default
+  - id: feet.heel
+    name: Heel
+    notes: Raised heel posture
+  - id: feet.boot
+    name: Boot
+  - id: feet.sneaker
+    name: Sneaker

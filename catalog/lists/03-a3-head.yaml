@@ -1,0 +1,42 @@
+list: A3
+order: 3
+part: A
+title: Head shapes
+prefix: head
+columns:
+  - ID
+  - Shape
+  - Notes
+detailKey: notes
+intro: Connect to the shared facial layout; all facial features fit every head shape.
+items:
+  - id: head.oval
+    name: Oval
+    notes: Default
+  - id: head.round
+    name: Round
+    notes: Full cheeks, soft jaw
+  - id: head.square
+    name: Square
+    notes: Wide, flat jaw
+  - id: head.angular
+    name: Angular
+    notes: Strong straight jaw
+  - id: head.long
+    name: Long
+    notes: Tall face
+  - id: head.heart
+    name: Heart
+    notes: Wide forehead, narrow chin
+  - id: head.diamond
+    name: Diamond
+    notes: Wide cheekbones
+  - id: head.triangle
+    name: Triangle
+    notes: Narrow forehead, wide jaw
+  - id: head.pear
+    name: Pear
+    notes: Full lower face
+  - id: head.rectangle
+    name: Rectangle
+    notes: Long with square jaw

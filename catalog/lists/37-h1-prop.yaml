@@ -1,0 +1,438 @@
+list: H1
+order: 37
+part: H
+title: Props
+prefix: prop
+columns:
+  - ID
+  - Prop
+  - Category · type
+detailKey: categoryType
+intro: Static, animated or interactive. Interactive props declare states, grip anchors, compatible actions, sound cues and layering against characters.
+items:
+  - id: prop.round-table
+    name: Round table
+    categoryType: Furniture · static
+  - id: prop.desk
+    name: Desk
+    categoryType: Furniture · static
+  - id: prop.office-chair
+    name: Office chair
+    categoryType: Furniture · interactive (seat anchor, swivel)
+  - id: prop.studio-chair
+    name: Studio chair
+    categoryType: Furniture · interactive (seat anchor)
+  - id: prop.armchair
+    name: Armchair
+    categoryType: Furniture · interactive (seat anchor)
+  - id: prop.sofa
+    name: Sofa
+    categoryType: Furniture · interactive (3 seat anchors)
+  - id: prop.stool
+    name: Stool
+    categoryType: Furniture · interactive (seat anchor)
+  - id: prop.bench
+    name: Bench
+    categoryType: Furniture · interactive (seat anchors)
+  - id: prop.bed
+    name: Bed
+    categoryType: Furniture · interactive (lie anchor)
+  - id: prop.bookshelf
+    name: Bookshelf
+    categoryType: Furniture · static
+  - id: prop.cabinet
+    name: Cabinet
+    categoryType: Furniture · interactive (open/closed)
+  - id: prop.coffee-table
+    name: Coffee table
+    categoryType: Furniture · static
+  - id: prop.kitchen-counter
+    name: Kitchen counter
+    categoryType: Furniture · static
+  - id: prop.bar-stool
+    name: Bar stool
+    categoryType: Furniture · interactive (seat anchor)
+  - id: prop.lectern
+    name: Lectern
+    categoryType: Furniture · static
+  - id: prop.whiteboard
+    name: Whiteboard
+    categoryType: Furniture · interactive (writable surface)
+  - id: prop.classroom-desk
+    name: Classroom desk
+    categoryType: Furniture · interactive (seat anchor)
+  - id: prop.dining-table
+    name: Dining table
+    categoryType: Furniture · static
+  - id: prop.wardrobe
+    name: Wardrobe
+    categoryType: Furniture · interactive (open/closed)
+  - id: prop.reception-desk
+    name: Reception desk
+    categoryType: Furniture · static
+  - id: prop.desk-microphone
+    name: Desk microphone
+    categoryType: Tech · animated (indicator light)
+  - id: prop.boom-microphone
+    name: Boom microphone
+    categoryType: Tech · static
+  - id: prop.podcast-headphones
+    name: Podcast headphones
+    categoryType: Tech · wearable
+  - id: prop.laptop
+    name: Laptop
+    categoryType: Tech · interactive (open/closed, screen content)
+  - id: prop.desktop-monitor
+    name: Desktop monitor
+    categoryType: Tech · animated (screen content)
+  - id: prop.phone
+    name: Phone
+    categoryType: Tech · interactive (screen on/off, ringing)
+  - id: prop.tablet
+    name: Tablet
+    categoryType: Tech · interactive (screen content)
+  - id: prop.tv
+    name: TV
+    categoryType: Tech · animated (screen content)
+  - id: prop.camera-on-tripod
+    name: Camera on tripod
+    categoryType: Tech · static
+  - id: prop.ring-light
+    name: Ring light
+    categoryType: Tech · animated (on/off)
+  - id: prop.game-controller
+    name: Game controller
+    categoryType: Tech · interactive (grip)
+  - id: prop.keyboard
+    name: Keyboard
+    categoryType: Tech · interactive (typing target)
+  - id: prop.speaker
+    name: Speaker
+    categoryType: Tech · animated (pulse)
+  - id: prop.radio
+    name: Radio
+    categoryType: Tech · animated
+  - id: prop.projector-screen
+    name: Projector screen
+    categoryType: Tech · animated (content)
+  - id: prop.mug
+    name: Mug
+    categoryType: Kitchen · interactive (grip, full/empty, steam)
+  - id: prop.coffee-cup-to-go
+    name: Coffee cup to go
+    categoryType: Kitchen · interactive (grip)
+  - id: prop.water-glass
+    name: Water glass
+    categoryType: Kitchen · interactive (grip, full/empty)
+  - id: prop.wine-glass
+    name: Wine glass
+    categoryType: Kitchen · interactive (grip)
+  - id: prop.plate-of-food
+    name: Plate of food
+    categoryType: Kitchen · interactive (full/eaten)
+  - id: prop.coffee-machine
+    name: Coffee machine
+    categoryType: Kitchen · animated (steam, sound)
+  - id: prop.kettle
+    name: Kettle
+    categoryType: Kitchen · animated (steam, whistle)
+  - id: prop.toaster
+    name: Toaster
+    categoryType: Kitchen · animated (pop, sound)
+  - id: prop.fridge
+    name: Fridge
+    categoryType: Kitchen · interactive (open/closed, light)
+  - id: prop.cereal-box
+    name: Cereal box
+    categoryType: Kitchen · interactive (grip)
+  - id: prop.pizza-box
+    name: Pizza box
+    categoryType: Kitchen · interactive (open/closed)
+  - id: prop.fruit-bowl
+    name: Fruit bowl
+    categoryType: Kitchen · static
+  - id: prop.book
+    name: Book
+    categoryType: Office · interactive (grip, open/closed)
+  - id: prop.notebook
+    name: Notebook
+    categoryType: Office · interactive (grip, open/closed)
+  - id: prop.pen
+    name: Pen
+    categoryType: Office · interactive (pinch)
+  - id: prop.clipboard
+    name: Clipboard
+    categoryType: Office · interactive (grip)
+  - id: prop.folder
+    name: Folder
+    categoryType: Office · interactive (grip, open/closed)
+  - id: prop.stack-of-papers
+    name: Stack of papers
+    categoryType: Office · static
+  - id: prop.envelope
+    name: Envelope
+    categoryType: Office · interactive (grip, sealed/open)
+  - id: prop.briefcase
+    name: Briefcase
+    categoryType: Office · interactive (grip, open/closed)
+  - id: prop.calculator
+    name: Calculator
+    categoryType: Office · interactive
+  - id: prop.stapler
+    name: Stapler
+    categoryType: Office · interactive (sound)
+  - id: prop.desk-lamp
+    name: Desk lamp
+    categoryType: Office · animated (on/off, light)
+  - id: prop.wall-clock
+    name: Wall clock
+    categoryType: Office · animated (hands)
+  - id: prop.calendar
+    name: Calendar
+    categoryType: Office · static
+  - id: prop.sticky-notes
+    name: Sticky notes
+    categoryType: Office · static
+  - id: prop.trophy
+    name: Trophy
+    categoryType: Office · interactive (grip)
+  - id: prop.potted-plant
+    name: Potted plant
+    categoryType: Decor · animated (sway)
+  - id: prop.large-plant
+    name: Large plant
+    categoryType: Decor · animated (sway)
+  - id: prop.flower-vase
+    name: Flower vase
+    categoryType: Decor · static
+  - id: prop.picture-frame
+    name: Picture frame
+    categoryType: Decor · interactive (image slot)
+  - id: prop.poster
+    name: Poster
+    categoryType: Decor · interactive (image slot)
+  - id: prop.neon-sign
+    name: Neon sign
+    categoryType: Decor · animated (flicker, text slot)
+  - id: prop.on-air-sign
+    name: On-air sign
+    categoryType: Decor · animated (on/off)
+  - id: prop.rug
+    name: Rug
+    categoryType: Decor · static
+  - id: prop.curtains
+    name: Curtains
+    categoryType: Decor · animated (sway, open/closed)
+  - id: prop.floor-lamp
+    name: Floor lamp
+    categoryType: Decor · animated (on/off, light)
+  - id: prop.candle
+    name: Candle
+    categoryType: Decor · animated (flame)
+  - id: prop.fireplace
+    name: Fireplace
+    categoryType: Decor · animated (fire, sound)
+  - id: prop.aquarium
+    name: Aquarium
+    categoryType: Decor · animated (fish, bubbles)
+  - id: prop.globe
+    name: Globe
+    categoryType: Decor · interactive (spin)
+  - id: prop.clock-radio
+    name: Clock radio
+    categoryType: Decor · animated
+  - id: prop.mirror
+    name: Mirror
+    categoryType: Decor · static
+  - id: prop.door
+    name: Door
+    categoryType: Building · interactive (open/closed, sound)
+  - id: prop.window
+    name: Window
+    categoryType: Building · interactive (open/closed, weather view)
+  - id: prop.light-switch
+    name: Light switch
+    categoryType: Building · interactive (press, controls lights)
+  - id: prop.stairs
+    name: Stairs
+    categoryType: Building · static (walk path)
+  - id: prop.elevator-doors
+    name: Elevator doors
+    categoryType: Building · interactive (open/closed, ding)
+  - id: prop.fence
+    name: Fence
+    categoryType: Outdoor · static
+  - id: prop.street-lamp
+    name: Street lamp
+    categoryType: Outdoor · animated (on/off)
+  - id: prop.park-bench
+    name: Park bench
+    categoryType: Outdoor · interactive (seat anchors)
+  - id: prop.bus-stop
+    name: Bus stop
+    categoryType: Outdoor · static
+  - id: prop.traffic-light
+    name: Traffic light
+    categoryType: Outdoor · animated (cycle)
+  - id: prop.tree
+    name: Tree
+    categoryType: Outdoor · animated (sway)
+  - id: prop.bush
+    name: Bush
+    categoryType: Outdoor · animated (sway)
+  - id: prop.rock
+    name: Rock
+    categoryType: Outdoor · static
+  - id: prop.mailbox
+    name: Mailbox
+    categoryType: Outdoor · interactive (open/closed)
+  - id: prop.trash-can
+    name: Trash can
+    categoryType: Outdoor · interactive (lid)
+  - id: prop.bicycle
+    name: Bicycle
+    categoryType: Outdoor · interactive (ride, walk with)
+  - id: prop.car
+    name: Car
+    categoryType: Outdoor · interactive (doors, drive across)
+  - id: prop.scooter
+    name: Scooter
+    categoryType: Outdoor · interactive (ride)
+  - id: prop.umbrella
+    name: Umbrella
+    categoryType: Outdoor · interactive (open/closed, grip)
+  - id: prop.football
+    name: Football
+    categoryType: Sports · interactive (throw/catch)
+  - id: prop.basketball
+    name: Basketball
+    categoryType: Sports · interactive (bounce)
+  - id: prop.tennis-racket
+    name: Tennis racket
+    categoryType: Sports · interactive (grip, swing)
+  - id: prop.dumbbell
+    name: Dumbbell
+    categoryType: Sports · interactive (grip)
+  - id: prop.yoga-mat
+    name: Yoga mat
+    categoryType: Sports · static
+  - id: prop.skateboard
+    name: Skateboard
+    categoryType: Sports · interactive (ride)
+  - id: prop.guitar
+    name: Guitar
+    categoryType: Music · interactive (play)
+  - id: prop.keyboard-instrument
+    name: Keyboard instrument
+    categoryType: Music · interactive (play)
+  - id: prop.drum-kit
+    name: Drum kit
+    categoryType: Music · interactive (play, sound)
+  - id: prop.violin
+    name: Violin
+    categoryType: Music · interactive (play)
+  - id: prop.microphone-stand
+    name: Microphone stand
+    categoryType: Music · static
+  - id: prop.gift-box
+    name: Gift box
+    categoryType: Party · interactive (closed/open)
+  - id: prop.balloons
+    name: Balloons
+    categoryType: Party · animated (bob)
+  - id: prop.birthday-cake
+    name: Birthday cake
+    categoryType: Party · interactive (candles lit/blown)
+  - id: prop.confetti-cannon
+    name: Confetti cannon
+    categoryType: Party · interactive (fire effect)
+  - id: prop.party-hat
+    name: Party hat
+    categoryType: Party · wearable
+  - id: prop.stethoscope
+    name: Stethoscope
+    categoryType: Medical · wearable
+  - id: prop.hospital-bed
+    name: Hospital bed
+    categoryType: Medical · interactive (lie anchor)
+  - id: prop.first-aid-kit
+    name: First aid kit
+    categoryType: Medical · interactive (open/closed)
+  - id: prop.pill-bottle
+    name: Pill bottle
+    categoryType: Medical · interactive (grip)
+  - id: prop.magnifying-glass
+    name: Magnifying glass
+    categoryType: Mystery · interactive (grip)
+  - id: prop.detective-notebook
+    name: Detective notebook
+    categoryType: Mystery · interactive (grip)
+  - id: prop.evidence-board
+    name: Evidence board
+    categoryType: Mystery · static (image slots)
+  - id: prop.flashlight
+    name: Flashlight
+    categoryType: Mystery · interactive (on/off, beam)
+  - id: prop.key
+    name: Key
+    categoryType: Mystery · interactive (pinch)
+  - id: prop.treasure-chest
+    name: Treasure chest
+    categoryType: Fantasy · interactive (closed/open, glow)
+  - id: prop.magic-wand
+    name: Magic wand
+    categoryType: Fantasy · interactive (sparkle effect)
+  - id: prop.potion-bottle
+    name: Potion bottle
+    categoryType: Fantasy · interactive (grip, bubbling)
+  - id: prop.crystal-ball
+    name: Crystal ball
+    categoryType: Fantasy · animated (glow)
+  - id: prop.sword
+    name: Sword
+    categoryType: Fantasy · interactive (grip, swing)
+  - id: prop.shield
+    name: Shield
+    categoryType: Fantasy · interactive (grip)
+  - id: prop.backpack
+    name: Backpack
+    categoryType: Travel · wearable
+  - id: prop.suitcase
+    name: Suitcase
+    categoryType: Travel · interactive (grip, roll)
+  - id: prop.map
+    name: Map
+    categoryType: Travel · interactive (open/closed)
+  - id: prop.camera
+    name: Camera
+    categoryType: Travel · interactive (grip, flash)
+  - id: prop.passport
+    name: Passport
+    categoryType: Travel · interactive (pinch)
+  - id: prop.shopping-bag
+    name: Shopping bag
+    categoryType: Retail · interactive (grip)
+  - id: prop.cash-register
+    name: Cash register
+    categoryType: Retail · animated (drawer, sound)
+  - id: prop.price-tag
+    name: Price tag
+    categoryType: Retail · static (text slot)
+  - id: prop.shopping-cart
+    name: Shopping cart
+    categoryType: Retail · interactive (push)
+  - id: prop.megaphone
+    name: Megaphone
+    categoryType: Event · interactive (grip, voice effect)
+  - id: prop.trophy-cup
+    name: Trophy cup
+    categoryType: Event · interactive (grip)
+  - id: prop.podium
+    name: Podium
+    categoryType: Event · static
+  - id: prop.stage-spotlight
+    name: Stage spotlight
+    categoryType: Event · animated (beam)
+  - id: prop.red-carpet
+    name: Red carpet
+    categoryType: Event · static

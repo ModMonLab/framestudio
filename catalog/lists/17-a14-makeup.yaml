@@ -1,0 +1,37 @@
+list: A14
+order: 17
+part: A
+title: Makeup
+prefix: makeup
+columns:
+  - ID
+  - Item
+  - Notes
+detailKey: notes
+intro: Colour and intensity controls; follows expressions.
+items:
+  - id: makeup.eyeliner
+    name: Eyeliner
+  - id: makeup.winged-liner
+    name: Winged liner
+  - id: makeup.eyeshadow
+    name: Eyeshadow
+  - id: makeup.mascara
+    name: Mascara
+  - id: makeup.lipstick
+    name: Lipstick
+  - id: makeup.lip-gloss
+    name: Lip gloss
+  - id: makeup.blush
+    name: Blush
+  - id: makeup.contour
+    name: Contour
+  - id: makeup.bold-brows
+    name: Bold brows
+  - id: makeup.glitter
+    name: Glitter
+  - id: makeup.stage-makeup
+    name: Stage makeup
+  - id: makeup.face-paint
+    name: Face paint
+    notes: Pattern library slot

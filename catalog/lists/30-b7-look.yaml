@@ -1,0 +1,54 @@
+list: B7
+order: 30
+part: B
+title: Preset looks
+prefix: look
+columns:
+  - ID
+  - Look
+  - Contents
+detailKey: contents
+intro: Named garment combinations usable on any character as a starting look.
+items:
+  - id: look.everyday
+    name: Everyday
+    contents: Tee, jeans, sneakers
+  - id: look.on-air
+    name: On-air
+    contents: Sweater, trousers, sneakers
+  - id: look.office
+    name: Office
+    contents: Button-up, chinos, loafers
+  - id: look.executive
+    name: Executive
+    contents: Suit, oxfords
+  - id: look.evening
+    name: Evening
+    contents: Blazer or gown, heels or oxfords
+  - id: look.sporty
+    name: Sporty
+    contents: Tracksuit, running shoes
+  - id: look.outdoor
+    name: Outdoor
+    contents: Parka, cargo pants, boots
+  - id: look.student
+    name: Student
+    contents: Hoodie, jeans, backpack
+  - id: look.teacher
+    name: Teacher
+    contents: Cardigan, chinos, glasses
+  - id: look.doctor
+    name: Doctor
+    contents: Scrubs, lab coat
+  - id: look.barista
+    name: Barista
+    contents: Tee, apron, sneakers
+  - id: look.news-anchor
+    name: News anchor
+    contents: Blazer, blouse, slacks
+  - id: look.sleepwear
+    name: Sleepwear
+    contents: Pyjamas, slippers
+  - id: look.rainy-day
+    name: Rainy day
+    contents: Raincoat, boots, umbrella prop

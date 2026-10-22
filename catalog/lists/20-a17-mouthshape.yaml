@@ -1,0 +1,39 @@
+list: A17
+order: 20
+part: A
+title: Mouth shapes (lip sync set)
+prefix: mouthshape
+columns:
+  - ID
+  - Shape
+  - Phonemes / meaning
+detailKey: phonemes
+intro: The standard set every mouth provides. Letters follow the widely used 2D convention so external tools interoperate.
+items:
+  - id: mouthshape.x-rest
+    name: X rest
+    phonemes: Silence, mouth at rest
+  - id: mouthshape.a-closed
+    name: A closed
+    phonemes: M, B, P
+  - id: mouthshape.b-slightly-open
+    name: B slightly open
+    phonemes: K, S, T, EE and most consonants
+  - id: mouthshape.c-open
+    name: C open
+    phonemes: EH, AE
+  - id: mouthshape.d-wide-open
+    name: D wide open
+    phonemes: AA, AH
+  - id: mouthshape.e-rounded
+    name: E rounded
+    phonemes: AO, ER
+  - id: mouthshape.f-puckered
+    name: F puckered
+    phonemes: UW, OW, W
+  - id: mouthshape.g-teeth-on-lip
+    name: G teeth on lip
+    phonemes: F, V
+  - id: mouthshape.h-tongue-up
+    name: H tongue up
+    phonemes: L, TH

@@ -1,0 +1,48 @@
+list: A20
+order: 23
+part: A
+title: Identity and access options
+prefix: identity
+columns:
+  - ID
+  - Option
+  - Notes
+detailKey: notes
+intro: First-class options available to every character family.
+items:
+  - id: identity.wheelchair
+    name: Wheelchair
+    notes: Seated rig variant with push and roll actions
+  - id: identity.walking-cane
+    name: Walking cane
+    notes: Prop with walk variant
+  - id: identity.crutches
+    name: Crutches
+    notes: Walk variant
+  - id: identity.hearing-aid
+    name: Hearing aid
+    notes: Ear overlay
+  - id: identity.cochlear-implant
+    name: Cochlear implant
+    notes: Ear overlay
+  - id: identity.prosthetic-arm
+    name: Prosthetic arm
+    notes: Arm variant
+  - id: identity.prosthetic-leg
+    name: Prosthetic leg
+    notes: Leg variant
+  - id: identity.glasses-prescription
+    name: Glasses (prescription)
+    notes: See Accessories
+  - id: identity.guide-dog-companion
+    name: Guide dog companion
+    notes: Prop character, follows owner
+  - id: identity.visible-pregnancy
+    name: Visible pregnancy
+    notes: Body variant
+  - id: identity.albinism-palette
+    name: Albinism palette
+    notes: Skin, hair, brow and lash palette
+  - id: identity.limb-difference
+    name: Limb difference
+    notes: Arm and hand variants

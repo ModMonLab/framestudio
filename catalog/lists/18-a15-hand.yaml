@@ -1,0 +1,72 @@
+list: A15
+order: 18
+part: A
+title: Hand poses
+prefix: hand
+columns:
+  - ID
+  - Pose
+  - Use
+detailKey: use
+intro: Every hand set provides these poses for left and right hands in all 4 views and both families. Gloves and nails are overlays.
+items:
+  - id: hand.relaxed
+    name: Relaxed
+    use: Rest
+  - id: hand.open-palm
+    name: Open palm
+    use: Presenting, explaining
+  - id: hand.fist
+    name: Fist
+    use: Emphasis, anger
+  - id: hand.point
+    name: Point
+    use: Pointing
+  - id: hand.thumbs-up
+    name: Thumbs up
+    use: Approval
+  - id: hand.thumbs-down
+    name: Thumbs down
+    use: Disapproval
+  - id: hand.peace
+    name: Peace
+    use: Emblem
+  - id: hand.ok
+    name: OK
+    use: Emblem
+  - id: hand.grip
+    name: Grip
+    use: Holding props
+  - id: hand.pinch
+    name: Pinch
+    use: Small props
+  - id: hand.wave-flat
+    name: Wave flat
+    use: Waving
+  - id: hand.count-one
+    name: Count one
+    use: Counting
+  - id: hand.count-two
+    name: Count two
+    use: Counting
+  - id: hand.count-three
+    name: Count three
+    use: Counting
+  - id: hand.count-four
+    name: Count four
+    use: Counting
+  - id: hand.count-five
+    name: Count five
+    use: Counting
+  - id: hand.clasped
+    name: Clasped
+    use: Hands together
+  - id: hand.cupped
+    name: Cupped
+    use: Holding small things
+  - id: hand.typing
+    name: Typing
+    use: Keyboard
+  - id: hand.phone-hold
+    name: Phone hold
+    use: Phone

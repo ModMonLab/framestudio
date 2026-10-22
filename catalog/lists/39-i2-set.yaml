@@ -1,0 +1,108 @@
+list: I2
+order: 39
+part: I
+title: Ready-made sets
+prefix: set
+columns:
+  - ID
+  - Set
+  - Kit
+detailKey: kit
+intro: Assembled, editable arrangements of a kit with character marks and camera compositions.
+items:
+  - id: set.two-host-podcast
+    name: Two-host podcast
+    kit: Podcast studio
+  - id: set.solo-podcast
+    name: Solo podcast
+    kit: Podcast studio
+  - id: set.four-person-panel
+    name: Four-person panel
+    kit: Podcast studio
+  - id: set.sofa-chat
+    name: Sofa chat
+    kit: Living room
+  - id: set.movie-night
+    name: Movie night
+    kit: Living room
+  - id: set.breakfast-table
+    name: Breakfast table
+    kit: Kitchen
+  - id: set.cooking-show
+    name: Cooking show
+    kit: Kitchen
+  - id: set.open-plan-office
+    name: Open-plan office
+    kit: Office
+  - id: set.meeting-room
+    name: Meeting room
+    kit: Office
+  - id: set.bosss-office
+    name: Boss’s office
+    kit: Office
+  - id: set.lecture
+    name: Lecture
+    kit: Classroom
+  - id: set.group-work
+    name: Group work
+    kit: Classroom
+  - id: set.counter-order
+    name: Counter order
+    kit: Coffee shop
+  - id: set.window-table
+    name: Window table
+    kit: Coffee shop
+  - id: set.anchor-desk
+    name: Anchor desk
+    kit: Newsroom
+  - id: set.weather-wall
+    name: Weather wall
+    kit: Newsroom
+  - id: set.shopfront
+    name: Shopfront
+    kit: City street
+  - id: set.crosswalk
+    name: Crosswalk
+    kit: City street
+  - id: set.lakeside-bench
+    name: Lakeside bench
+    kit: Park
+  - id: set.picnic
+    name: Picnic
+    kit: Park
+  - id: set.late-night-desk
+    name: Late night desk
+    kit: Bedroom
+  - id: set.bedside
+    name: Bedside
+    kit: Bedroom
+  - id: set.ward
+    name: Ward
+    kit: Hospital
+  - id: set.corridor
+    name: Corridor
+    kit: Hospital
+  - id: set.keynote
+    name: Keynote
+    kit: Stage and auditorium
+  - id: set.award-show
+    name: Award show
+    kit: Stage and auditorium
+  - id: set.reading-corner
+    name: Reading corner
+    kit: Library
+  - id: set.weights-area
+    name: Weights area
+    kit: Gym
+  - id: set.commuter-seats
+    name: Commuter seats
+    kit: Train interior
+  - id: set.forest-clearing
+    name: Forest clearing
+    kit: Fantasy forest
+  - id: set.ruined-temple
+    name: Ruined temple
+    kit: Fantasy forest
+  - id: set.info-desk
+    name: Info desk
+    kit: Library

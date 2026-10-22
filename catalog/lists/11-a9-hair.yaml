@@ -1,0 +1,132 @@
+list: A9
+order: 11
+part: A
+title: Hairstyles
+prefix: hair
+columns:
+  - ID
+  - Hairstyle
+  - Group
+detailKey: group
+intro: Each hairstyle is drawn front/back layers for 4 views and both families, declares head-shape fit, hat compatibility and physics-free secondary motion (sway) parameters.
+items:
+  - id: hair.buzz
+    name: Buzz
+    group: Short
+  - id: hair.crew-cut
+    name: Crew cut
+    group: Short
+  - id: hair.crop
+    name: Crop
+    group: Short
+  - id: hair.undercut
+    name: Undercut
+    group: Short
+  - id: hair.fade
+    name: Fade
+    group: Short
+  - id: hair.spiky
+    name: Spiky
+    group: Short
+  - id: hair.slick-back
+    name: Slick back
+    group: Short
+  - id: hair.side-part
+    name: Side part
+    group: Short
+  - id: hair.short-curls
+    name: Short curls
+    group: Short
+  - id: hair.shaved
+    name: Shaved
+    group: Short
+  - id: hair.bob
+    name: Bob
+    group: Medium
+  - id: hair.lob
+    name: Lob
+    group: Medium
+  - id: hair.shag
+    name: Shag
+    group: Medium
+  - id: hair.mop
+    name: Mop
+    group: Medium
+  - id: hair.wavy-medium
+    name: Wavy medium
+    group: Medium
+  - id: hair.mullet
+    name: Mullet
+    group: Medium
+  - id: hair.curtains
+    name: Curtains
+    group: Medium
+  - id: hair.pixie
+    name: Pixie
+    group: Medium
+  - id: hair.afro-medium
+    name: Afro medium
+    group: Medium
+  - id: hair.two-strand-twists
+    name: Two-strand twists
+    group: Medium
+  - id: hair.straight-long
+    name: Straight long
+    group: Long
+  - id: hair.wavy-long
+    name: Wavy long
+    group: Long
+  - id: hair.curly-long
+    name: Curly long
+    group: Long
+  - id: hair.braids
+    name: Braids
+    group: Long
+  - id: hair.box-braids
+    name: Box braids
+    group: Long
+  - id: hair.ponytail
+    name: Ponytail
+    group: Long
+  - id: hair.high-bun
+    name: High bun
+    group: Long
+  - id: hair.low-bun
+    name: Low bun
+    group: Long
+  - id: hair.top-knot
+    name: Top knot
+    group: Long
+  - id: hair.half-up
+    name: Half up
+    group: Long
+  - id: hair.pigtails
+    name: Pigtails
+    group: Long
+  - id: hair.locs
+    name: Locs
+    group: Long
+  - id: hair.cornrows
+    name: Cornrows
+    group: Long
+  - id: hair.afro
+    name: Afro
+    group: Long
+  - id: hair.side-swept-long
+    name: Side swept long
+    group: Long
+  - id: hair.bald
+    name: Bald
+    group: Covered or none
+  - id: hair.receding
+    name: Receding
+    group: Covered or none
+  - id: hair.headwrap
+    name: Headwrap
+    group: Covered or none
+  - id: hair.hijab
+    name: Hijab
+    group: Covered or none
+  - id: hair.durag
+    name: Durag
+    group: Covered or none

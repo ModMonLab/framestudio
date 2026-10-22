@@ -1,0 +1,261 @@
+list: E1
+order: 33
+part: E
+title: Expressions
+prefix: exp
+columns:
+  - ID
+  - Expression
+  - Group
+detailKey: group
+intro: Each preset sets eye state, brow state, mouth expression, gaze tendency, optional overlay and default intensity; all have intensity (0–100) and transition time and remain editable per clip. Expressions cooperate with lip sync (mouth shape plus expression curvature).
+items:
+  - id: exp.content
+    name: Content
+    group: Positive
+  - id: exp.smile
+    name: Smile
+    group: Positive
+  - id: exp.big-grin
+    name: Big grin
+    group: Positive
+  - id: exp.laugh
+    name: Laugh
+    group: Positive
+  - id: exp.giggle
+    name: Giggle
+    group: Positive
+  - id: exp.delighted
+    name: Delighted
+    group: Positive
+  - id: exp.proud
+    name: Proud
+    group: Positive
+  - id: exp.smug
+    name: Smug
+    group: Positive
+  - id: exp.relieved
+    name: Relieved
+    group: Positive
+  - id: exp.amused
+    name: Amused
+    group: Positive
+  - id: exp.loving
+    name: Loving
+    group: Positive
+  - id: exp.grateful
+    name: Grateful
+    group: Positive
+  - id: exp.excited
+    name: Excited
+    group: Positive
+  - id: exp.starstruck
+    name: Starstruck
+    group: Positive
+  - id: exp.sad
+    name: Sad
+    group: Sad
+  - id: exp.teary
+    name: Teary
+    group: Sad
+  - id: exp.crying
+    name: Crying
+    group: Sad
+  - id: exp.sobbing
+    name: Sobbing
+    group: Sad
+  - id: exp.disappointed
+    name: Disappointed
+    group: Sad
+  - id: exp.hurt
+    name: Hurt
+    group: Sad
+  - id: exp.lonely
+    name: Lonely
+    group: Sad
+  - id: exp.ashamed
+    name: Ashamed
+    group: Sad
+  - id: exp.guilty
+    name: Guilty
+    group: Sad
+  - id: exp.defeated
+    name: Defeated
+    group: Sad
+  - id: exp.annoyed
+    name: Annoyed
+    group: Anger
+  - id: exp.irritated
+    name: Irritated
+    group: Anger
+  - id: exp.frustrated
+    name: Frustrated
+    group: Anger
+  - id: exp.angry
+    name: Angry
+    group: Anger
+  - id: exp.furious
+    name: Furious
+    group: Anger
+  - id: exp.seething
+    name: Seething
+    group: Anger
+  - id: exp.indignant
+    name: Indignant
+    group: Anger
+  - id: exp.contemptuous
+    name: Contemptuous
+    group: Anger
+  - id: exp.nervous
+    name: Nervous
+    group: Fear and stress
+  - id: exp.anxious
+    name: Anxious
+    group: Fear and stress
+  - id: exp.worried
+    name: Worried
+    group: Fear and stress
+  - id: exp.scared
+    name: Scared
+    group: Fear and stress
+  - id: exp.terrified
+    name: Terrified
+    group: Fear and stress
+  - id: exp.panicked
+    name: Panicked
+    group: Fear and stress
+  - id: exp.uneasy
+    name: Uneasy
+    group: Fear and stress
+  - id: exp.sheepish
+    name: Sheepish
+    group: Fear and stress
+  - id: exp.surprised
+    name: Surprised
+    group: Surprise
+  - id: exp.shocked
+    name: Shocked
+    group: Surprise
+  - id: exp.stunned
+    name: Stunned
+    group: Surprise
+  - id: exp.gasp
+    name: Gasp
+    group: Surprise
+  - id: exp.double-take-face
+    name: Double-take face
+    group: Surprise
+  - id: exp.jaw-drop
+    name: Jaw drop
+    group: Surprise
+  - id: exp.thinking
+    name: Thinking
+    group: Thinking
+  - id: exp.confused
+    name: Confused
+    group: Thinking
+  - id: exp.puzzled
+    name: Puzzled
+    group: Thinking
+  - id: exp.skeptical
+    name: Skeptical
+    group: Thinking
+  - id: exp.suspicious
+    name: Suspicious
+    group: Thinking
+  - id: exp.doubtful
+    name: Doubtful
+    group: Thinking
+  - id: exp.calculating
+    name: Calculating
+    group: Thinking
+  - id: exp.eureka
+    name: Eureka
+    group: Thinking
+  - id: exp.embarrassed
+    name: Embarrassed
+    group: Social
+  - id: exp.flustered
+    name: Flustered
+    group: Social
+  - id: exp.awkward
+    name: Awkward
+    group: Social
+  - id: exp.shy
+    name: Shy
+    group: Social
+  - id: exp.flirty
+    name: Flirty
+    group: Social
+  - id: exp.teasing
+    name: Teasing
+    group: Social
+  - id: exp.sarcastic
+    name: Sarcastic
+    group: Social
+  - id: exp.polite-smile
+    name: Polite smile
+    group: Social
+  - id: exp.fake-smile
+    name: Fake smile
+    group: Social
+  - id: exp.eye-roll
+    name: Eye roll
+    group: Social
+  - id: exp.bored
+    name: Bored
+    group: Low energy
+  - id: exp.tired
+    name: Tired
+    group: Low energy
+  - id: exp.sleepy
+    name: Sleepy
+    group: Low energy
+  - id: exp.unimpressed
+    name: Unimpressed
+    group: Low energy
+  - id: exp.deadpan
+    name: Deadpan
+    group: Low energy
+  - id: exp.zoned-out
+    name: Zoned out
+    group: Low energy
+  - id: exp.raised-eyebrow
+    name: Raised eyebrow
+    group: Subtle reaction
+  - id: exp.slight-frown
+    name: Slight frown
+    group: Subtle reaction
+  - id: exp.lip-press
+    name: Lip press
+    group: Subtle reaction
+  - id: exp.half-smile
+    name: Half smile
+    group: Subtle reaction
+  - id: exp.nose-wrinkle
+    name: Nose wrinkle
+    group: Subtle reaction
+  - id: exp.squint
+    name: Squint
+    group: Subtle reaction
+  - id: exp.blink-pause
+    name: Blink pause
+    group: Subtle reaction
+  - id: exp.side-eye
+    name: Side eye
+    group: Subtle reaction
+  - id: exp.disgusted
+    name: Disgusted
+    group: Other
+  - id: exp.determined
+    name: Determined
+    group: Other
+  - id: exp.focused
+    name: Focused
+    group: Other
+  - id: exp.dreamy
+    name: Dreamy
+    group: Other
+  - id: exp.mischievous
+    name: Mischievous
+    group: Other

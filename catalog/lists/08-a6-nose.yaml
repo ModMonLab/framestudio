@@ -1,0 +1,48 @@
+list: A6
+order: 8
+part: A
+title: Noses
+prefix: nose
+columns:
+  - ID
+  - Shape
+  - Notes
+detailKey: notes
+intro: Drawn for all views including true profile.
+items:
+  - id: nose.button
+    name: Button
+    notes: Small, rounded
+  - id: nose.straight
+    name: Straight
+    notes: Default
+  - id: nose.roman
+    name: Roman
+    notes: Prominent bridge
+  - id: nose.aquiline
+    name: Aquiline
+    notes: Curved bridge
+  - id: nose.snub
+    name: Snub
+    notes: Short, upturned
+  - id: nose.wide
+    name: Wide
+    notes: Broad nostrils
+  - id: nose.narrow
+    name: Narrow
+    notes: Slim
+  - id: nose.hooked
+    name: Hooked
+    notes: Downturned tip
+  - id: nose.upturned
+    name: Upturned
+    notes: Lifted tip
+  - id: nose.flat
+    name: Flat
+    notes: Low bridge
+  - id: nose.long
+    name: Long
+    notes: Extended
+  - id: nose.rounded
+    name: Rounded
+    notes: Bulbous tip

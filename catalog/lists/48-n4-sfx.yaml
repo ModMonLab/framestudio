@@ -1,0 +1,192 @@
+list: N4
+order: 48
+part: N
+title: Sound effects
+prefix: sfx
+columns:
+  - ID
+  - Effect
+  - Group
+detailKey: group
+intro: Foley and effects; many are pre-linked to prop states and actions (e.g., door close, mug on table).
+items:
+  - id: sfx.footsteps-wood
+    name: Footsteps wood
+    group: Movement
+  - id: sfx.footsteps-concrete
+    name: Footsteps concrete
+    group: Movement
+  - id: sfx.footsteps-grass
+    name: Footsteps grass
+    group: Movement
+  - id: sfx.running-steps
+    name: Running steps
+    group: Movement
+  - id: sfx.chair-creak
+    name: Chair creak
+    group: Movement
+  - id: sfx.sit-on-sofa
+    name: Sit on sofa
+    group: Movement
+  - id: sfx.clothes-rustle
+    name: Clothes rustle
+    group: Movement
+  - id: sfx.body-fall
+    name: Body fall
+    group: Movement
+  - id: sfx.door-open
+    name: Door open
+    group: Object
+  - id: sfx.door-close
+    name: Door close
+    group: Object
+  - id: sfx.door-slam
+    name: Door slam
+    group: Object
+  - id: sfx.knock
+    name: Knock
+    group: Object
+  - id: sfx.doorbell
+    name: Doorbell
+    group: Object
+  - id: sfx.mug-on-table
+    name: Mug on table
+    group: Object
+  - id: sfx.cup-clink
+    name: Cup clink
+    group: Object
+  - id: sfx.pour-drink
+    name: Pour drink
+    group: Object
+  - id: sfx.paper-rustle
+    name: Paper rustle
+    group: Object
+  - id: sfx.page-turn
+    name: Page turn
+    group: Object
+  - id: sfx.pen-click
+    name: Pen click
+    group: Object
+  - id: sfx.keyboard-typing
+    name: Keyboard typing
+    group: Object
+  - id: sfx.mouse-click
+    name: Mouse click
+    group: Object
+  - id: sfx.phone-ring
+    name: Phone ring
+    group: Object
+  - id: sfx.phone-vibrate
+    name: Phone vibrate
+    group: Object
+  - id: sfx.phone-notification
+    name: Phone notification
+    group: Object
+  - id: sfx.camera-shutter
+    name: Camera shutter
+    group: Object
+  - id: sfx.zipper
+    name: Zipper
+    group: Object
+  - id: sfx.glass-break
+    name: Glass break
+    group: Object
+  - id: sfx.kettle-whistle
+    name: Kettle whistle
+    group: Object
+  - id: sfx.microwave-ding
+    name: Microwave ding
+    group: Object
+  - id: sfx.toaster-pop
+    name: Toaster pop
+    group: Object
+  - id: sfx.record-beep
+    name: Record beep
+    group: Tech
+  - id: sfx.computer-startup
+    name: Computer startup
+    group: Tech
+  - id: sfx.error-beep
+    name: Error beep
+    group: Tech
+  - id: sfx.notification-chime
+    name: Notification chime
+    group: Tech
+  - id: sfx.static-noise
+    name: Static noise
+    group: Tech
+  - id: sfx.applause
+    name: Applause
+    group: Crowd
+  - id: sfx.laugh-track
+    name: Laugh track
+    group: Crowd
+  - id: sfx.gasp-crowd
+    name: Gasp crowd
+    group: Crowd
+  - id: sfx.boo
+    name: Boo
+    group: Crowd
+  - id: sfx.cheer
+    name: Cheer
+    group: Crowd
+  - id: sfx.whoosh
+    name: Whoosh
+    group: Motion
+  - id: sfx.swish
+    name: Swish
+    group: Motion
+  - id: sfx.zip-pass
+    name: Zip pass
+    group: Motion
+  - id: sfx.boing
+    name: Boing
+    group: Cartoon
+  - id: sfx.pop
+    name: Pop
+    group: Cartoon
+  - id: sfx.slide-whistle
+    name: Slide whistle
+    group: Cartoon
+  - id: sfx.bonk
+    name: Bonk
+    group: Cartoon
+  - id: sfx.punch-impact
+    name: Punch impact
+    group: Impact
+  - id: sfx.thud
+    name: Thud
+    group: Impact
+  - id: sfx.crash
+    name: Crash
+    group: Impact
+  - id: sfx.explosion-small
+    name: Explosion small
+    group: Impact
+  - id: sfx.throat-clear
+    name: Throat clear
+    group: Vocal
+  - id: sfx.sigh
+    name: Sigh
+    group: Vocal
+  - id: sfx.cough
+    name: Cough
+    group: Vocal
+  - id: sfx.sniff
+    name: Sniff
+    group: Vocal
+  - id: sfx.yawn
+    name: Yawn
+    group: Vocal
+  - id: sfx.car-pass
+    name: Car pass
+    group: Vehicle
+  - id: sfx.car-horn
+    name: Car horn
+    group: Vehicle
+  - id: sfx.bicycle-bell
+    name: Bicycle bell
+    group: Vehicle
+  - id: sfx.train-horn
+    name: Train horn
+    group: Vehicle

@@ -1,0 +1,42 @@
+list: A9b
+order: 12
+part: A
+title: Hair controls
+prefix: hair-ctl
+columns:
+  - ID
+  - Control
+  - Range or options
+detailKey: options
+intro: Applies to any hairstyle that declares the control.
+items:
+  - id: hair-ctl.volume
+    name: Volume
+    options: Close – Full
+  - id: hair-ctl.length
+    name: Length
+    options: Shorter – Longer
+  - id: hair-ctl.curl-tightness
+    name: Curl tightness
+    options: Straight – Coily
+  - id: hair-ctl.parting
+    name: Parting
+    options: Left, Centre, Right, None
+  - id: hair-ctl.hair-colour
+    name: Hair colour
+    options: 16 presets plus custom
+  - id: hair-ctl.highlight-colour
+    name: Highlight colour
+    options: Off or custom
+  - id: hair-ctl.highlight-amount
+    name: Highlight amount
+    options: None – Strong
+  - id: hair-ctl.greying
+    name: Greying
+    options: None – Full
+  - id: hair-ctl.flyaways
+    name: Flyaways
+    options: None – Many
+  - id: hair-ctl.sway
+    name: Sway
+    options: Still – Lively (secondary motion)

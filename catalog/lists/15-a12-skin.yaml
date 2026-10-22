@@ -1,0 +1,84 @@
+list: A12
+order: 15
+part: A
+title: Skin tones
+prefix: skin
+columns:
+  - ID
+  - Tone
+  - Undertone
+detailKey: undertone
+intro: Twenty-four tones in three undertones, plus custom colour. Each tone defines base, shadow and highlight per family.
+items:
+  - id: skin.porcelain
+    name: Porcelain
+    undertone: Cool
+  - id: skin.ivory
+    name: Ivory
+    undertone: Neutral
+  - id: skin.sand
+    name: Sand
+    undertone: Warm
+  - id: skin.light-beige
+    name: Light beige
+    undertone: Neutral
+  - id: skin.peach
+    name: Peach
+    undertone: Warm
+  - id: skin.rose-beige
+    name: Rose beige
+    undertone: Cool
+  - id: skin.golden
+    name: Golden
+    undertone: Warm
+  - id: skin.honey
+    name: Honey
+    undertone: Warm
+  - id: skin.olive-light
+    name: Olive light
+    undertone: Neutral
+  - id: skin.olive
+    name: Olive
+    undertone: Neutral
+  - id: skin.tan
+    name: Tan
+    undertone: Warm
+  - id: skin.caramel
+    name: Caramel
+    undertone: Warm
+  - id: skin.amber
+    name: Amber
+    undertone: Warm
+  - id: skin.cinnamon
+    name: Cinnamon
+    undertone: Warm
+  - id: skin.chestnut
+    name: Chestnut
+    undertone: Neutral
+  - id: skin.bronze
+    name: Bronze
+    undertone: Warm
+  - id: skin.sienna
+    name: Sienna
+    undertone: Warm
+  - id: skin.umber
+    name: Umber
+    undertone: Neutral
+  - id: skin.mocha
+    name: Mocha
+    undertone: Neutral
+  - id: skin.espresso
+    name: Espresso
+    undertone: Cool
+  - id: skin.cocoa
+    name: Cocoa
+    undertone: Warm
+  - id: skin.ebony
+    name: Ebony
+    undertone: Cool
+  - id: skin.deep-mahogany
+    name: Deep mahogany
+    undertone: Warm
+  - id: skin.onyx
+    name: Onyx
+    undertone: Cool

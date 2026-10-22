@@ -1,0 +1,42 @@
+list: E2
+order: 34
+part: E
+title: Facial overlays
+prefix: overlay
+columns:
+  - ID
+  - Overlay
+  - Notes
+detailKey: notes
+intro: Attach to the face and follow head turns; usable inside expressions or as separate effect clips.
+items:
+  - id: overlay.blush
+    name: Blush
+  - id: overlay.heavy-blush
+    name: Heavy blush
+  - id: overlay.tears
+    name: Tears
+  - id: overlay.tear-streams
+    name: Tear streams
+  - id: overlay.sweat-drop
+    name: Sweat drop
+  - id: overlay.stress-lines
+    name: Stress lines
+  - id: overlay.anger-vein
+    name: Anger vein
+  - id: overlay.shadowed-eyes
+    name: Shadowed eyes
+    notes: Gloom
+  - id: overlay.sparkle-eyes
+    name: Sparkle eyes
+  - id: overlay.heart-eyes
+    name: Heart eyes
+  - id: overlay.dizzy-eyes
+    name: Dizzy eyes
+    notes: Spirals
+  - id: overlay.sick-green
+    name: Sick green
+  - id: overlay.pale
+    name: Pale
+  - id: overlay.steam-from-ears
+    name: Steam from ears

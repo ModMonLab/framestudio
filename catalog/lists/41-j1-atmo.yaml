@@ -1,0 +1,174 @@
+list: J1
+order: 41
+part: J
+title: Scene atmosphere
+prefix: atmo
+columns:
+  - ID
+  - Item
+  - Group
+detailKey: group
+intro: Weather, particles, lighting overlays, animated backgrounds, foreground layers and colour grades. All have intensity, colour and timing.
+items:
+  - id: atmo.light-rain
+    name: Light rain
+    group: Weather
+  - id: atmo.heavy-rain
+    name: Heavy rain
+    group: Weather
+  - id: atmo.storm-with-lightning
+    name: Storm with lightning
+    group: Weather
+  - id: atmo.snow
+    name: Snow
+    group: Weather
+  - id: atmo.blizzard
+    name: Blizzard
+    group: Weather
+  - id: atmo.fog
+    name: Fog
+    group: Weather
+  - id: atmo.mist
+    name: Mist
+    group: Weather
+  - id: atmo.wind-with-leaves
+    name: Wind with leaves
+    group: Weather
+  - id: atmo.wind-with-debris
+    name: Wind with debris
+    group: Weather
+  - id: atmo.hail
+    name: Hail
+    group: Weather
+  - id: atmo.heat-haze
+    name: Heat haze
+    group: Weather
+  - id: atmo.dust-motes
+    name: Dust motes
+    group: Particles
+  - id: atmo.fireflies
+    name: Fireflies
+    group: Particles
+  - id: atmo.floating-petals
+    name: Floating petals
+    group: Particles
+  - id: atmo.bubbles
+    name: Bubbles
+    group: Particles
+  - id: atmo.embers
+    name: Embers
+    group: Particles
+  - id: atmo.confetti
+    name: Confetti
+    group: Particles
+  - id: atmo.smoke
+    name: Smoke
+    group: Particles
+  - id: atmo.steam
+    name: Steam
+    group: Particles
+  - id: atmo.sparkles
+    name: Sparkles
+    group: Particles
+  - id: atmo.day
+    name: Day
+    group: Lighting overlay
+  - id: atmo.golden-hour
+    name: Golden hour
+    group: Lighting overlay
+  - id: atmo.dusk
+    name: Dusk
+    group: Lighting overlay
+  - id: atmo.night
+    name: Night
+    group: Lighting overlay
+  - id: atmo.moonlight
+    name: Moonlight
+    group: Lighting overlay
+  - id: atmo.neon-glow
+    name: Neon glow
+    group: Lighting overlay
+  - id: atmo.window-light-shafts
+    name: Window light shafts
+    group: Lighting overlay
+  - id: atmo.spotlight
+    name: Spotlight
+    group: Lighting overlay
+  - id: atmo.flicker
+    name: Flicker
+    group: Lighting overlay
+  - id: atmo.lightning-flash
+    name: Lightning flash
+    group: Lighting overlay
+  - id: atmo.colour-wash
+    name: Colour wash
+    group: Lighting overlay
+  - id: atmo.vignette
+    name: Vignette
+    group: Lighting overlay
+  - id: atmo.god-rays
+    name: God rays
+    group: Lighting overlay
+  - id: atmo.drifting-clouds
+    name: Drifting clouds
+    group: Animated background
+  - id: atmo.traffic
+    name: Traffic
+    group: Animated background
+  - id: atmo.crowd-silhouettes
+    name: Crowd silhouettes
+    group: Animated background
+  - id: atmo.swaying-trees
+    name: Swaying trees
+    group: Animated background
+  - id: atmo.water-ripples
+    name: Water ripples
+    group: Animated background
+  - id: atmo.city-lights
+    name: City lights
+    group: Animated background
+  - id: atmo.screens-and-monitors
+    name: Screens and monitors
+    group: Animated background
+  - id: atmo.ceiling-fan
+    name: Ceiling fan
+    group: Animated background
+  - id: atmo.blurred-plants
+    name: Blurred plants
+    group: Foreground
+  - id: atmo.curtain-edge
+    name: Curtain edge
+    group: Foreground
+  - id: atmo.rain-on-glass
+    name: Rain on glass
+    group: Foreground
+  - id: atmo.window-frame
+    name: Window frame
+    group: Foreground
+  - id: atmo.crowd-heads
+    name: Crowd heads
+    group: Foreground
+  - id: atmo.warm-grade
+    name: Warm grade
+    group: Colour grade
+  - id: atmo.cool-grade
+    name: Cool grade
+    group: Colour grade
+  - id: atmo.noir
+    name: Noir
+    group: Colour grade
+  - id: atmo.sepia
+    name: Sepia
+    group: Colour grade
+  - id: atmo.pastel
+    name: Pastel
+    group: Colour grade
+  - id: atmo.high-contrast
+    name: High contrast
+    group: Colour grade
+  - id: atmo.desaturated
+    name: Desaturated
+    group: Colour grade
+  - id: atmo.retro-vhs
+    name: Retro VHS
+    group: Colour grade

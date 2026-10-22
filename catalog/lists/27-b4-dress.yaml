@@ -1,0 +1,41 @@
+list: B4
+order: 27
+part: B
+title: Dresses and full outfits
+prefix: dress
+columns:
+  - ID
+  - Garment
+  - Notes
+detailKey: notes
+intro: Single garments replacing top and bottom.
+items:
+  - id: dress.casual-dress
+    name: Casual dress
+  - id: dress.shirt-dress
+    name: Shirt dress
+  - id: dress.wrap-dress
+    name: Wrap dress
+  - id: dress.evening-gown
+    name: Evening gown
+  - id: dress.sundress
+    name: Sundress
+  - id: dress.jumpsuit
+    name: Jumpsuit
+  - id: dress.business-suit
+    name: Business suit
+    notes: Jacket and trousers or skirt
+  - id: dress.tracksuit
+    name: Tracksuit
+  - id: dress.hospital-scrubs
+    name: Hospital scrubs
+  - id: dress.pyjamas
+    name: Pyjamas
+  - id: dress.robe
+    name: Robe
+  - id: dress.kurta
+    name: Kurta
+  - id: dress.abaya
+    name: Abaya
+  - id: dress.kimono-style-robe
+    name: Kimono-style robe

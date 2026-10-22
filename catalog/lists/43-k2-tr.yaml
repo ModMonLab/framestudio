@@ -1,0 +1,55 @@
+list: K2
+order: 43
+part: K
+title: Transitions
+prefix: tr
+columns:
+  - ID
+  - Transition
+  - Notes
+detailKey: notes
+intro: Between shots within a scene and between scenes; duration and direction where relevant.
+items:
+  - id: tr.cut
+    name: Cut
+    notes: Default, zero duration
+  - id: tr.fade-to-black
+    name: Fade to black
+  - id: tr.fade-to-white
+    name: Fade to white
+  - id: tr.crossfade
+    name: Crossfade
+  - id: tr.wipe-left
+    name: Wipe left
+  - id: tr.wipe-right
+    name: Wipe right
+  - id: tr.wipe-up
+    name: Wipe up
+  - id: tr.wipe-down
+    name: Wipe down
+  - id: tr.slide
+    name: Slide
+    notes: Direction
+  - id: tr.push
+    name: Push
+    notes: Direction
+  - id: tr.iris-in
+    name: Iris in
+    notes: Centre on subject
+  - id: tr.iris-out
+    name: Iris out
+    notes: Centre on subject
+  - id: tr.zoom-blur
+    name: Zoom blur
+  - id: tr.page-turn
+    name: Page turn
+  - id: tr.ink-splash
+    name: Ink splash
+  - id: tr.glitch
+    name: Glitch
+  - id: tr.whip-blur
+    name: Whip blur
+    notes: Pairs with whip pan
+  - id: tr.shape-reveal
+    name: Shape reveal
+    notes: Circle, star, heart

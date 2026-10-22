@@ -1,0 +1,54 @@
+list: A4
+order: 5
+part: A
+title: Eye shapes
+prefix: eyes
+columns:
+  - ID
+  - Shape
+  - Notes
+detailKey: notes
+intro: Each includes all eye states (A18) in all views.
+items:
+  - id: eyes.almond
+    name: Almond
+    notes: Default
+  - id: eyes.round
+    name: Round
+    notes: Large, open
+  - id: eyes.hooded
+    name: Hooded
+    notes: Heavy upper lid
+  - id: eyes.monolid
+    name: Monolid
+    notes: No visible crease
+  - id: eyes.downturned
+    name: Downturned
+    notes: Outer corners lower
+  - id: eyes.upturned
+    name: Upturned
+    notes: Outer corners higher
+  - id: eyes.narrow
+    name: Narrow
+    notes: Slim aperture
+  - id: eyes.wide-set
+    name: Wide-set
+    notes: Increased spacing preset
+  - id: eyes.close-set
+    name: Close-set
+    notes: Decreased spacing preset
+  - id: eyes.deep-set
+    name: Deep-set
+    notes: Shadowed lids
+  - id: eyes.protruding
+    name: Protruding
+    notes: Prominent eyeball
+  - id: eyes.sleepy
+    name: Sleepy
+    notes: Low lid at rest
+  - id: eyes.large-cartoon
+    name: Large cartoon
+    notes: Stylised oversized (Flat emphasis)
+  - id: eyes.dot
+    name: Dot
+    notes: Minimal dot eyes (Flat emphasis)

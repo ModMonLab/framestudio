@@ -1,0 +1,42 @@
+list: A7
+order: 9
+part: A
+title: Mouths
+prefix: mouth
+columns:
+  - ID
+  - Shape
+  - Notes
+detailKey: notes
+intro: Each mouth contains the full mouth-shape set (A17) for every view and both families, plus expression variants.
+items:
+  - id: mouth.full
+    name: Full
+    notes: Default
+  - id: mouth.thin
+    name: Thin
+    notes: Slim lips
+  - id: mouth.wide
+    name: Wide
+    notes: Broad mouth
+  - id: mouth.small
+    name: Small
+    notes: Narrow mouth
+  - id: mouth.bow
+    name: Bow
+    notes: Pronounced cupid’s bow
+  - id: mouth.downturned
+    name: Downturned
+    notes: Corners down at rest
+  - id: mouth.upturned
+    name: Upturned
+    notes: Corners up at rest
+  - id: mouth.asymmetric
+    name: Asymmetric
+    notes: Lopsided rest
+  - id: mouth.gap-toothed
+    name: Gap-toothed
+    notes: Visible gap in smiles
+  - id: mouth.overbite
+    name: Overbite
+    notes: Upper teeth visible

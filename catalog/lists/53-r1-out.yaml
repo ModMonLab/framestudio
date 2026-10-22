@@ -1,0 +1,48 @@
+list: R1
+order: 53
+part: R
+title: Output presets
+prefix: out
+columns:
+  - ID
+  - Preset
+  - Format
+detailKey: format
+intro: Export presets; any can be customised.
+items:
+  - id: out.landscape-hd
+    name: Landscape HD
+    format: 1920×1080, 16:9, 24/25/30 fps, MP4 H.264 + AAC
+  - id: out.landscape-720p
+    name: Landscape 720p
+    format: 1280×720, 16:9, MP4
+  - id: out.landscape-4k
+    name: Landscape 4K
+    format: 3840×2160, 16:9, MP4 H.265 or H.264
+  - id: out.portrait-social
+    name: Portrait social
+    format: 1080×1920, 9:16, MP4
+  - id: out.square
+    name: Square
+    format: 1080×1080, 1:1, MP4
+  - id: out.feed-portrait
+    name: Feed portrait
+    format: 1080×1350, 4:5, MP4
+  - id: out.web-webm
+    name: Web WebM
+    format: Any size, VP9 + Opus
+  - id: out.transparent-overlay
+    name: Transparent overlay
+    format: ProRes 4444 or WebM VP9 alpha
+  - id: out.image-sequence
+    name: Image sequence
+    format: PNG frames + WAV
+  - id: out.audio-only
+    name: Audio only
+    format: WAV / MP3 mix and stems
+  - id: out.animated-gif
+    name: Animated GIF
+    format: Short clips, no audio
+  - id: out.subtitles
+    name: Subtitles
+    format: SRT and WebVTT from dialogue

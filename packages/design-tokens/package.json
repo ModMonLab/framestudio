@@ -1,0 +1,7 @@
+{
+  "name": "@frame/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./tokens.json": "./tokens.json", "./tokens.css": "./tokens.css" }
+}

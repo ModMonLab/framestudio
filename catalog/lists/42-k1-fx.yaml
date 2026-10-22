@@ -1,0 +1,126 @@
+list: K1
+order: 42
+part: K
+title: Motion and visual effects
+prefix: fx
+columns:
+  - ID
+  - Effect
+  - Group
+detailKey: group
+intro: Effects declare attachment (screen, stage point, object, character anchor), start, duration and editable properties. Character-attached effects follow the anchor.
+items:
+  - id: fx.anticipation
+    name: Anticipation
+    group: Animation principle
+  - id: fx.squash-and-stretch
+    name: Squash and stretch
+    group: Animation principle
+  - id: fx.overshoot-and-settle
+    name: Overshoot and settle
+    group: Animation principle
+  - id: fx.bounce
+    name: Bounce
+    group: Animation principle
+  - id: fx.ease-presets
+    name: Ease presets
+    group: Animation principle
+  - id: fx.wobble
+    name: Wobble
+    group: Animation principle
+  - id: fx.jiggle
+    name: Jiggle
+    group: Animation principle
+  - id: fx.follow-through
+    name: Follow-through
+    group: Animation principle
+  - id: fx.smear-frame
+    name: Smear frame
+    group: Animation principle
+  - id: fx.impact-flash
+    name: Impact flash
+    group: Impact
+  - id: fx.impact-star
+    name: Impact star
+    group: Impact
+  - id: fx.dust-puff
+    name: Dust puff
+    group: Impact
+  - id: fx.shockwave-ring
+    name: Shockwave ring
+    group: Impact
+  - id: fx.screen-flash
+    name: Screen flash
+    group: Impact
+  - id: fx.hit-pause
+    name: Hit pause
+    group: Impact
+  - id: fx.speed-lines
+    name: Speed lines
+    group: Motion graphics
+  - id: fx.radial-focus-lines
+    name: Radial focus lines
+    group: Motion graphics
+  - id: fx.swoosh-trail
+    name: Swoosh trail
+    group: Motion graphics
+  - id: fx.motion-blur-streak
+    name: Motion blur streak
+    group: Motion graphics
+  - id: fx.afterimage
+    name: Afterimage
+    group: Motion graphics
+  - id: fx.dash-puff
+    name: Dash puff
+    group: Motion graphics
+  - id: fx.question-mark
+    name: Question mark
+    group: Emotional symbol
+  - id: fx.exclamation
+    name: Exclamation
+    group: Emotional symbol
+  - id: fx.hearts
+    name: Hearts
+    group: Emotional symbol
+  - id: fx.anger-mark
+    name: Anger mark
+    group: Emotional symbol
+  - id: fx.sweat-drops
+    name: Sweat drops
+    group: Emotional symbol
+  - id: fx.sparkles
+    name: Sparkles
+    group: Emotional symbol
+  - id: fx.gloom-cloud
+    name: Gloom cloud
+    group: Emotional symbol
+  - id: fx.light-bulb
+    name: Light bulb
+    group: Emotional symbol
+  - id: fx.zzz
+    name: Zzz
+    group: Emotional symbol
+  - id: fx.music-notes
+    name: Music notes
+    group: Emotional symbol
+  - id: fx.swirl
+    name: Swirl
+    group: Emotional symbol
+  - id: fx.ellipsis-dots
+    name: Ellipsis dots
+    group: Emotional symbol
+  - id: fx.spotlight-focus
+    name: Spotlight focus
+    group: Treatment
+  - id: fx.dramatic-silhouette
+    name: Dramatic silhouette
+    group: Treatment
+  - id: fx.tint
+    name: Tint
+    group: Treatment
+  - id: fx.freeze-frame
+    name: Freeze frame
+    group: Treatment
+  - id: fx.split-tone
+    name: Split tone
+    group: Treatment

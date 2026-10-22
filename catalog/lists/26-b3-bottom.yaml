@@ -1,0 +1,39 @@
+list: B3
+order: 26
+part: B
+title: Bottoms
+prefix: bottom
+columns:
+  - ID
+  - Garment
+  - Notes
+detailKey: notes
+intro: Leg variants follow sitting, walking and kneeling.
+items:
+  - id: bottom.trousers
+    name: Trousers
+  - id: bottom.jeans
+    name: Jeans
+  - id: bottom.chinos
+    name: Chinos
+  - id: bottom.cargo-pants
+    name: Cargo pants
+  - id: bottom.joggers
+    name: Joggers
+  - id: bottom.shorts
+    name: Shorts
+  - id: bottom.skirt
+    name: Skirt
+  - id: bottom.pencil-skirt
+    name: Pencil skirt
+  - id: bottom.pleated-skirt
+    name: Pleated skirt
+  - id: bottom.long-skirt
+    name: Long skirt
+  - id: bottom.leggings
+    name: Leggings
+  - id: bottom.suit-trousers
+    name: Suit trousers
+  - id: bottom.overalls
+    name: Overalls
+    notes: Includes bib

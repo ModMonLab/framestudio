@@ -1,0 +1,42 @@
+list: A3b
+order: 4
+part: A
+title: Face structure controls
+prefix: face-ctl
+columns:
+  - ID
+  - Control
+  - Range
+detailKey: range
+intro: Continuous sliders applied to any head shape (0–100, default 50).
+items:
+  - id: face-ctl.face-width
+    name: Face width
+    range: Narrow – Wide
+  - id: face-ctl.face-length
+    name: Face length
+    range: Shorter – Longer
+  - id: face-ctl.jaw-width
+    name: Jaw width
+    range: Soft – Defined
+  - id: face-ctl.chin-shape
+    name: Chin shape
+    range: Pointed – Square
+  - id: face-ctl.chin-length
+    name: Chin length
+    range: Short – Long
+  - id: face-ctl.cheekbone-height
+    name: Cheekbone height
+    range: Low – High
+  - id: face-ctl.cheek-fullness
+    name: Cheek fullness
+    range: Hollow – Full
+  - id: face-ctl.forehead-height
+    name: Forehead height
+    range: Low – High
+  - id: face-ctl.neck-width
+    name: Neck width
+    range: Thin – Thick
+  - id: face-ctl.neck-length
+    name: Neck length
+    range: Short – Long

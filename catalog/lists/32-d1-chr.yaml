@@ -1,0 +1,54 @@
+list: D1
+order: 32
+part: D
+title: Bundled cast
+prefix: chr
+columns:
+  - ID
+  - Character
+  - Description
+detailKey: description
+intro: Ready-made characters available in both families, each with three looks and a designed voice (Q1). Names and lines are content only; no engine logic depends on them.
+items:
+  - id: chr.maya-bennett
+    name: Maya Bennett
+    description: Curious podcast host, late 20s
+  - id: chr.leo-park
+    name: Leo Park
+    description: Dry-witted co-host, early 30s
+  - id: chr.sam-ortiz
+    name: Sam Ortiz
+    description: Calm presenter for explainers, 40s
+  - id: chr.priya-nair
+    name: Priya Nair
+    description: Energetic teacher, 30s
+  - id: chr.jonah-reed
+    name: Jonah Reed
+    description: Teenage student, 16
+  - id: chr.grace-okafor
+    name: Grace Okafor
+    description: Retired engineer, 70s
+  - id: chr.theo-lambert
+    name: Theo Lambert
+    description: Barista and aspiring comic, 20s
+  - id: chr.aiko-tanaka
+    name: Aiko Tanaka
+    description: Product designer, 30s
+  - id: chr.marcus-hale
+    name: Marcus Hale
+    description: News anchor, 50s
+  - id: chr.luc-a-ferreira
+    name: Lucía Ferreira
+    description: Doctor, 40s
+  - id: chr.ben-carter
+    name: Ben Carter
+    description: Child, 9
+  - id: chr.nadia-haddad
+    name: Nadia Haddad
+    description: Startup founder, 30s, wears hijab
+  - id: chr.ravi-shah
+    name: Ravi Shah
+    description: Wheelchair user, game streamer, 20s
+  - id: chr.elena-novak
+    name: Elena Novak
+    description: Detective, 40s

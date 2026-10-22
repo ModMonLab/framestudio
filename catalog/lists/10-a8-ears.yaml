@@ -1,0 +1,30 @@
+list: A8
+order: 10
+part: A
+title: Ears
+prefix: ears
+columns:
+  - ID
+  - Shape
+  - Notes
+detailKey: notes
+intro: Ears declare an earring anchor and hide correctly behind hair layers.
+items:
+  - id: ears.small
+    name: Small
+  - id: ears.average
+    name: Average
+    notes: Default
+  - id: ears.large
+    name: Large
+  - id: ears.pointed
+    name: Pointed
+  - id: ears.round
+    name: Round
+  - id: ears.attached-lobe
+    name: Attached lobe
+  - id: ears.protruding
+    name: Protruding
+  - id: ears.elf
+    name: Elf
+    notes: Fantasy

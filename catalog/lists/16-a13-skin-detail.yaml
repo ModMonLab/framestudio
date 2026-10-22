@@ -1,0 +1,63 @@
+list: A13
+order: 16
+part: A
+title: Skin details and overlays
+prefix: skin-detail
+columns:
+  - ID
+  - Detail
+  - Notes
+detailKey: notes
+intro: Positionable overlays with size and opacity.
+items:
+  - id: skin-detail.freckles-light
+    name: Freckles light
+    notes: Cheeks and nose
+  - id: skin-detail.freckles-heavy
+    name: Freckles heavy
+    notes: Face and shoulders
+  - id: skin-detail.moles
+    name: Moles
+  - id: skin-detail.beauty-mark
+    name: Beauty mark
+  - id: skin-detail.forehead-lines
+    name: Forehead lines
+    notes: Ageing
+  - id: skin-detail.crows-feet
+    name: Crow’s feet
+    notes: Ageing
+  - id: skin-detail.smile-lines
+    name: Smile lines
+    notes: Ageing
+  - id: skin-detail.under-eye-bags
+    name: Under-eye bags
+  - id: skin-detail.scar-straight
+    name: Scar straight
+  - id: skin-detail.scar-curved
+    name: Scar curved
+  - id: skin-detail.scar-cheek
+    name: Scar cheek
+  - id: skin-detail.vitiligo-pattern
+    name: Vitiligo pattern
+    notes: Multiple layouts
+  - id: skin-detail.birthmark
+    name: Birthmark
+  - id: skin-detail.acne
+    name: Acne
+  - id: skin-detail.rosy-cheeks
+    name: Rosy cheeks
+  - id: skin-detail.tattoo-slot-face
+    name: Tattoo slot face
+    notes: Accepts imported art
+  - id: skin-detail.tattoo-slot-neck
+    name: Tattoo slot neck
+    notes: Accepts imported art
+  - id: skin-detail.tattoo-slot-arms
+    name: Tattoo slot arms
+    notes: Accepts imported art
+  - id: skin-detail.body-hair
+    name: Body hair
+    notes: Arms and chest, density control
+  - id: skin-detail.dimples
+    name: Dimples
+    notes: Visible when smiling

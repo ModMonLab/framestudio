@@ -1,0 +1,48 @@
+list: Q2
+order: 52
+part: Q
+title: Delivery presets
+prefix: delivery
+columns:
+  - ID
+  - Delivery
+  - Settings
+detailKey: settings
+intro: Reusable combinations of supported delivery settings; resolved to the voice’s emotional range bank and engine capabilities.
+items:
+  - id: delivery.neutral
+    name: Neutral
+    settings: Neutral reference, pace 1.0
+  - id: delivery.warm
+    name: Warm
+    settings: Happy reference, pace 0.95
+  - id: delivery.upbeat
+    name: Upbeat
+    settings: Happy reference, pace 1.08
+  - id: delivery.nervous
+    name: Nervous
+    settings: Nervous reference, pace 1.1, hesitations allowed
+  - id: delivery.angry
+    name: Angry
+    settings: Angry reference, pace 1.05
+  - id: delivery.sad
+    name: Sad
+    settings: Sad reference, pace 0.9
+  - id: delivery.whisper
+    name: Whisper
+    settings: Whisper reference, low gain
+  - id: delivery.sarcastic
+    name: Sarcastic
+    settings: Neutral reference, instruction "dry, sarcastic"
+  - id: delivery.excited
+    name: Excited
+    settings: Happy reference, pace 1.15
+  - id: delivery.deadpan
+    name: Deadpan
+    settings: Neutral reference, flat instruction
+  - id: delivery.shouting
+    name: Shouting
+    settings: Angry reference, high energy instruction
+  - id: delivery.teasing
+    name: Teasing
+    settings: Happy reference, instruction "playful teasing"

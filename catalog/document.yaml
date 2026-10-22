@@ -1,0 +1,51 @@
+header: |
+  # Frame — Catalog of Building Blocks
+  | | |
+  |---|---|
+  | Document | 03 of 4 — Catalog |
+  | Version | 1.0 |
+  | Date | 22 October 2026 |
+  | Status | Normative content list for version 1 |
+  | Related | 01 Vision (P3, P11, P14) · 02 Design System · 04 SRS (catalog requirements CAT-xx) |
+  This catalog lists **every reusable building block Frame ships with in version 1** — 1254 items across 53 lists. It is a content specification: the SRS defines the systems these items plug into and the rules each item must satisfy; this document names the items. Examples elsewhere in the documentation are illustrations; **this list is the requirement**.
+  ## 0 How to read this catalog
+
+  **Identifiers.** Every item has a stable ID of the form `<prefix>.<slug>` (for example `exp.skeptical`, `hair.box-braids`, `prop.mug`). IDs are lowercase, never reused, and are what manifests, projects, the CLI and tests refer to. Display names may be localised later; IDs never change.
+
+  **Status.** Every item listed is **v1 — required**. Items are not optional unless the SRS says so. New items added after v1 are appended with a new ID; existing IDs are never repurposed.
+
+  **Universal availability rules** (verified by the SRS acceptance suite, see SRS §CAT):
+
+  1. **Both style families.** Every visual item exists in *Flat* and *Illustrated* with the same ID, parameters and behaviour; only artwork differs.
+  2. **All four views.** Every character part, wardrobe item, accessory, hand pose and mouth shape exists for Front, Three-quarter, Side and Back (mirrored for left/right). An item may be declared *view-exempt* for a specific view only with a documented reason (for example, a back view has no visible mouth shape) and the exemption is recorded in its manifest.
+  3. **Rig contract.** Every character-attached item passes the rig check: anchors present, layering valid, all actions in §F compatible or explicitly declared incompatible with reason.
+  4. **Manifest.** Every item has a manifest with ID, version, name, category, tags, family support, view support, capabilities, parameters with ranges and defaults, dependencies, preview thumbnails (both families), licence and source/provenance.
+  5. **Previews.** Every item renders a real thumbnail (not an icon) for the library in both families.
+  6. **Search.** Every item is findable by name, group, tags and synonyms (synonym list maintained in the manifest).
+  7. **Licensing.** Every audio, art and font asset has recorded authorship and a licence that permits redistribution with Frame and commercial use of exported videos.
+
+  **Item schema (summary).** `id`, `version`, `name`, `category`, `group`, `tags[]`, `synonyms[]`, `families[]`, `views[]`, `viewExemptions{}`, `anchors{}`, `capabilities[]`, `parameters[{key,type,range,default}]`, `dependencies[]`, `layering{}`, `previews{flat,illustrated}`, `license`, `provenance` (authored, AI-assisted with human review, imported). Category-specific fields are defined in SRS §Data model.
+parts:
+  A: Character building blocks
+  B: Wardrobe
+  C: Accessories
+  D: Bundled cast
+  E: Expressions and facial overlays
+  F: Performance clips
+  G: Performance recipes
+  H: Props and interactive objects
+  I: Environments
+  J: Scene atmosphere
+  K: Motion effects and transitions
+  M: Camera language
+  N: Sound library
+  O: Text, graphics and finishing
+  P: Production templates
+  Q: Voices and delivery
+  R: Output presets
+appendix: |
+  ## Appendix — Catalog maintenance
+
+  - During implementation, convert this catalog into a machine-readable source (`catalog/*.yaml`); from then on that source is the authority and this document is generated from it and checked in CI so they cannot drift.
+  - Adding an item: add it to the catalog source with a new ID, author its assets through the part editor or import pipeline, pass the rig check and asset validator, render both previews, and add it to the acceptance coverage report.
+  - Retiring an item: mark it `deprecated` with a replacement ID; it stays loadable for existing projects forever.

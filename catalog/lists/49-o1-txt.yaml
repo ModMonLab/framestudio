@@ -1,0 +1,120 @@
+list: O1
+order: 49
+part: O
+title: Text, graphics and finishing
+prefix: txt
+columns:
+  - ID
+  - Element
+  - Group
+detailKey: group
+intro: Screen-space (captions, lower thirds, cards) or world-space (signs, screens). All have content, placement, timing and style controls and respect safe areas in every aspect ratio.
+items:
+  - id: txt.podcast-captions
+    name: Podcast captions
+    group: Caption style
+  - id: txt.bold-karaoke-captions
+    name: Bold karaoke captions
+    group: Caption style (word highlight)
+  - id: txt.minimal-captions
+    name: Minimal captions
+    group: Caption style
+  - id: txt.boxed-captions
+    name: Boxed captions
+    group: Caption style
+  - id: txt.social-pop-captions
+    name: Social pop captions
+    group: Caption style (animated words)
+  - id: txt.film-subtitles
+    name: Film subtitles
+    group: Caption style
+  - id: txt.speech-bubble-round
+    name: Speech bubble round
+    group: Bubble
+  - id: txt.speech-bubble-square
+    name: Speech bubble square
+    group: Bubble
+  - id: txt.shout-bubble
+    name: Shout bubble
+    group: Bubble
+  - id: txt.whisper-bubble
+    name: Whisper bubble
+    group: Bubble
+  - id: txt.thought-bubble
+    name: Thought bubble
+    group: Bubble
+  - id: txt.narration-box
+    name: Narration box
+    group: Bubble
+  - id: txt.episode-title-card
+    name: Episode title card
+    group: Title
+  - id: txt.cold-open-title
+    name: Cold open title
+    group: Title
+  - id: txt.chapter-title
+    name: Chapter title
+    group: Title
+  - id: txt.quote-card
+    name: Quote card
+    group: Title
+  - id: txt.name-lower-third
+    name: Name lower third
+    group: Lower third
+  - id: txt.name-and-role-lower-third
+    name: Name and role lower third
+    group: Lower third
+  - id: txt.location-lower-third
+    name: Location lower third
+    group: Lower third
+  - id: txt.breaking-news-bar
+    name: Breaking news bar
+    group: Lower third
+  - id: txt.social-handle-tag
+    name: Social handle tag
+    group: Lower third
+  - id: txt.opening-card
+    name: Opening card
+    group: Card
+  - id: txt.closing-card
+    name: Closing card
+    group: Card
+  - id: txt.subscribe-end-card
+    name: Subscribe end card
+    group: Card
+  - id: txt.credits-roll
+    name: Credits roll
+    group: Credits
+  - id: txt.credits-card
+    name: Credits card
+    group: Credits
+  - id: txt.logo-bug
+    name: Logo bug
+    group: Graphic
+  - id: txt.watermark
+    name: Watermark
+    group: Graphic
+  - id: txt.progress-bar
+    name: Progress bar
+    group: Graphic
+  - id: txt.countdown
+    name: Countdown
+    group: Graphic
+  - id: txt.chart-callout
+    name: Chart callout
+    group: Graphic
+  - id: txt.arrow-callout
+    name: Arrow callout
+    group: Graphic
+  - id: txt.highlight-circle
+    name: Highlight circle
+    group: Graphic
+  - id: txt.sign-text
+    name: Sign text
+    group: World text
+  - id: txt.screen-text
+    name: Screen text
+    group: World text
+  - id: txt.chalkboard-text
+    name: Chalkboard text
+    group: World text

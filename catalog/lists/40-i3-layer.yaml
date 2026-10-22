@@ -1,0 +1,42 @@
+list: I3
+order: 40
+part: I
+title: Environment layers
+prefix: layer
+columns:
+  - ID
+  - Layer
+  - Default depth / parallax
+detailKey: depthParallax
+intro: Standard layer stack every kit and set uses; each layer has depth plane and parallax defaults.
+items:
+  - id: layer.sky
+    name: Sky
+    depthParallax: Far / 10%
+  - id: layer.distant-background
+    name: Distant background
+    depthParallax: Far / 25%
+  - id: layer.background
+    name: Background
+    depthParallax: Back / 50%
+  - id: layer.main-setting
+    name: Main setting
+    depthParallax: Back / 75%
+  - id: layer.floor
+    name: Floor
+    depthParallax: Ground / 100%
+  - id: layer.set-pieces
+    name: Set pieces
+    depthParallax: Mid / 100%
+  - id: layer.characters
+    name: Characters
+    depthParallax: Mid / 100%
+  - id: layer.props
+    name: Props
+    depthParallax: Mid / 100%
+  - id: layer.foreground
+    name: Foreground
+    depthParallax: Front / 130%
+  - id: layer.atmosphere-overlay
+    name: Atmosphere overlay
+    depthParallax: Screen / 0%
