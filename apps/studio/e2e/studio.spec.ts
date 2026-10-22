@@ -119,10 +119,17 @@ test('dropping a character on a chair seats it on the seat anchor, in front of t
   const maya = st.scenes[sid].instances.find((i: { name: string }) => i.name === 'Maya Bennett');
   // Wait until the Studio has the new chair (it arrives over the live connection).
   await expect(page.getByRole('treeitem', { name: /Spare chair/ }).first()).toBeVisible();
-  await page.waitForTimeout(500);
   // The wide camera shows the whole stage (centre 960,560, width 1920): stage → canvas is a uniform scale.
+  // Wait until the canvas has settled (fonts and panels can resize it just after load); the drop maps through it.
   const canvas = page.getByTestId('stage-canvas');
-  const box = (await canvas.boundingBox())!;
+  let box = (await canvas.boundingBox())!;
+  await expect.poll(async () => {
+    await page.waitForTimeout(250);
+    const b = (await canvas.boundingBox())!;
+    const same = Math.abs(b.width - box.width) < 0.5 && Math.abs(b.x - box.x) < 0.5 && Math.abs(b.y - box.y) < 0.5;
+    box = b;
+    return same;
+  }).toBe(true);
   const k = box.width / 1920;
   const toScreen = (x: number, y: number) => [box.x + x * k, box.y + (y - 20) * k] as const;
   const [x0, y0] = toScreen(maya.transform.x, maya.transform.y - 420); // her head, above the chair she sits on
@@ -131,6 +138,8 @@ test('dropping a character on a chair seats it on the seat anchor, in front of t
   await page.mouse.down();
   await page.mouse.move(x1, y1, { steps: 6 });
   await page.mouse.up();
+  // Seated on the spare chair: the seat command (not a plain move) ran.
+  await expect(page.getByRole('button', { name: /^Undo Seat Maya Bennett on Spare chair/ }).first()).toBeVisible();
   await expect.poll(async () => (await state()).scenes[sid].instances.find((i: { id: string }) => i.id === maya.id).transform.x, { timeout: 10_000 }).toBeLessThan(400);
   st = await state();
   const m = st.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id);

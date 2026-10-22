@@ -1,8 +1,8 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
 import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Bot, ChevronRight, Eye, EyeOff, Lock, Maximize, Scan, SkipBack, Sparkles, SplitSquareHorizontal, Video, Volume2 } from 'lucide-react';
-import { conflictingClipIds, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
-import type { Clip, Scene, Track } from '@frame/schema';
+import { applyOverrides, conflictingClipIds, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
+import type { Clip, MouthBlock, MouthShape, Scene, Track } from '@frame/schema';
 import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
@@ -340,18 +340,44 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict
   );
 }
 
-/** Lip-sync lane (Design System §6.2): mouth-shape blocks from each line's chosen take, letter in mono 9 px. */
+const MOUTHS: { shape: MouthShape; label: string }[] = [
+  { shape: 'X', label: 'X · rest' }, { shape: 'A', label: 'A · closed (M, B, P)' }, { shape: 'B', label: 'B · teeth (K, S, T…)' }, { shape: 'C', label: 'C · open (EH, AE)' },
+  { shape: 'D', label: 'D · wide open (AA)' }, { shape: 'E', label: 'E · rounded (AO, ER)' }, { shape: 'F', label: 'F · puckered (OO, W)' }, { shape: 'G', label: 'G · lip bite (F, V)' }, { shape: 'H', label: 'H · tongue (L, TH)' },
+];
+
+/**
+ * Lip-sync lane (Design System §6.2): mouth-shape blocks from each line's chosen take, letter in mono 9 px. Clicking a
+ * block changes its shape (FR-LIP-04); edits are stored on the line as overrides, so they survive re-alignment.
+ */
 function LipLane({ project, scene, owner, x }: { project: ProjectState; scene: Scene; owner: string; x: (t: number) => number }) {
+  const { studio } = useCtx();
+  const openMenu = useContextMenu();
   const dlg = scene.tracks.find((t) => t.owner === owner && t.kind === 'dialogue');
-  const blocks: { start: number; end: number; shape: string; key: string }[] = [];
+  const blocks: { start: number; end: number; shape: string; key: string; line: string; take: { start: number; end: number }; edited: boolean }[] = [];
   for (const c of scene.clips) {
     if (c.track !== dlg?.id || !c.line?.take) continue;
     const take = project.takes[c.line.take];
     if (!take?.alignment || lineTakeState(project, c) !== 'Ready') continue;
-    const mt = mouthTrackFromAlignment(take.alignment, { fps: project.project.frameRate });
-    for (const [i, b] of mt.blocks.entries()) blocks.push({ start: c.start + b.start * 48000, end: c.start + b.end * 48000, shape: b.shape, key: `${c.id}:${i}` });
+    const overrides = (c.line.mouthOverrides ?? []) as MouthBlock[];
+    const mt = applyOverrides(mouthTrackFromAlignment(take.alignment, { fps: project.project.frameRate }).blocks, overrides);
+    for (const [i, b] of mt.entries()) blocks.push({ start: c.start + b.start * 48000, end: c.start + b.end * 48000, shape: b.shape, key: `${c.id}:${i}`, line: c.id, take: { start: b.start, end: b.end }, edited: overrides.some((o) => o.start < b.end && o.end > b.start) });
   }
-  return <>{blocks.map((b) => <span key={b.key} className="st-mouth" style={{ left: x(b.start), width: Math.max(1, x(b.end - b.start)) }} title={`Mouth ${b.shape}`}>{x(b.end - b.start) > 9 ? b.shape : ''}</span>)}</>;
+  const edit = (b: (typeof blocks)[number], shape: MouthShape | null) => {
+    const c = scene.clips.find((x) => x.id === b.line)!;
+    const others = ((c.line!.mouthOverrides ?? []) as MouthBlock[]).filter((o) => o.end <= b.take.start || o.start >= b.take.end);
+    const next = shape ? [...others, { shape, start: b.take.start, end: b.take.end }].sort((p, q) => p.start - q.start) : others;
+    void studio.exec([{ name: 'line.setMouthOverrides', params: { scene: scene.id, id: c.id, blocks: next.length ? next : null } }], shape ? `Mouth ${shape}` : 'Reset mouth block');
+  };
+  const menu = (e: React.MouseEvent, b: (typeof blocks)[number]) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenu({ x: e.clientX, y: e.clientY, label: 'Mouth shape', items: [
+      ...MOUTHS.map((m) => ({ id: m.shape, label: m.label, checked: m.shape === b.shape, onSelect: () => edit(b, m.shape) })),
+      { kind: 'separator' as const, id: 's' },
+      { id: 'reset', label: 'Back to the aligned shape', disabled: !b.edited, disabledReason: 'Not edited', onSelect: () => edit(b, null) },
+    ] });
+  };
+  return <>{blocks.map((b) => <button type="button" key={b.key} className={`st-mouth ${b.edited ? 'st-mouth--edited' : ''}`} style={{ left: x(b.start), width: Math.max(1, x(b.end - b.start)) }} title={`Mouth ${b.shape}${b.edited ? ' (edited)' : ''} — click to change`} aria-label={`Mouth ${b.shape} at ${formatTimecode(b.start)}${b.edited ? ', edited' : ''}`} onClick={(e) => menu(e, b)} onContextMenu={(e) => menu(e, b)}>{x(b.end - b.start) > 9 ? b.shape : ''}</button>)}</>;
 }
 
 /** Selection rectangle in the timeline grid (client coordinates → grid coordinates). */
