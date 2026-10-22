@@ -269,11 +269,14 @@ test('timeline editing: a trim snaps to a marker, S splits at the playhead, I/O 
   await page.keyboard.press('m');
   await expect.poll(async () => (await state()).scenes[sid].markers.length).toBe(1);
   await page.getByRole('button', { name: 'Zoom to fit' }).click();
+  // The focus click above may land on a group header; make sure Leo's lanes are open.
+  const leoGroup = page.getByRole('button', { name: /^Leo Park \d+$/ });
+  if ((await leoGroup.getAttribute('aria-expanded')) !== 'true') await leoGroup.click();
   // Drag the end of Leo's point-at clip (ends at 7.8 s) toward the marker: it snaps to 9 s.
   const chip = page.getByRole('button', { name: /^Acting: Point at/ }).first();
   await chip.scrollIntoViewIfNeeded();
   const box = (await chip.boundingBox())!;
-  const marker = (await page.getByRole('button', { name: 'Marker Marker 1' }).boundingBox())!;
+  const marker = (await page.getByRole('region', { name: 'Timeline' }).getByRole('button', { name: 'Marker Marker 1' }).boundingBox())!;
   await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(marker.x + marker.width / 2 + 3, box.y + box.height / 2, { steps: 6 });
