@@ -3,6 +3,7 @@ import type { ProjectState } from './state.js';
 import { takeMatchesRevision } from './commands/timeline.js';
 import { formatTimecode } from './time.js';
 import { clipChannels, postureAt, type ActionData } from './perform/data.js';
+import { characterVariant } from './perform/character.js';
 
 export type TakeState = 'Missing' | 'Queued' | 'Generating' | 'Ready' | 'Failed' | 'Outdated' | 'Muted';
 
@@ -108,7 +109,11 @@ export function postureProblems(scene: SceneT, ctx: ValidationContext): { clip: 
     const a = actionData(ctx, c.asset);
     const inst = scene.instances.find((i) => i.id === tr.owner);
     if (!a?.postures?.length || !inst?.character) continue;
-    const posture = postureAt(scene, inst.id, inst.character.posture, c.start, (r) => actionData(ctx, r));
+    // Identity options hold a posture; rolling variants take any locomotion clip as rolling (FR-CHR-11).
+    const man = inst.asset ? ctx.manifest(inst.asset) : undefined;
+    const variant = man ? characterVariant(man as never, inst.character.look, { manifest: ctx.manifest as never }) : {};
+    const posture = variant.posture ?? postureAt(scene, inst.id, inst.character.posture, c.start, (r) => actionData(ctx, r));
+    if (variant.rolling && a.locomotion) continue;
     if (!a.postures.includes(posture)) out.push({ clip: c, owner: inst.id, posture, allowed: a.postures });
   }
   return out;

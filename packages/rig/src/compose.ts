@@ -343,6 +343,11 @@ function makeFrames(d: BodyDims, st: PerformState, headArt: ViewArt | undefined,
       case 'mouth': return featureMap('mouth', featureUnit * 1.25 * (1 + (params['mouth.size'] ?? 0) * 0.15), keep, false);
       case 'nose': return featureMap('nose', featureUnit * 1.1, keep, false);
       case 'stage': return (u, v) => [u, v];
+      case 'seat': {
+        const L = d.thigh + d.shin;
+        const o = J.pelvis.p;
+        return (u, v) => [o[0] + u * L * flipS, o[1] + v * L];
+      }
       case 'upperArmL': return segmentMap(J.shoulderL.p, J.elbowL.p, d.armW / 2);
       case 'upperArmR': return segmentMap(J.shoulderR.p, J.elbowR.p, d.armW / 2);
       case 'foreArmL': return segmentMap(J.elbowL.p, J.wristL.p, d.armW / 2);
@@ -456,6 +461,20 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
   };
 
   const anchors: Record<string, Pt> = {};
+  // Limb differences (FR-CHR-11): limbs end early and their hand or foot is not drawn.
+  const truncate: Record<string, number> = {};
+  const replace: Record<string, number> = {};
+  for (const p of visible) {
+    for (const [k, v] of Object.entries(p.data.variant?.truncate ?? {})) truncate[k] = Math.min(truncate[k] ?? 1, v);
+    for (const [k, v] of Object.entries(p.data.variant?.replace ?? {})) replace[k] = Math.min(replace[k] ?? 1, v);
+  }
+  const cut = (sp: string, side?: 'L' | 'R') => {
+    const m = /^(hand|foot|foreArm|shin|upperArm|thigh)([LR])?$/.exec(sp);
+    if (!m) return false;
+    const limb = `${m[1] === 'hand' || m[1] === 'foreArm' || m[1] === 'upperArm' ? 'arm' : 'leg'}${m[2] ?? side ?? ''}`;
+    const t = truncate[limb] ?? 1;
+    return m[1] === 'hand' || m[1] === 'foot' ? t < 1 : m[1] === 'foreArm' || m[1] === 'shin' ? t <= 0.5 : t <= 0;
+  };
 
   for (const part of visible) {
     const { art } = artFor(part.data, spec.family, st.view);
@@ -478,6 +497,7 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
       for (const side of sides) {
         const space = (layer.space ?? 'head') as FitSpace;
         const sp = side && (space === 'hand' || space === 'foot') ? (`${space}${side}` as FitSpace) : side && /^(eye|brow|ear)$/.test(space) ? (`${space}${side}` as FitSpace) : space;
+        if (cut(sp, side) && !part.data.variant?.truncate) continue;
         const map = frames.map(sp, side, part.data.mirror);
         if (!map) continue; // feature not present in this view (e.g. far eye in side view)
         const params = side && /^(eye|brow)/.test(sp) ? sideParams(side) : side && sp.startsWith('ear') ? baseParams : { ...baseParams, 'gaze.x': gx, 'gaze.y': gy, ...sideParams('L') };
@@ -548,17 +568,22 @@ export function composeCharacter(spec: CharacterSpec, st: PerformState): Compose
       const side = limb.endsWith('L') ? 'L' : 'R';
       const pair = limb.startsWith('arm') ? 'arm' : limb.startsWith('leg') ? 'leg' : undefined;
       const slot = resolveSlot(layer.slot, side, pair);
-      const pts = subChain(chain.pts, L.from, L.to);
+      // The part carrying a limb variant draws its own replacement; skin limbs end where a prosthetic starts.
+      const own = !!(part.data.variant?.truncate || part.data.variant?.replace);
+      const skin = /^(arm|leg)\./.test(layer.slot);
+      const to = own ? L.to : Math.min(L.to, truncate[limb] ?? 1, skin ? (replace[limb] ?? 1) : 1);
+      if (to <= L.from) continue;
+      const pts = subChain(chain.pts, L.from, to);
       const segs = chain.pts.length - 1;
       const wAt = (t: number) => {
         const x = Math.max(0, Math.min(1, t)) * segs;
         const i = Math.min(segs - 1, Math.floor(x));
         return lerp(chain.widths[i]!, chain.widths[i + 1]!, x - i);
       };
-      const ts = [L.from, ...chain.pts.slice(1, -1).map((_, i) => (i + 1) / segs).filter((t) => t > L.from && t < L.to), L.to];
+      const ts = [L.from, ...chain.pts.slice(1, -1).map((_, i) => (i + 1) / segs).filter((t) => t > L.from && t < to), to];
       const widths = ts.map((t, i) => wAt(t) * L.width + (i === ts.length - 1 ? (L.flare ?? 0) * d.armW : 0));
       // Open ends of garments (sleeve hems, trouser cuffs) are cut straight; ends at the joint root stay round.
-      const dPath = limbPath(pts, widths, { end: L.to < 0.999 || L.cap === 'butt' ? 'butt' : 'round', start: L.from > 0.001 ? 'butt' : 'round' });
+      const dPath = limbPath(pts, widths, { end: to < 0.999 || L.cap === 'butt' ? 'butt' : 'round', start: L.from > 0.001 ? 'butt' : 'round' });
       const items: Item[] = [{ k: 'path', d: dPath, fill: { color: resolveColor(L.fill, palette) } }];
       if (L.shade) {
         // Illustrated: a soft shade band along one edge (light from upper left).

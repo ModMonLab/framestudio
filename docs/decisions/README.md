@@ -23,3 +23,4 @@ Each file records one decision: context, choice, alternatives, consequences, and
 | [0017](0017-packages.md) | Packages: fflate 0.8.2 zip, declared contents, safe reader, refuse-or-rename conflicts | Accepted |
 | [0018](0018-file-import.md) | File import: sniffed rasters, SVG parsed as data (fast-xml-parser 5.2.5), rights statement on every import | Accepted |
 | [0019](0019-rigging-assistant.md) | Rigging assistant: ag-psd 31.0.3, placed artwork and limb-segment fit spaces (additive part-contract change) | Accepted |
+| [0020](0020-identity-variants.md) | Identity options: data-driven rig variants and the seat fit space (additive part-contract change) | Accepted |

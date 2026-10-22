@@ -25,6 +25,8 @@ import { FRAMINGS, MOVES } from './camera-specs.js';
 import { RECIPES, SHOT_RECIPES } from './recipe-specs.js';
 import { ATMOSPHERE, EFFECTS, TRANSITIONS } from './fx-specs.js';
 import { TEMPLATES } from './template-specs.js';
+import { IDENTITY, identityPart } from './parts/identity.js';
+import { ACCESSORIES, MAKEUP, SKIN_DETAILS, WORN_PROPS, wornPropPart, accessoryPart, makeupPart, skinDetailPart } from './parts/accessories.js';
 import { BEDROOM_KIT, CLASSROOM_KIT, LIVING_ROOM_KIT, NEWSROOM_KIT, OFFICE_KIT, PARK_KIT } from './parts/kits.js';
 import type { KitParts } from './parts/props.js';
 
@@ -172,6 +174,10 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'outer': return OUTERS[s] ? partBuilt(topPart(OUTERS[s]!)) : undefined;
     case 'bottom': return BOTTOMS[s] ? partBuilt(bottomPart(BOTTOMS[s]!)) : undefined;
     case 'dress': return DRESSES[s] ? partBuilt(topPart(DRESSES[s]!)) : undefined;
+    case 'identity': return IDENTITY[s] ? partBuilt(identityPart(s)) : undefined;
+    case 'acc': return ACCESSORIES[s] ? partBuilt(accessoryPart(s)) : undefined;
+    case 'skin-detail': return SKIN_DETAILS[s] ? partBuilt(skinDetailPart(s)) : undefined;
+    case 'makeup': return MAKEUP[s] ? partBuilt(makeupPart(s)) : undefined;
     case 'shoe': return SHOES[s] ? partBuilt(shoePart(SHOES[s]!)) : undefined;
     case 'hand': return HAND_POSES[s] ? { data: { handPose: s, set: 'base.hands@1' }, families: ['flat', 'illustrated'], views: ALL_VIEWS, dependencies: ['base.hands@1'], capabilities: ['rig.biped@1'] } : undefined;
     case 'face-ctl': {
@@ -200,6 +206,8 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
       return c ? { data: castData(c), families: ['flat', 'illustrated'], views: ALL_VIEWS, capabilities: ['rig.biped@1'], tags: ['cast'] } : undefined;
     }
     case 'prop': {
+      // Props worn by a character (a doctor's stethoscope) are parts that follow the rig, like accessories.
+      if (WORN_PROPS[s]) return partBuilt(wornPropPart(s));
       const p = PROPS[s];
       return p ? { data: propPart(p), families: ['flat', 'illustrated'], views: ['front'], viewExemptions: { three: 'Props are drawn from the camera.', side: 'Props are drawn from the camera.', back: 'Props are drawn from the camera.' }, anchors: { ...(p.anchors ?? {}), bounds: p.bounds }, capabilities: p.capabilities ?? [], ...(p.states ? { parameters: [{ key: 'state', type: 'enum' as const, default: p.states[0], options: p.states, label: 'State' }] } : {}) } : undefined;
     }

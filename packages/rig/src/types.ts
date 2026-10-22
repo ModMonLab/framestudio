@@ -65,7 +65,9 @@ export type FitSpace =
   | 'handL' | 'handR' | 'hand' | 'footL' | 'footR' | 'foot'
   | 'eye' | 'eyeL' | 'eyeR' | 'brow' | 'browL' | 'browR' | 'mouth' | 'nose' | 'ear' | 'earL' | 'earR' | 'stage'
   /** Limb segments (additive, decision 0019): origin at the proximal joint, v 0→1 to the distal joint, u across in limb half-widths. */
-  | 'upperArmL' | 'upperArmR' | 'foreArmL' | 'foreArmR' | 'thighL' | 'thighR' | 'shinL' | 'shinR';
+  | 'upperArmL' | 'upperArmR' | 'foreArmL' | 'foreArmR' | 'thighL' | 'thighR' | 'shinL' | 'shinR'
+  /** Seat frame (FR-CHR-11): origin at the pelvis, units of leg length (thigh + shin), u toward the character's screen facing, v down. */
+  | 'seat';
 
 export type Limb = 'armL' | 'armR' | 'legL' | 'legR' | 'neck';
 
@@ -140,6 +142,24 @@ export interface PartData {
   patternable?: boolean;
   /** Props: sound cues (FR-SND-04) by action event name (`contact`) or state (`state:open`) → sound asset ref. */
   sounds?: Record<string, string>;
+  /** Rig variant carried by identity options (FR-CHR-11). */
+  variant?: RigVariant;
+}
+
+/** Data-driven rig variant (FR-CHR-11): the engine reads these fields, never an option's name. */
+export interface RigVariant {
+  /** Posture the character keeps (a wheelchair user is seated; posture-changing actions do not stand them up). */
+  posture?: 'seated';
+  /** Locomotion rolls instead of walking: no leg cycle; `wheel.cos`/`wheel.sin` turn with distance (radius in leg lengths). */
+  rolling?: { radius: number };
+  /** Limbs that end early (0 = at the root, 0.5 = elbow/knee); hands/feet on those sides are not drawn. */
+  truncate?: Partial<Record<'armL' | 'armR' | 'legL' | 'legR', number>>;
+  /** Prosthetics: the natural limb's skin ends here and the variant's own part draws the rest; garments, hands and feet stay. */
+  replace?: Partial<Record<'armL' | 'armR' | 'legL' | 'legR', number>>;
+  /** Body slider overrides (0–100), e.g. belly for a visible pregnancy. */
+  body?: Record<string, number>;
+  /** Palette overrides that win over the character's own colours (e.g. an albinism palette). */
+  palette?: Record<string, string>;
 }
 
 export const MOUTH_SHAPES = ['X', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;

@@ -43,8 +43,7 @@ describe('Production templates (FR-TPL, AC-22)', () => {
     for (const [w, h, aspect] of [[640, 360, '16:9'], [360, 640, '9:16'], [400, 400, '1:1']] as const) {
       for (const f of [0.1, 0.35, 0.6, 0.9]) {
         const ev = evaluateFrame(session.state, r.sceneId, Math.round(scene.duration * f), { assets, styles, width: w, height: h, aspect });
-        // Some bundled looks name accessories and skin details whose catalog entries are not built yet (as in AC-06).
-        expect(ev.issues.filter((i) => !/missing asset/.test(i))).toEqual([]);
+        expect(ev.issues).toEqual([]);
       }
     }
     // Every character is in its first shot.

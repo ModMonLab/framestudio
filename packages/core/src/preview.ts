@@ -28,7 +28,7 @@ export interface PreviewSetup {
 
 /** Kinds that have a visual preview; others (output presets, controls without art) return undefined. */
 export function previewable(kind: string): boolean {
-  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'prop' || kind === 'kit' || kind === 'txt';
+  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'skin-detail' || kind === 'makeup' || kind === 'identity' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'prop' || kind === 'kit' || kind === 'txt';
 }
 
 const PREVIEW_USER_ID = 'user.00000000-0000-4000-8000-0000000000ff';
@@ -61,7 +61,7 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
   if (!previewCharacter) return undefined;
   const base = previewCharacter.manifest.data as CharacterData;
   let charRef = previewCharacter.ref;
-  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin' || m.kind === 'body') {
+  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin' || m.kind === 'body' || m.kind === 'skin-detail' || m.kind === 'makeup' || m.kind === 'identity') {
     // A project-local copy of the preview character wearing the item.
     const data: CharacterData = JSON.parse(JSON.stringify(base));
     if (m.kind in PART_KEYS) data.parts[PART_KEYS[m.kind]!] = ref;
@@ -70,6 +70,8 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
       data.bodyBase = ref;
       data.body = {};
     }
+    else if (m.kind === 'skin-detail' || m.kind === 'makeup') data.details = [ref];
+    else if (m.kind === 'identity') data.rigVariant = ref;
     else {
       const look = data.looks.find((l) => l.id === data.defaultLook) ?? data.looks[0]!;
       const replaced = m.kind === 'dress' ? new Set(['top', 'bottom', 'dress']) : new Set([m.kind]);

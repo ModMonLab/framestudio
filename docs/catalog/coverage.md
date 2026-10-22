@@ -2,7 +2,7 @@
 
 Generated 2026-10-22 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
 
-**Green: 0 / 1254 (0 %)** · manifests present: 720 / 1254 (57.4 %)
+**Green: 0 / 1254 (0 %)** · manifests present: 806 / 1254 (64.3 %)
 
 An item is green when it has a manifest, both families and all four views (or documented exemptions) where they apply, passes the validators (schema and, for character-attached items, the rig check), has previews in both families, is approved in visual review (CAT-06) and carries a redistributable, commercial-use licence with provenance.
 
@@ -23,14 +23,14 @@ An item is green when it has a manifest, both families and all four views (or do
 | A10 Fringes | `fringe` | 8 | 0 | 0 |
 | A11 Facial hair | `facial-hair` | 15 | 0 | 0 |
 | A12 Skin tones | `skin` | 24 | 24 | 0 |
-| A13 Skin details and overlays | `skin-detail` | 20 | 0 | 0 |
-| A14 Makeup | `makeup` | 12 | 0 | 0 |
+| A13 Skin details and overlays | `skin-detail` | 20 | 20 | 0 |
+| A14 Makeup | `makeup` | 12 | 12 | 0 |
 | A15 Hand poses | `hand` | 20 | 20 | 0 |
 | A16 Feet and footwear bases | `feet` | 5 | 5 | 0 |
 | A17 Mouth shapes (lip sync set) | `mouthshape` | 9 | 9 | 0 |
 | A18 Eye states | `eyestate` | 10 | 10 | 0 |
 | A19 Brow states | `browstate` | 9 | 9 | 0 |
-| A20 Identity and access options | `identity` | 12 | 0 | 0 |
+| A20 Identity and access options | `identity` | 12 | 12 | 0 |
 | B1 Tops | `top` | 18 | 18 | 0 |
 | B2 Outerwear | `outer` | 14 | 14 | 0 |
 | B3 Bottoms | `bottom` | 13 | 13 | 0 |
@@ -38,13 +38,13 @@ An item is green when it has a manifest, both families and all four views (or do
 | B5 Footwear | `shoe` | 12 | 12 | 0 |
 | B6 Fabric patterns | `pattern` | 14 | 0 | 0 |
 | B7 Preset looks | `look` | 14 | 0 | 0 |
-| C1 Accessories | `acc` | 40 | 0 | 0 |
+| C1 Accessories | `acc` | 40 | 40 | 0 |
 | D1 Bundled cast | `chr` | 14 | 14 | 0 |
 | E1 Expressions | `exp` | 83 | 83 | 0 |
 | E2 Facial overlays | `overlay` | 14 | 0 | 0 |
-| F1 Performance clips | `act` | 118 | 33 | 0 |
+| F1 Performance clips | `act` | 118 | 34 | 0 |
 | G1 Performance recipes | `rcp` | 24 | 18 | 0 |
-| H1 Props | `prop` | 142 | 10 | 0 |
+| H1 Props | `prop` | 142 | 11 | 0 |
 | I1 Location kits | `kit` | 16 | 8 | 0 |
 | I2 Ready-made sets | `set` | 32 | 0 | 0 |
 | I3 Environment layers | `layer` | 10 | 0 | 0 |
@@ -268,38 +268,38 @@ An item is green when it has a manifest, both families and all four views (or do
 | `skin.ebony` | missing (—) | n/a | ok | ok | pending | ok |
 | `skin.deep-mahogany` | missing (—) | n/a | ok | ok | pending | ok |
 | `skin.onyx` | missing (—) | n/a | ok | ok | pending | ok |
-| `skin-detail.freckles-light` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.freckles-heavy` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.moles` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.beauty-mark` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.forehead-lines` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.crows-feet` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.smile-lines` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.under-eye-bags` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.scar-straight` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.scar-curved` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.scar-cheek` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.vitiligo-pattern` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.birthmark` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.acne` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.rosy-cheeks` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.tattoo-slot-face` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.tattoo-slot-neck` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.tattoo-slot-arms` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.body-hair` | — | — | — | — | — | — (no manifest) |
-| `skin-detail.dimples` | — | — | — | — | — | — (no manifest) |
-| `makeup.eyeliner` | — | — | — | — | — | — (no manifest) |
-| `makeup.winged-liner` | — | — | — | — | — | — (no manifest) |
-| `makeup.eyeshadow` | — | — | — | — | — | — (no manifest) |
-| `makeup.mascara` | — | — | — | — | — | — (no manifest) |
-| `makeup.lipstick` | — | — | — | — | — | — (no manifest) |
-| `makeup.lip-gloss` | — | — | — | — | — | — (no manifest) |
-| `makeup.blush` | — | — | — | — | — | — (no manifest) |
-| `makeup.contour` | — | — | — | — | — | — (no manifest) |
-| `makeup.bold-brows` | — | — | — | — | — | — (no manifest) |
-| `makeup.glitter` | — | — | — | — | — | — (no manifest) |
-| `makeup.stage-makeup` | — | — | — | — | — | — (no manifest) |
-| `makeup.face-paint` | — | — | — | — | — | — (no manifest) |
+| `skin-detail.freckles-light` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.freckles-heavy` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.moles` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.beauty-mark` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.forehead-lines` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.crows-feet` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.smile-lines` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.under-eye-bags` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.scar-straight` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.scar-curved` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.scar-cheek` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.vitiligo-pattern` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.birthmark` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.acne` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.rosy-cheeks` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.tattoo-slot-face` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.tattoo-slot-neck` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `skin-detail.tattoo-slot-arms` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `skin-detail.body-hair` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `skin-detail.dimples` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.eyeliner` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.winged-liner` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.eyeshadow` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.mascara` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.lipstick` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.lip-gloss` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.blush` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.contour` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.bold-brows` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.glitter` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.stage-makeup` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `makeup.face-paint` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
 | `hand.relaxed` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
 | `hand.open-palm` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
 | `hand.fist` | ok (flat, illustrated) | ok (4) | ok | missing | pending | ok |
@@ -353,18 +353,18 @@ An item is green when it has a manifest, both families and all four views (or do
 | `browstate.one-raised-right` | n/a | n/a | ok | n/a | pending | ok |
 | `browstate.furrowed` | n/a | n/a | ok | n/a | pending | ok |
 | `browstate.relaxed` | n/a | n/a | ok | n/a | pending | ok |
-| `identity.wheelchair` | — | — | — | — | — | — (no manifest) |
-| `identity.walking-cane` | — | — | — | — | — | — (no manifest) |
-| `identity.crutches` | — | — | — | — | — | — (no manifest) |
-| `identity.hearing-aid` | — | — | — | — | — | — (no manifest) |
-| `identity.cochlear-implant` | — | — | — | — | — | — (no manifest) |
-| `identity.prosthetic-arm` | — | — | — | — | — | — (no manifest) |
-| `identity.prosthetic-leg` | — | — | — | — | — | — (no manifest) |
-| `identity.glasses-prescription` | — | — | — | — | — | — (no manifest) |
-| `identity.guide-dog-companion` | — | — | — | — | — | — (no manifest) |
-| `identity.visible-pregnancy` | — | — | — | — | — | — (no manifest) |
-| `identity.albinism-palette` | — | — | — | — | — | — (no manifest) |
-| `identity.limb-difference` | — | — | — | — | — | — (no manifest) |
+| `identity.wheelchair` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `identity.walking-cane` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `identity.crutches` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `identity.hearing-aid` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `identity.cochlear-implant` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `identity.prosthetic-arm` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `identity.prosthetic-leg` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `identity.glasses-prescription` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `identity.guide-dog-companion` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `identity.visible-pregnancy` | ok (flat, illustrated) | ok (0) | ok | ok | pending | ok |
+| `identity.albinism-palette` | ok (flat, illustrated) | ok (0) | ok | ok | pending | ok |
+| `identity.limb-difference` | ok (flat, illustrated) | ok (0) | ok | ok | pending | ok |
 | `top.t-shirt` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `top.long-sleeve-tee` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `top.v-neck-tee` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
@@ -464,46 +464,46 @@ An item is green when it has a manifest, both families and all four views (or do
 | `look.news-anchor` | — | — | — | — | — | — (no manifest) |
 | `look.sleepwear` | — | — | — | — | — | — (no manifest) |
 | `look.rainy-day` | — | — | — | — | — | — (no manifest) |
-| `acc.round-glasses` | — | — | — | — | — | — (no manifest) |
-| `acc.rectangular-glasses` | — | — | — | — | — | — (no manifest) |
-| `acc.cat-eye-glasses` | — | — | — | — | — | — (no manifest) |
-| `acc.sunglasses` | — | — | — | — | — | — (no manifest) |
-| `acc.reading-glasses-on-nose` | — | — | — | — | — | — (no manifest) |
-| `acc.monocle` | — | — | — | — | — | — (no manifest) |
-| `acc.baseball-cap` | — | — | — | — | — | — (no manifest) |
-| `acc.beanie` | — | — | — | — | — | — (no manifest) |
-| `acc.fedora` | — | — | — | — | — | — (no manifest) |
-| `acc.sun-hat` | — | — | — | — | — | — (no manifest) |
-| `acc.hard-hat` | — | — | — | — | — | — (no manifest) |
-| `acc.headband` | — | — | — | — | — | — (no manifest) |
-| `acc.bandana` | — | — | — | — | — | — (no manifest) |
-| `acc.headphones` | — | — | — | — | — | — (no manifest) |
-| `acc.headset-with-mic` | — | — | — | — | — | — (no manifest) |
-| `acc.earbuds` | — | — | — | — | — | — (no manifest) |
-| `acc.stud-earrings` | — | — | — | — | — | — (no manifest) |
-| `acc.hoop-earrings` | — | — | — | — | — | — (no manifest) |
-| `acc.drop-earrings` | — | — | — | — | — | — (no manifest) |
-| `acc.necklace-chain` | — | — | — | — | — | — (no manifest) |
-| `acc.pendant` | — | — | — | — | — | — (no manifest) |
-| `acc.scarf` | — | — | — | — | — | — (no manifest) |
-| `acc.tie` | — | — | — | — | — | — (no manifest) |
-| `acc.bow-tie` | — | — | — | — | — | — (no manifest) |
-| `acc.lanyard-badge` | — | — | — | — | — | — (no manifest) |
-| `acc.wristwatch` | — | — | — | — | — | — (no manifest) |
-| `acc.smartwatch` | — | — | — | — | — | — (no manifest) |
-| `acc.bracelet` | — | — | — | — | — | — (no manifest) |
-| `acc.rings` | — | — | — | — | — | — (no manifest) |
-| `acc.gloves` | — | — | — | — | — | — (no manifest) |
-| `acc.backpack` | — | — | — | — | — | — (no manifest) |
-| `acc.messenger-bag` | — | — | — | — | — | — (no manifest) |
-| `acc.tote-bag` | — | — | — | — | — | — (no manifest) |
-| `acc.handbag` | — | — | — | — | — | — (no manifest) |
-| `acc.belt` | — | — | — | — | — | — (no manifest) |
-| `acc.face-mask` | — | — | — | — | — | — (no manifest) |
-| `acc.nose-ring` | — | — | — | — | — | — (no manifest) |
-| `acc.lip-piercing` | — | — | — | — | — | — (no manifest) |
-| `acc.eyebrow-piercing` | — | — | — | — | — | — (no manifest) |
-| `acc.hair-clip` | — | — | — | — | — | — (no manifest) |
+| `acc.round-glasses` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.rectangular-glasses` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.cat-eye-glasses` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.sunglasses` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.reading-glasses-on-nose` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.monocle` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.baseball-cap` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.beanie` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.fedora` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.sun-hat` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.hard-hat` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.headband` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.bandana` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.headphones` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.headset-with-mic` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.earbuds` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.stud-earrings` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.hoop-earrings` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.drop-earrings` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.necklace-chain` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.pendant` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.scarf` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.tie` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `acc.bow-tie` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `acc.lanyard-badge` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.wristwatch` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.smartwatch` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.bracelet` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.rings` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.gloves` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.backpack` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.messenger-bag` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `acc.tote-bag` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `acc.handbag` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.belt` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.face-mask` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `acc.nose-ring` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `acc.lip-piercing` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `acc.eyebrow-piercing` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `acc.hair-clip` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `chr.maya-bennett` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `chr.leo-park` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `chr.sam-ortiz` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
@@ -729,7 +729,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | `act.close-door` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.adjust-glasses` | — | — | — | — | — | — (no manifest) |
 | `act.press-button` | — | — | — | — | — | — (no manifest) |
-| `act.push-wheelchair` | — | — | — | — | — | — (no manifest) |
+| `act.push-wheelchair` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.roll-forward` | — | — | — | — | — | — (no manifest) |
 | `act.sign-hello` | — | — | — | — | — | — (no manifest) |
 | `act.sign-thank-you` | — | — | — | — | — | — (no manifest) |
@@ -870,7 +870,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | `prop.birthday-cake` | — | — | — | — | — | — (no manifest) |
 | `prop.confetti-cannon` | — | — | — | — | — | — (no manifest) |
 | `prop.party-hat` | — | — | — | — | — | — (no manifest) |
-| `prop.stethoscope` | — | — | — | — | — | — (no manifest) |
+| `prop.stethoscope` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.hospital-bed` | — | — | — | — | — | — (no manifest) |
 | `prop.first-aid-kit` | — | — | — | — | — | — (no manifest) |
 | `prop.pill-bottle` | — | — | — | — | — | — (no manifest) |
