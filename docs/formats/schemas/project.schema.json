@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/project.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "minimum": 1,
+      "description": "File schema version (FR-DAT-05).",
+      "type": "integer"
+    },
+    "id": {
+      "pattern": "^prj_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix prj_.",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "maxLength": 200,
+      "type": "string"
+    },
+    "description": {
+      "description": "Rich text (Markdown subset: headings, lists, bold, italic).",
+      "type": "string"
+    },
+    "styleFamily": {
+      "anyOf": [
+        {
+          "const": "flat",
+          "type": "string"
+        },
+        {
+          "const": "illustrated",
+          "type": "string"
+        }
+      ]
+    },
+    "frameRate": {
+      "anyOf": [
+        {
+          "const": 24,
+          "type": "number"
+        },
+        {
+          "const": 25,
+          "type": "number"
+        },
+        {
+          "const": 30,
+          "type": "number"
+        }
+      ]
+    },
+    "output": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "preset": {
+          "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+          "description": "Asset reference id@version.",
+          "type": "string"
+        },
+        "width": {
+          "minimum": 16,
+          "maximum": 8192,
+          "type": "integer"
+        },
+        "height": {
+          "minimum": 16,
+          "maximum": 8192,
+          "type": "integer"
+        },
+        "aspectRatios": {
+          "minItems": 1,
+          "description": "Aspect ratios previewed per camera (FR-CAM-06).",
+          "type": "array",
+          "items": {
+            "pattern": "^\\d+:\\d+$",
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "preset",
+        "width",
+        "height",
+        "aspectRatios"
+      ]
+    },
+    "captions": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "style": {
+          "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+          "description": "Asset reference id@version.",
+          "type": "string"
+        },
+        "speakerLabels": {
+          "type": "boolean"
+        },
+        "burnIn": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled",
+        "speakerLabels",
+        "burnIn"
+      ]
+    },
+    "voiceWorkerUrl": {
+      "description": "Endpoint override; tokens are never stored in projects (NFR-09).",
+      "type": "string"
+    },
+    "renderDir": {
+      "type": "string"
+    },
+    "episodes": {
+      "type": "array",
+      "items": {
+        "pattern": "^ep_[A-Za-z0-9]{6,32}$",
+        "description": "Project-local ID with prefix ep_.",
+        "type": "string"
+      }
+    },
+    "cast": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "description": "A character version used by this project (identity is the asset; FR-CHR-09).",
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^cst_[A-Za-z0-9]{6,32}$",
+            "description": "Project-local ID with prefix cst_.",
+            "type": "string"
+          },
+          "character": {
+            "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+            "description": "Asset reference id@version.",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "character",
+          "name"
+        ]
+      }
+    },
+    "permissions": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "agent": {
+          "additionalProperties": false,
+          "description": "Human-granted agent permissions (FR-AGT-04).",
+          "type": "object",
+          "properties": {
+            "deleteProjects": {
+              "default": false,
+              "type": "boolean"
+            },
+            "deleteVoices": {
+              "default": false,
+              "type": "boolean"
+            },
+            "cloneVoices": {
+              "default": false,
+              "type": "boolean"
+            },
+            "exposeWorker": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "deleteProjects",
+            "deleteVoices",
+            "cloneVoices",
+            "exposeWorker"
+          ]
+        }
+      },
+      "required": [
+        "agent"
+      ]
+    },
+    "seed": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "appVersion": {
+      "type": "string"
+    },
+    "template": {
+      "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+      "description": "Asset reference id@version.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "description",
+    "styleFamily",
+    "frameRate",
+    "output",
+    "captions",
+    "episodes",
+    "cast",
+    "permissions",
+    "seed",
+    "createdAt",
+    "appVersion"
+  ]
+}

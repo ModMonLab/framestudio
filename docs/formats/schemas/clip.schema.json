@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/clip.json",
+  "additionalProperties": false,
+  "description": "Half-open interval [start, end) in ticks (FR-DAT-03).",
+  "type": "object",
+  "properties": {
+    "id": {
+      "pattern": "^clp_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix clp_.",
+      "type": "string"
+    },
+    "track": {
+      "pattern": "^trk_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix trk_.",
+      "type": "string"
+    },
+    "start": {
+      "minimum": 0,
+      "description": "Time in ticks (48 000 per second).",
+      "type": "integer"
+    },
+    "end": {
+      "minimum": 0,
+      "description": "Time in ticks (48 000 per second).",
+      "type": "integer"
+    },
+    "asset": {
+      "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+      "description": "Asset reference id@version.",
+      "type": "string"
+    },
+    "params": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {}
+      }
+    },
+    "blendIn": {
+      "minimum": 0,
+      "description": "Time in ticks (48 000 per second).",
+      "type": "integer"
+    },
+    "blendOut": {
+      "minimum": 0,
+      "description": "Time in ticks (48 000 per second).",
+      "type": "integer"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "source": {
+      "pattern": "^(manual|auto|import|template|recipe:[a-z0-9.@-]+|agent:[A-Za-z0-9_-]+)$",
+      "type": "string"
+    },
+    "group": {
+      "pattern": "^grp_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix grp_.",
+      "type": "string"
+    },
+    "line": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "speaker": {
+          "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+          "description": "Project-local ID with prefix ins_.",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 4000,
+          "type": "string"
+        },
+        "revision": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "delivery": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "preset": {
+              "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+              "description": "Asset reference id@version.",
+              "type": "string"
+            },
+            "emotion": {
+              "type": "string"
+            },
+            "pace": {
+              "minimum": 0.5,
+              "maximum": 2,
+              "type": "number"
+            },
+            "instruction": {
+              "maxLength": 500,
+              "type": "string"
+            }
+          }
+        },
+        "take": {
+          "pattern": "^tak_[A-Za-z0-9]{6,32}$",
+          "description": "Project-local ID with prefix tak_.",
+          "type": "string"
+        },
+        "muted": {
+          "description": "Intentionally silent line (take state \"Muted\").",
+          "type": "boolean"
+        },
+        "caption": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "hidden": {
+              "type": "boolean"
+            }
+          }
+        },
+        "mouthOverrides": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "description": "Times in seconds relative to the take start.",
+            "type": "object",
+            "properties": {
+              "shape": {
+                "description": "Mouth shape letter (Catalog A17).",
+                "anyOf": [
+                  {
+                    "const": "X",
+                    "type": "string"
+                  },
+                  {
+                    "const": "A",
+                    "type": "string"
+                  },
+                  {
+                    "const": "B",
+                    "type": "string"
+                  },
+                  {
+                    "const": "C",
+                    "type": "string"
+                  },
+                  {
+                    "const": "D",
+                    "type": "string"
+                  },
+                  {
+                    "const": "E",
+                    "type": "string"
+                  },
+                  {
+                    "const": "F",
+                    "type": "string"
+                  },
+                  {
+                    "const": "G",
+                    "type": "string"
+                  },
+                  {
+                    "const": "H",
+                    "type": "string"
+                  }
+                ]
+              },
+              "start": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "end": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "shape",
+              "start",
+              "end"
+            ]
+          }
+        }
+      },
+      "required": [
+        "speaker",
+        "text",
+        "revision",
+        "delivery",
+        "muted"
+      ]
+    },
+    "media": {
+      "description": "Media hash for imported audio or images.",
+      "type": "string"
+    },
+    "sourceIn": {
+      "minimum": 0,
+      "description": "Time in ticks (48 000 per second).",
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "track",
+    "start",
+    "end",
+    "params",
+    "blendIn",
+    "blendOut",
+    "enabled",
+    "source"
+  ]
+}

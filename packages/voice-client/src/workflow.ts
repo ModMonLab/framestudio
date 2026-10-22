@@ -279,3 +279,20 @@ export function voiceWithReferences(voice: AssetManifest, accepted: RangeCandida
     data: { ...vd, references: refs, auditions: [...vd.auditions, ...accepted.map((a) => ({ text: a.transcript, media: a.media, emotion: a.emotion }))], engineData: {} },
   } as AssetManifest;
 }
+
+/* ------------------------------------------------------------------ re-align (FR-LIP-01, `frame align`) */
+
+/** Forced alignment of an existing take against its line's current text; replaces the take's alignment. */
+export async function alignTake(client: VoiceClient, p: ProjectAccess, takeId: string, language = 'en', ctl: Ctl = {}): Promise<{ take: string; words: number; method: string }> {
+  const take = p.state().takes[takeId];
+  if (!take) throw new FrameError('NOT_FOUND', `Take ${takeId} not found`);
+  if (!take.media) throw new FrameError('VALIDATION_FAILED', `Take ${takeId} has no audio yet`);
+  const line = Object.values(p.state().scenes).flatMap((s) => s.clips).find((c) => c.id === take.line)?.line;
+  if (!line) throw new FrameError('NOT_FOUND', `The line of take ${takeId} no longer exists`);
+  const hash = await client.uploadBlob(p.readMedia(take.media.hash), `take.${take.media.ext}`, take.media.mime);
+  const aj = await client.align({ audioHash: hash, transcript: stripPauses(line.text), language });
+  const al = await run(client, aj, ctl, [0, 1], 'Aligning');
+  const alignment = toAlignment(al);
+  p.apply([{ name: 'take.update', params: { id: takeId, set: { alignment } } }], 'Align take');
+  return { take: takeId, words: alignment.words.length, method: alignment.method };
+}

@@ -21,7 +21,8 @@
     "test:e2e": "pnpm --filter @frame/studio exec playwright test",
     "sample": "tsx tools/demo/make-sample.ts",
     "catalog:coverage": "tsx tools/catalog/coverage.ts",
-    "docs:mcp": "tsx tools/docs/mcp-reference.ts"
+    "docs:mcp": "tsx tools/docs/mcp-reference.ts",
+    "docs:formats": "tsx tools/docs/formats.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",

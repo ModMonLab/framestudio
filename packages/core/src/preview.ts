@@ -172,3 +172,15 @@ export function previewFrame(
   const next: ProjectState = { ...state, scenes: { ...state.scenes, [scene]: { ...sc0, cameras: [cam] } } };
   return evaluateFrame(next, scene, t, o);
 }
+
+/** A turnaround sheet (FR-CLI-05 `char sheet`): the character in all four views side by side, in a look. */
+export function sheetSetup(ref: string, m: AssetManifest, look?: string): PreviewSetup {
+  const ids = sequentialIds(1);
+  const state = createProjectState(ids, { name: 'Sheet', styleFamily: 'flat', frameRate: 24, output: { preset: 'sheet', width: 1920, height: 1080, aspectRatios: ['16:9'] }, appVersion: 'preview', now: '2000-01-01T00:00:00Z', seed: 1 });
+  const s = new ProjectSession(state, 0, { newId: ids, now: () => '2000-01-01T00:00:00Z' });
+  const scene = state.episodes[state.project.episodes[0]!]!.scenes[0]!;
+  const data = m.data as CharacterData;
+  const views = ['front', 'three', 'side', 'back'];
+  s.apply({ commands: views.map((view, i) => ({ name: 'instance.add', params: { scene, kind: 'character', asset: ref, name: view, transform: { x: 240 + i * 480, y: 1000 }, character: { look: look ?? data.defaultLook, view, posture: 'standing', auto: { idle: false, listening: false, blinks: false, talkingGestures: false } } } })) });
+  return { state: s.state, scene, t: 0, framing: 'scene' };
+}

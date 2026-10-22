@@ -1,0 +1,990 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/scene.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "minimum": 1,
+      "description": "File schema version (FR-DAT-05).",
+      "type": "integer"
+    },
+    "id": {
+      "pattern": "^scn_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix scn_.",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "duration": {
+      "minimum": 0,
+      "description": "Time in ticks (48 000 per second).",
+      "type": "integer"
+    },
+    "kit": {
+      "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+      "description": "Asset reference id@version.",
+      "type": "string"
+    },
+    "seed": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "stage": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "width": {
+          "exclusiveMinimum": 0,
+          "description": "Stage width in stage units (1 unit = 1 px at 1920-wide reference).",
+          "type": "number"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "groundLines": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "description": "Where feet stand; scale is the character scale on that line.",
+            "type": "object",
+            "properties": {
+              "id": {
+                "pattern": "^gl_[A-Za-z0-9]{6,32}$",
+                "description": "Project-local ID with prefix gl_.",
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "y": {
+                "type": "number"
+              },
+              "depthPlane": {
+                "type": "string"
+              },
+              "scale": {
+                "exclusiveMinimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "y",
+              "depthPlane",
+              "scale"
+            ]
+          }
+        },
+        "marks": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "id": {
+                "pattern": "^mk_[A-Za-z0-9]{6,32}$",
+                "description": "Project-local ID with prefix mk_.",
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "depthPlane": {
+                "type": "string"
+              },
+              "facing": {
+                "anyOf": [
+                  {
+                    "const": "left",
+                    "type": "string"
+                  },
+                  {
+                    "const": "right",
+                    "type": "string"
+                  },
+                  {
+                    "const": "front",
+                    "type": "string"
+                  }
+                ]
+              },
+              "seat": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "instance": {
+                    "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+                    "description": "Project-local ID with prefix ins_.",
+                    "type": "string"
+                  },
+                  "anchor": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "instance",
+                  "anchor"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "x",
+              "y",
+              "depthPlane",
+              "facing"
+            ]
+          }
+        },
+        "depthPlanes": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "order": {
+                "description": "Back to front: lower draws first.",
+                "type": "integer"
+              },
+              "parallax": {
+                "description": "Default parallax factor for this plane (1 = moves with the main stage).",
+                "type": "number"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "order",
+              "parallax"
+            ]
+          }
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "groundLines",
+        "marks",
+        "depthPlanes"
+      ]
+    },
+    "instances": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+            "description": "Project-local ID with prefix ins_.",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "const": "character",
+                "type": "string"
+              },
+              {
+                "const": "prop",
+                "type": "string"
+              },
+              {
+                "const": "set-piece",
+                "type": "string"
+              },
+              {
+                "const": "effect",
+                "type": "string"
+              },
+              {
+                "const": "text",
+                "type": "string"
+              },
+              {
+                "const": "image",
+                "type": "string"
+              },
+              {
+                "const": "group",
+                "type": "string"
+              }
+            ]
+          },
+          "asset": {
+            "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+            "description": "Asset reference id@version.",
+            "type": "string"
+          },
+          "media": {
+            "description": "Media hash for image instances.",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "transform": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "scale": {
+                "exclusiveMinimum": 0,
+                "type": "number"
+              },
+              "rotation": {
+                "description": "Degrees, clockwise.",
+                "type": "number"
+              },
+              "flipX": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "scale",
+              "rotation",
+              "flipX"
+            ]
+          },
+          "depthPlane": {
+            "type": "string"
+          },
+          "order": {
+            "description": "Layer order within the depth plane.",
+            "type": "number"
+          },
+          "parallax": {
+            "description": "Parallax factor (independent of draw order; FR-STG-02).",
+            "type": "number"
+          },
+          "opacity": {
+            "minimum": 0,
+            "maximum": 1,
+            "type": "number"
+          },
+          "parent": {
+            "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+            "description": "Project-local ID with prefix ins_.",
+            "type": "string"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "character": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "look": {
+                "description": "Look id within the character asset.",
+                "type": "string"
+              },
+              "view": {
+                "anyOf": [
+                  {
+                    "const": "front",
+                    "type": "string"
+                  },
+                  {
+                    "const": "three",
+                    "type": "string"
+                  },
+                  {
+                    "const": "side",
+                    "type": "string"
+                  },
+                  {
+                    "const": "back",
+                    "type": "string"
+                  }
+                ]
+              },
+              "posture": {
+                "anyOf": [
+                  {
+                    "const": "standing",
+                    "type": "string"
+                  },
+                  {
+                    "const": "seated",
+                    "type": "string"
+                  },
+                  {
+                    "const": "crouched",
+                    "type": "string"
+                  },
+                  {
+                    "const": "kneeling",
+                    "type": "string"
+                  },
+                  {
+                    "const": "lying",
+                    "type": "string"
+                  }
+                ]
+              },
+              "baseExpression": {
+                "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+                "description": "Asset reference id@version.",
+                "type": "string"
+              },
+              "voice": {
+                "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+                "description": "Asset reference id@version.",
+                "type": "string"
+              },
+              "auto": {
+                "additionalProperties": false,
+                "description": "Automatic behaviour generators (FR-ACT-07, FR-ACT-08, FR-EXP-03).",
+                "type": "object",
+                "properties": {
+                  "idle": {
+                    "type": "boolean"
+                  },
+                  "listening": {
+                    "type": "boolean"
+                  },
+                  "blinks": {
+                    "type": "boolean"
+                  },
+                  "talkingGestures": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "idle",
+                  "listening",
+                  "blinks",
+                  "talkingGestures"
+                ]
+              }
+            },
+            "required": [
+              "look",
+              "view",
+              "posture",
+              "auto"
+            ]
+          },
+          "propState": {
+            "description": "Initial prop state.",
+            "type": "string"
+          },
+          "params": {
+            "description": "Kind-specific parameters (text content, palette, colours...).",
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {}
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "transform",
+          "depthPlane",
+          "order",
+          "parallax",
+          "opacity",
+          "visible",
+          "locked",
+          "params"
+        ]
+      }
+    },
+    "cameras": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^cam_[A-Za-z0-9]{6,32}$",
+            "description": "Project-local ID with prefix cam_.",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "center": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          },
+          "width": {
+            "exclusiveMinimum": 0,
+            "description": "Framing width in stage units at stage scale.",
+            "type": "number"
+          },
+          "rotation": {
+            "type": "number"
+          },
+          "lens": {
+            "anyOf": [
+              {
+                "const": "24mm",
+                "type": "string"
+              },
+              {
+                "const": "35mm",
+                "type": "string"
+              },
+              {
+                "const": "50mm",
+                "type": "string"
+              },
+              {
+                "const": "85mm",
+                "type": "string"
+              }
+            ]
+          },
+          "preset": {
+            "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+            "description": "Asset reference id@version.",
+            "type": "string"
+          },
+          "subjects": {
+            "type": "array",
+            "items": {
+              "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+              "description": "Project-local ID with prefix ins_.",
+              "type": "string"
+            }
+          },
+          "ratioRule": {
+            "anyOf": [
+              {
+                "const": "center",
+                "type": "string"
+              },
+              {
+                "const": "headroom",
+                "type": "string"
+              }
+            ]
+          },
+          "ratioOverrides": {
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "center": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ]
+                  },
+                  "width": {
+                    "exclusiveMinimum": 0,
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "center",
+                  "width"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "center",
+          "width",
+          "rotation",
+          "lens",
+          "subjects",
+          "ratioRule",
+          "ratioOverrides"
+        ]
+      }
+    },
+    "defaultCamera": {
+      "pattern": "^cam_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix cam_.",
+      "type": "string"
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^trk_[A-Za-z0-9]{6,32}$",
+            "description": "Project-local ID with prefix trk_.",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "const": "shot",
+                "type": "string"
+              },
+              {
+                "const": "camera-move",
+                "type": "string"
+              },
+              {
+                "const": "dialogue",
+                "type": "string"
+              },
+              {
+                "const": "lipsync",
+                "type": "string"
+              },
+              {
+                "const": "acting",
+                "type": "string"
+              },
+              {
+                "const": "face",
+                "type": "string"
+              },
+              {
+                "const": "gaze",
+                "type": "string"
+              },
+              {
+                "const": "effect",
+                "type": "string"
+              },
+              {
+                "const": "music",
+                "type": "string"
+              },
+              {
+                "const": "ambience",
+                "type": "string"
+              },
+              {
+                "const": "sfx",
+                "type": "string"
+              },
+              {
+                "const": "text",
+                "type": "string"
+              }
+            ]
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "const": "scene",
+                "type": "string"
+              },
+              {
+                "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+                "description": "Project-local ID with prefix ins_.",
+                "type": "string"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "mute": {
+            "type": "boolean"
+          },
+          "solo": {
+            "type": "boolean"
+          },
+          "lock": {
+            "type": "boolean"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "gainDb": {
+            "minimum": -60,
+            "maximum": 12,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "owner",
+          "name",
+          "mute",
+          "solo",
+          "lock",
+          "hidden",
+          "gainDb"
+        ]
+      }
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "description": "Half-open interval [start, end) in ticks (FR-DAT-03).",
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^clp_[A-Za-z0-9]{6,32}$",
+            "description": "Project-local ID with prefix clp_.",
+            "type": "string"
+          },
+          "track": {
+            "pattern": "^trk_[A-Za-z0-9]{6,32}$",
+            "description": "Project-local ID with prefix trk_.",
+            "type": "string"
+          },
+          "start": {
+            "minimum": 0,
+            "description": "Time in ticks (48 000 per second).",
+            "type": "integer"
+          },
+          "end": {
+            "minimum": 0,
+            "description": "Time in ticks (48 000 per second).",
+            "type": "integer"
+          },
+          "asset": {
+            "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+            "description": "Asset reference id@version.",
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {}
+            }
+          },
+          "blendIn": {
+            "minimum": 0,
+            "description": "Time in ticks (48 000 per second).",
+            "type": "integer"
+          },
+          "blendOut": {
+            "minimum": 0,
+            "description": "Time in ticks (48 000 per second).",
+            "type": "integer"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "source": {
+            "pattern": "^(manual|auto|import|template|recipe:[a-z0-9.@-]+|agent:[A-Za-z0-9_-]+)$",
+            "type": "string"
+          },
+          "group": {
+            "pattern": "^grp_[A-Za-z0-9]{6,32}$",
+            "description": "Project-local ID with prefix grp_.",
+            "type": "string"
+          },
+          "line": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "speaker": {
+                "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+                "description": "Project-local ID with prefix ins_.",
+                "type": "string"
+              },
+              "text": {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              "revision": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "delivery": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "preset": {
+                    "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+                    "description": "Asset reference id@version.",
+                    "type": "string"
+                  },
+                  "emotion": {
+                    "type": "string"
+                  },
+                  "pace": {
+                    "minimum": 0.5,
+                    "maximum": 2,
+                    "type": "number"
+                  },
+                  "instruction": {
+                    "maxLength": 500,
+                    "type": "string"
+                  }
+                }
+              },
+              "take": {
+                "pattern": "^tak_[A-Za-z0-9]{6,32}$",
+                "description": "Project-local ID with prefix tak_.",
+                "type": "string"
+              },
+              "muted": {
+                "description": "Intentionally silent line (take state \"Muted\").",
+                "type": "boolean"
+              },
+              "caption": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "hidden": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "mouthOverrides": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "Times in seconds relative to the take start.",
+                  "type": "object",
+                  "properties": {
+                    "shape": {
+                      "description": "Mouth shape letter (Catalog A17).",
+                      "anyOf": [
+                        {
+                          "const": "X",
+                          "type": "string"
+                        },
+                        {
+                          "const": "A",
+                          "type": "string"
+                        },
+                        {
+                          "const": "B",
+                          "type": "string"
+                        },
+                        {
+                          "const": "C",
+                          "type": "string"
+                        },
+                        {
+                          "const": "D",
+                          "type": "string"
+                        },
+                        {
+                          "const": "E",
+                          "type": "string"
+                        },
+                        {
+                          "const": "F",
+                          "type": "string"
+                        },
+                        {
+                          "const": "G",
+                          "type": "string"
+                        },
+                        {
+                          "const": "H",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "start": {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    "end": {
+                      "minimum": 0,
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "shape",
+                    "start",
+                    "end"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "speaker",
+              "text",
+              "revision",
+              "delivery",
+              "muted"
+            ]
+          },
+          "media": {
+            "description": "Media hash for imported audio or images.",
+            "type": "string"
+          },
+          "sourceIn": {
+            "minimum": 0,
+            "description": "Time in ticks (48 000 per second).",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "track",
+          "start",
+          "end",
+          "params",
+          "blendIn",
+          "blendOut",
+          "enabled",
+          "source"
+        ]
+      }
+    },
+    "markers": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^mkr_[A-Za-z0-9]{6,32}$",
+            "description": "Project-local ID with prefix mkr_.",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "at": {
+            "minimum": 0,
+            "description": "Time in ticks (48 000 per second).",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "at"
+        ]
+      }
+    },
+    "loop": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "start": {
+          "minimum": 0,
+          "description": "Time in ticks (48 000 per second).",
+          "type": "integer"
+        },
+        "end": {
+          "minimum": 0,
+          "description": "Time in ticks (48 000 per second).",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ]
+    },
+    "audio": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "duckingDb": {
+          "maximum": 0,
+          "minimum": -40,
+          "type": "number"
+        },
+        "duckAttack": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "duckRelease": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "roomTone": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "duckingDb",
+        "duckAttack",
+        "duckRelease",
+        "roomTone"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "notes",
+    "duration",
+    "seed",
+    "stage",
+    "instances",
+    "cameras",
+    "defaultCamera",
+    "tracks",
+    "clips",
+    "markers",
+    "audio"
+  ]
+}

@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/voice.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "method": {
+      "anyOf": [
+        {
+          "const": "design",
+          "type": "string"
+        },
+        {
+          "const": "clone",
+          "type": "string"
+        },
+        {
+          "const": "preset",
+          "type": "string"
+        },
+        {
+          "const": "recorded",
+          "type": "string"
+        }
+      ]
+    },
+    "language": {
+      "type": "string"
+    },
+    "consent": {
+      "additionalProperties": false,
+      "description": "Mandatory for cloned voices (FR-VOI-04).",
+      "type": "object",
+      "properties": {
+        "statement": {
+          "anyOf": [
+            {
+              "const": "own-voice",
+              "type": "string"
+            },
+            {
+              "const": "documented-consent",
+              "type": "string"
+            }
+          ]
+        },
+        "speakerName": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "confirmedBy": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "date": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement",
+        "speakerName",
+        "confirmedBy",
+        "date"
+      ]
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "emotion": {
+            "description": "neutral, happy, sad, angry, nervous, whisper, excited, deadpan, ...",
+            "type": "string"
+          },
+          "media": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "hash": {
+                "pattern": "^sha256-[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "mime": {
+                "type": "string"
+              },
+              "ext": {
+                "pattern": "^[a-z0-9]{1,8}$",
+                "type": "string"
+              },
+              "bytes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "durationS": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "sampleRate": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "channels": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "width": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "height": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "hash",
+              "mime",
+              "ext",
+              "bytes"
+            ]
+          },
+          "transcript": {
+            "type": "string"
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "accepted": {
+            "type": "boolean"
+          },
+          "fixture": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "emotion",
+          "media",
+          "transcript",
+          "accepted",
+          "fixture"
+        ]
+      }
+    },
+    "auditions": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "media": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "hash": {
+                "pattern": "^sha256-[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "mime": {
+                "type": "string"
+              },
+              "ext": {
+                "pattern": "^[a-z0-9]{1,8}$",
+                "type": "string"
+              },
+              "bytes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "durationS": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "sampleRate": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "channels": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "width": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "height": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "hash",
+              "mime",
+              "ext",
+              "bytes"
+            ]
+          },
+          "emotion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "media",
+          "emotion"
+        ]
+      }
+    },
+    "engineData": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "conditioningHash": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "conditioningHash",
+            "model"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "description",
+    "method",
+    "language",
+    "references",
+    "auditions",
+    "engineData"
+  ]
+}

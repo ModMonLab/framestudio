@@ -182,6 +182,17 @@ export class ProjectSession {
     return this.emit({ revision: this._revision, baseRevision: base, rebased, dryRun: false, label, commands: prepared, changed, state: next, reports });
   }
 
+  /** The undo and redo stacks (newest last), for keeping undo across reopening the project (FR-PER-02). */
+  stacks(limit = this.undoLimit): { undo: HistoryStep[]; redo: HistoryStep[] } {
+    return { undo: this.undoStack.slice(-limit), redo: this.redoStack.slice(-limit) };
+  }
+
+  /** Restores stacks saved by `stacks()` at the same revision. */
+  restoreStacks(s: { undo: HistoryStep[]; redo: HistoryStep[] }): void {
+    this.undoStack = s.undo.slice(-this.undoLimit);
+    this.redoStack = s.redo.slice(-this.undoLimit);
+  }
+
   /** Undo the most recent step (FR-PER-02). Undo never re-triggers generation: it only applies stored patches. */
   undo(): ApplyResult | undefined {
     const step = this.undoStack.pop();

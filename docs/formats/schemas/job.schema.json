@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/job.json",
+  "additionalProperties": true,
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "state": {
+      "anyOf": [
+        {
+          "const": "queued",
+          "type": "string"
+        },
+        {
+          "const": "running",
+          "type": "string"
+        },
+        {
+          "const": "succeeded",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "type": "string"
+        }
+      ]
+    },
+    "progress": {
+      "minimum": 0,
+      "maximum": 1,
+      "type": "number"
+    },
+    "message": {
+      "type": "string"
+    },
+    "project": {
+      "type": "string"
+    },
+    "result": {},
+    "error": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "code": {
+          "anyOf": [
+            {
+              "const": "USAGE",
+              "type": "string"
+            },
+            {
+              "const": "VALIDATION_FAILED",
+              "type": "string"
+            },
+            {
+              "const": "REVISION_CONFLICT",
+              "type": "string"
+            },
+            {
+              "const": "NOT_FOUND",
+              "type": "string"
+            },
+            {
+              "const": "WORKER_UNAVAILABLE",
+              "type": "string"
+            },
+            {
+              "const": "RENDER_FAILED",
+              "type": "string"
+            },
+            {
+              "const": "CANCELLED",
+              "type": "string"
+            },
+            {
+              "const": "PERMISSION_REQUIRED",
+              "type": "string"
+            },
+            {
+              "const": "CONSENT_REQUIRED",
+              "type": "string"
+            },
+            {
+              "const": "INTERNAL",
+              "type": "string"
+            },
+            {
+              "const": "SCHEMA_TOO_NEW",
+              "type": "string"
+            },
+            {
+              "const": "MIGRATION_REQUIRED",
+              "type": "string"
+            },
+            {
+              "const": "CONFLICT",
+              "type": "string"
+            },
+            {
+              "const": "UNSUPPORTED",
+              "type": "string"
+            },
+            {
+              "const": "IO_ERROR",
+              "type": "string"
+            },
+            {
+              "const": "INVALID_PACKAGE",
+              "type": "string"
+            }
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {},
+        "hint": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ]
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "startedAt": {
+      "type": "string"
+    },
+    "finishedAt": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "title",
+    "state",
+    "progress",
+    "message",
+    "createdAt"
+  ]
+}

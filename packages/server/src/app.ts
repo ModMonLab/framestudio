@@ -19,7 +19,7 @@ import {
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
-import { VoiceClient, designCandidates, designedVoiceManifest, clonedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
+import { VoiceClient, designCandidates, designedVoiceManifest, clonedVoiceManifest, generateTakes, alignTake, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
 
@@ -1631,6 +1631,19 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const b = req.body;
       if (!b?.scene || !Array.isArray(b.lines) || !b.lines.length) throw new FrameError('USAGE', 'scene and lines[] are required');
       const job = jobs.voice.submit('takes.generate', `Generate takes · ${b.lines.length} line(s)`, (ctx) => generateTakes(client, access(p, sourceOf(req)), { scene: b.scene, lines: b.lines, takes: b.takes ?? 1, ...(b.seed !== undefined ? { seed: b.seed } : {}), ...(b.voice ? { voice: b.voice } : {}) }, { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
+      return reply.code(202).send(publicJob(job));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  // Re-align a take against its line's text (FR-LIP-01; `frame align`).
+  app.post<{ Params: { pid: string; id: string }; Body: { language?: string } }>('/api/projects/:pid/takes/:id/align', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const client = workerFor(p);
+      if (!p.open.state.takes[req.params.id]) throw new FrameError('NOT_FOUND', `Take ${req.params.id} not found`);
+      const job = jobs.voice.submit('takes.align', 'Align take', (ctx) => alignTake(client, access(p, sourceOf(req)), req.params.id, req.body?.language ?? 'en', { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
       return reply.code(202).send(publicJob(job));
     } catch (e) {
       return sendError(reply, e);

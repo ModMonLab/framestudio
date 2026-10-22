@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/locks.json",
+  "additionalProperties": false,
+  "description": "Pinned versions of every referenced library asset (FR-DAT-06).",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "minimum": 1,
+      "description": "File schema version (FR-DAT-05).",
+      "type": "integer"
+    },
+    "assets": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "hash": {
+              "pattern": "^sha256-[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "const": "bundled",
+                  "type": "string"
+                },
+                {
+                  "const": "user",
+                  "type": "string"
+                },
+                {
+                  "const": "project",
+                  "type": "string"
+                },
+                {
+                  "const": "imported",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "hash",
+            "source"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "assets"
+  ]
+}

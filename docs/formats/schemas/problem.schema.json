@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/problem.json",
+  "additionalProperties": false,
+  "description": "An entry in the Problems panel (FR-PER-06).",
+  "type": "object",
+  "properties": {
+    "severity": {
+      "anyOf": [
+        {
+          "const": "error",
+          "type": "string"
+        },
+        {
+          "const": "warning",
+          "type": "string"
+        },
+        {
+          "const": "info",
+          "type": "string"
+        }
+      ]
+    },
+    "code": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "scene": {
+      "type": "string"
+    },
+    "target": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ]
+    },
+    "blocksExport": {
+      "type": "boolean"
+    },
+    "fix": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "command": {}
+      },
+      "required": [
+        "label"
+      ]
+    }
+  },
+  "required": [
+    "severity",
+    "code",
+    "message",
+    "blocksExport"
+  ]
+}

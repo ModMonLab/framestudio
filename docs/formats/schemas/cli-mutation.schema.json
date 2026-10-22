@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/cli-mutation.json",
+  "additionalProperties": true,
+  "type": "object",
+  "properties": {
+    "dryRun": {
+      "description": "True when nothing was written.",
+      "type": "boolean"
+    },
+    "revision": {
+      "minimum": 0,
+      "description": "Project revision after the change (unchanged on a dry run).",
+      "type": "integer"
+    },
+    "label": {
+      "description": "Undo label of the change.",
+      "type": "string"
+    },
+    "commands": {
+      "description": "The engine commands, with ids filled in.",
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "name": {
+            "pattern": "^[a-z]+(\\.[a-z][a-zA-Z]*)+$",
+            "description": "Command name, e.g. scene.add, clip.move.",
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {}
+            }
+          }
+        },
+        "required": [
+          "name",
+          "params"
+        ]
+      }
+    },
+    "reports": {
+      "description": "Command reports (e.g. clips moved by a frame-rate change).",
+      "type": "array",
+      "items": {}
+    },
+    "problems": {
+      "description": "Validation errors and warnings after the change.",
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "description": "An entry in the Problems panel (FR-PER-06).",
+        "type": "object",
+        "properties": {
+          "severity": {
+            "anyOf": [
+              {
+                "const": "error",
+                "type": "string"
+              },
+              {
+                "const": "warning",
+                "type": "string"
+              },
+              {
+                "const": "info",
+                "type": "string"
+              }
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "scene": {
+            "type": "string"
+          },
+          "target": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "id"
+            ]
+          },
+          "blocksExport": {
+            "type": "boolean"
+          },
+          "fix": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "command": {}
+            },
+            "required": [
+              "label"
+            ]
+          }
+        },
+        "required": [
+          "severity",
+          "code",
+          "message",
+          "blocksExport"
+        ]
+      }
+    }
+  },
+  "required": [
+    "dryRun",
+    "revision",
+    "label",
+    "commands",
+    "reports",
+    "problems"
+  ]
+}

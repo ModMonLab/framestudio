@@ -1,0 +1,369 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/asset.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "minimum": 1,
+      "description": "File schema version (FR-DAT-05).",
+      "type": "integer"
+    },
+    "id": {
+      "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+      "description": "Asset ID.",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "kind": {
+      "pattern": "^[a-z-]+$",
+      "description": "Catalog prefix of the asset category (e.g. hair, act, prop).",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "group": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "synonyms": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "families": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "flat",
+            "type": "string"
+          },
+          {
+            "const": "illustrated",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "const": "front",
+            "type": "string"
+          },
+          {
+            "const": "three",
+            "type": "string"
+          },
+          {
+            "const": "side",
+            "type": "string"
+          },
+          {
+            "const": "back",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "viewExemptions": {
+      "description": "view → documented reason.",
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    },
+    "anchors": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {}
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "const": "number",
+                "type": "string"
+              },
+              {
+                "const": "enum",
+                "type": "string"
+              },
+              {
+                "const": "color",
+                "type": "string"
+              },
+              {
+                "const": "boolean",
+                "type": "string"
+              },
+              {
+                "const": "string",
+                "type": "string"
+              },
+              {
+                "const": "ref",
+                "type": "string"
+              }
+            ]
+          },
+          "range": {
+            "type": "array",
+            "items": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "additionalItems": false,
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default": {},
+          "label": {
+            "type": "string"
+          },
+          "endLabels": {
+            "type": "array",
+            "items": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "additionalItems": false,
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "required": [
+          "key",
+          "type",
+          "default"
+        ]
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+        "description": "Asset reference id@version.",
+        "type": "string"
+      }
+    },
+    "layering": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {}
+      }
+    },
+    "previews": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "flat": {
+          "type": "string"
+        },
+        "illustrated": {
+          "type": "string"
+        }
+      }
+    },
+    "license": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "SPDX identifier or \"proprietary-owner\".",
+          "type": "string"
+        },
+        "redistributable": {
+          "type": "boolean"
+        },
+        "commercialUse": {
+          "type": "boolean"
+        },
+        "attribution": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "redistributable",
+        "commercialUse"
+      ]
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "method": {
+          "anyOf": [
+            {
+              "const": "authored",
+              "type": "string"
+            },
+            {
+              "const": "ai-assisted-human-reviewed",
+              "type": "string"
+            },
+            {
+              "const": "imported",
+              "type": "string"
+            },
+            {
+              "const": "generated",
+              "type": "string"
+            },
+            {
+              "const": "recorded",
+              "type": "string"
+            }
+          ]
+        },
+        "author": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "sourceFile": {
+          "type": "string"
+        },
+        "rightsStatement": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "author",
+        "date"
+      ]
+    },
+    "review": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "status": {
+          "anyOf": [
+            {
+              "const": "pending",
+              "type": "string"
+            },
+            {
+              "const": "approved",
+              "type": "string"
+            },
+            {
+              "const": "changes-requested",
+              "type": "string"
+            }
+          ]
+        },
+        "by": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "sheet": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ]
+    },
+    "deprecated": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "replacement": {
+          "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+          "description": "Asset ID.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "replacement"
+      ]
+    },
+    "changes": {
+      "description": "What changed in this version (FR-AST-05).",
+      "type": "string"
+    },
+    "data": {
+      "description": "Kind-specific definition, validated by the kind schema in @frame/assets."
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "version",
+    "kind",
+    "name",
+    "category",
+    "tags",
+    "synonyms",
+    "families",
+    "views",
+    "viewExemptions",
+    "anchors",
+    "capabilities",
+    "parameters",
+    "dependencies",
+    "layering",
+    "previews",
+    "license",
+    "provenance",
+    "data"
+  ]
+}

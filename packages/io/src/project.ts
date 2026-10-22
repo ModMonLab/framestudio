@@ -1,6 +1,13 @@
-import { ProjectSession, createProjectState, randomId, type ApplyResult, type IdSource, type NewProjectOptions, type ProjectState } from '@frame/core';
+import fs from 'node:fs';
+import path from 'node:path';
+import { ProjectSession, createProjectState, type HistoryStep, randomId, type ApplyResult, type IdSource, type NewProjectOptions, type ProjectState } from '@frame/core';
 import { FrameError } from '@frame/schema';
 import { ProjectStore, type LoadOptions, type LoadResult } from './store.js';
+import { writeJsonAtomic } from './fsutil.js';
+
+/** Undo steps kept on disk between sessions. */
+const UNDO_KEPT = 200;
+const UNDO_FILE = 'history/undo.json';
 
 export type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error';
 
@@ -54,6 +61,13 @@ export class OpenProject {
       // Loaded in memory; files are not rewritten until the user confirms (FR-DAT-05).
     }
     const session = new ProjectSession(load.state, load.revision, { newId: opts.newId, now: opts.now });
+    // Undo survives closing and reopening when nothing changed in between (FR-PER-02; `frame undo` in local mode).
+    try {
+      const saved = JSON.parse(fs.readFileSync(path.join(store.root, UNDO_FILE), 'utf8')) as { revision: number; undo: HistoryStep[]; redo: HistoryStep[] };
+      if (saved.revision === load.revision && !opts.skipJournal) session.restoreStacks(saved);
+    } catch {
+      /* no saved undo history */
+    }
     return new OpenProject(store, session, { debounceMs: opts.debounceMs, load });
   }
 
@@ -166,5 +180,13 @@ export class OpenProject {
 
   close(): void {
     if (!this.flush()) throw new FrameError('IO_ERROR', `Could not save the project: ${this._save.error}`);
+    try {
+      const { undo, redo } = this.session.stacks(UNDO_KEPT);
+      const file = path.join(this.store.root, UNDO_FILE);
+      if (undo.length || redo.length) writeJsonAtomic(file, { revision: this.session.revision, undo, redo });
+      else fs.rmSync(file, { force: true });
+    } catch {
+      /* undo history is a convenience; the project itself is saved */
+    }
   }
 }

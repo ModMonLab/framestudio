@@ -88,6 +88,11 @@ export async function mutate(ctx: CommandContext, cmds: Command[], label?: strin
   };
 }
 
+/** Bundled, user and project-local assets for a project state (works in local and server mode). */
+export function libraryOf(ctx: CommandContext, state: ProjectState): Library {
+  return libraryFor({ contentDir: contentDir(), userDir: userLibraryDir(ctx.io.env), projectAssets: state.assets });
+}
+
 /** Project state for read-only commands, from the folder or the server. */
 export async function readProject(ctx: CommandContext): Promise<{ state: ProjectState; revision: number; root: string }> {
   const r = remote(ctx);
