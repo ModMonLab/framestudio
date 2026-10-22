@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { assetUsages, checkCharacter, compareStates, rigArtwork, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { assetUsages, checkCharacter, compareStates, compatibility, type CompatTarget, rigArtwork, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import {
@@ -361,12 +361,16 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   });
 
   /* ---------------------------------------------------------------- library (FR-AST) */
-  app.get<{ Querystring: { q?: string; kind?: string; limit?: string; project?: string } }>('/api/library', async (req, reply) => {
+  app.get<{ Querystring: { q?: string; kind?: string; limit?: string; project?: string; scene?: string; instance?: string } }>('/api/library', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
       const lib = library(p);
       const limit = req.query.limit === 'all' ? Infinity : Math.min(500, Number(req.query.limit ?? 100));
-      const hits = lib.search(req.query.q ?? '', { ...(req.query.kind ? { kind: req.query.kind } : {}) }).slice(0, limit);
+      // Compatibility with the selection (FR-AST-04): the project's family and, with an instance, its character.
+      const inst = p && req.query.scene && req.query.instance ? p.open.state.scenes[req.query.scene]?.instances.find((i) => i.id === req.query.instance) : undefined;
+      const charMan = inst?.kind === 'character' && inst.asset ? lib.manifest(inst.asset) : undefined;
+      const target: CompatTarget | undefined = p ? { family: p.open.state.project.styleFamily, ...(charMan && inst?.character ? { character: { manifest: charMan, view: inst.character.view, posture: inst.character.posture } } : {}) } : undefined;
+      const hits = lib.search(req.query.q ?? '', { ...(req.query.kind ? { kind: req.query.kind } : {}), ...(target ? { compatible: (m) => compatibility(m, target) } : {}) }).slice(0, limit);
       return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source, preview: previewable(m.kind), ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views, capabilities: m.capabilities })) };
     } catch (e) {
       return sendError(reply, e);

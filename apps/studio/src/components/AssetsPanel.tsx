@@ -18,6 +18,8 @@ export interface Hit {
   category: string;
   group?: string;
   tags: string[];
+  /** Why the item cannot be applied to the current selection (FR-AST-04). */
+  incompatible?: string;
 }
 
 /** Which library kinds each rail destination shows (Design System §4.3). */
@@ -48,14 +50,18 @@ export function AssetsPanel({ filter }: { filter: string }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const f = FILTERS[filter] ?? FILTERS.assets!;
 
+  const scene0 = sceneId ? project.scenes[sceneId] : undefined;
+  const selCharId = selection.find((s) => s.kind === 'instance' && scene0?.instances.find((i) => i.id === s.id)?.kind === 'character')?.id;
+  const selView = selCharId ? scene0?.instances.find((i) => i.id === selCharId)?.character?.view : undefined;
   useEffect(() => {
     let live = true;
     const kinds = f.kinds;
-    Promise.all((kinds ?? [undefined]).map((k) => api.library(q, k, pid, 500))).then((rs) => live && setAll(rs.flatMap((r) => r.results))).catch(() => live && setAll([]));
+    const sel = sceneId && selCharId ? { scene: sceneId, instance: selCharId } : undefined;
+    Promise.all((kinds ?? [undefined]).map((k) => api.library(q, k, pid, 500, sel))).then((rs) => live && setAll(rs.flatMap((r) => r.results))).catch(() => live && setAll([]));
     return () => {
       live = false;
     };
-  }, [q, filter, pid, f.kinds]);
+  }, [q, filter, pid, f.kinds, sceneId, selCharId, selView]);
 
   const groups = useMemo(() => {
     const m = new Map<string, Hit[]>();
@@ -73,6 +79,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
 
   const reason = (h: Hit): string | undefined => {
     if (!PLACEABLE.has(h.kind)) return 'Editing these is part of the character builder';
+    if (h.incompatible) return h.incompatible;
     if ((h.kind === 'exp' || h.kind === 'act') && !selChar) return 'Select a character first';
     return undefined;
   };

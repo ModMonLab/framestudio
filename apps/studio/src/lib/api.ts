@@ -80,7 +80,7 @@ export const api = {
   validate: (pid: string) => req<{ revision: number; problems: Problem[] }>('GET', `/api/projects/${pid}/validate`),
   sceneAssets: (pid: string, scene: string) => req<{ revision: number; manifests: Record<string, unknown> }>('GET', `/api/projects/${pid}/scene-assets?scene=${encodeURIComponent(scene)}`),
   manifest: (ref: string, pid?: string) => req<unknown>('GET', `/api/library/manifest?ref=${encodeURIComponent(ref)}${pid ? `&project=${pid}` : ''}`),
-  library: (q: string, kind?: string, pid?: string, limit = 200) => req<{ results: { ref: string; kind: string; name: string; category: string; group?: string; tags: string[]; preview?: boolean }[] }>('GET', `/api/library?q=${encodeURIComponent(q)}${kind ? `&kind=${kind}` : ''}${pid ? `&project=${pid}` : ''}&limit=${limit}`),
+  library: (q: string, kind?: string, pid?: string, limit = 200, sel?: { scene: string; instance: string }) => req<{ results: { ref: string; kind: string; name: string; category: string; group?: string; tags: string[]; preview?: boolean; incompatible?: string; source?: string }[] }>('GET', `/api/library?q=${encodeURIComponent(q)}${kind ? `&kind=${kind}` : ''}${pid ? `&project=${pid}` : ''}&limit=${limit}${sel ? `&scene=${encodeURIComponent(sel.scene)}&instance=${encodeURIComponent(sel.instance)}` : ''}`),
   styles: () => req<Record<string, unknown>>('GET', '/api/styles'),
   jobs: (pid?: string) => req<{ jobs: JobInfo[] }>('GET', `/api/jobs${pid ? `?project=${pid}` : ''}`),
   cancelJob: (id: string) => req<{ cancelled: boolean }>('DELETE', `/api/jobs/${id}`),
