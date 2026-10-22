@@ -288,7 +288,7 @@ H1 props (10 of 142), I1 kits (8 of 16), J1 atmosphere (42 of 54), K1 effects (2
 N1 music (12 of 20), N2 cues (12), N3 ambience (20), N4 SFX (20 of 60), O1 text and graphics (36), P1 templates (16), R1 output presets (12).
 
 ## Next actions (ordered)
-1. Keep CI green (typecheck, lint, unit, visual, worker, slice + Studio e2e).
+1. Keep CI green (typecheck, lint, unit, visual, worker, slice + Studio e2e). CI runs once per pull request update (Linux) and on main (Linux, Windows, macOS); run the full local checks before pushing, and push in batches.
 2. M3 remainder: ripple, marquee, word-boundary snapping, zoom to selection and marker naming (FR-TML-02/04/08);
    motion principles and pose editing (FR-ACT-09/10); project-level templates (FR-TPL-02, FR-PRJ-01); transitions
    between scenes with the episode view (FR-TML-09); lip-sync accuracy corpus (AC-09).
