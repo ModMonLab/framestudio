@@ -79,6 +79,8 @@
 .st-ms:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .st-tl-lane .fr-clip { border: 0; font: inherit; font-size: 11px; font-weight: 500; text-align: left; }
 .st-mouth { position: absolute; top: 6px; bottom: 6px; border-radius: 2px; background: var(--clip-lipsync); color: var(--clip-lipsync-text); font-family: var(--font-mono); font-size: 9px; display: grid; place-items: center; border-right: 1px solid var(--color-panel); overflow: hidden; }
+.st-mouth { padding: 0; border-top: 0; border-bottom: 0; border-left: 0; cursor: pointer; }
+.st-mouth--edited { box-shadow: inset 0 -2px 0 var(--color-warning); }
 .st-playhead { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--color-accent); pointer-events: none; z-index: 5; }
 .st-playhead::before { content: ''; position: absolute; top: 0; left: -5px; width: 11px; height: 10px; background: var(--color-accent); clip-path: polygon(0 0, 100% 0, 100% 50%, 50% 100%, 0 50%); }
 
@@ -191,3 +193,17 @@
 .st-library__usages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .st-library__usages li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .st-library__problems { padding: var(--space-3) var(--space-5); background: var(--color-panel); border-bottom: 1px solid var(--color-divider); color: var(--color-warning-text, var(--color-text)); }
+/* Timeline box selection and overview (FR-TML-02/08). */
+.st-marquee { position: absolute; z-index: 5; pointer-events: none; border: 1px solid var(--color-accent); background: color-mix(in srgb, var(--color-accent) 14%, transparent); border-radius: 2px; }
+.st-minimap { position: relative; height: 18px; margin: 0 8px 4px; border-radius: 4px; background: var(--color-subtle); overflow: hidden; cursor: pointer; }
+.st-mini-clip { position: absolute; top: 4px; height: 10px; border-radius: 1px; opacity: .7; }
+.st-mini-view { position: absolute; top: 0; bottom: 0; border: 1.5px solid var(--color-accent); border-radius: 4px; pointer-events: none; }
+/* Episode view (FR-TML-09). */
+.st-ep-strip { display: flex; gap: var(--space-4); padding: var(--space-4); margin: 0; list-style: none; overflow-x: auto; align-items: flex-start; }
+.st-ep-card { flex: 0 0 auto; width: 208px; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-panel); }
+.st-ep-card--current { border-color: var(--color-accent); }
+.st-ep-thumb { padding: 0; border: 0; background: var(--color-canvas); border-radius: var(--radius-xs); cursor: pointer; line-height: 0; }
+.st-ep-thumb img { width: 100%; height: auto; border-radius: var(--radius-xs); }
+.st-ep-meta { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.st-ep-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-ep-num { font-variant-numeric: tabular-nums; opacity: .6; }

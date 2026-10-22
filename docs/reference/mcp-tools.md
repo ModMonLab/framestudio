@@ -84,6 +84,54 @@ Apply engine commands as one undoable change. dry_run validates and returns the 
 | `base_revision` | integer | no |  |
 | `project` | string | no | Project id from open_project/create_project; defaults to the last opened project. |
 
+## `apply_recipe`
+
+Apply a performance or shot recipe (search_assets kind "rcp" or "cam") to a scene: roles map to instance ids; line-anchored recipes take a line clip id, others a start time. Adds ordinary grouped clips (one undo step); warnings name steps whose assets are missing.
+
+| Argument | Type | Required | Notes |
+|---|---|---|---|
+| `scene` | string | yes |  |
+| `ref` | string | yes | Recipe ref |
+| `roles` | object | yes | Role key → instance id |
+| `at` | number | no | Start in seconds (time-anchored recipes) |
+| `line` | string | no | Line clip id (line-anchored recipes) |
+| `dry_run` | boolean | no |  |
+| `project` | string | no | Project id from open_project/create_project; defaults to the last opened project. |
+
+## `auto_coverage`
+
+Generate editable shots from a scene's dialogue: an establishing wide, speaker close-ups, reactions; replaces earlier automatic shots and keeps hand-placed ones.
+
+| Argument | Type | Required | Notes |
+|---|---|---|---|
+| `scene` | string | yes |  |
+| `project` | string | no | Project id from open_project/create_project; defaults to the last opened project. |
+
+## `apply_template`
+
+Add the scene(s) of a production template (search_assets kind "tpl") to an episode with any characters in its cast roles (role key → character ref); the suggested script is in the scene notes.
+
+| Argument | Type | Required | Notes |
+|---|---|---|---|
+| `ref` | string | yes |  |
+| `cast` | object | no |  |
+| `episode` | string | no |  |
+| `name` | string | no |  |
+| `project` | string | no | Project id from open_project/create_project; defaults to the last opened project. |
+
+## `add_sound`
+
+Put a library sound on a scene's sound tracks: music (kind "music") and ambience ("amb") loop from the start time to the scene end unless a duration is given; sound effects ("sfx") and cues ("cue") play once. Music ducks under dialogue automatically.
+
+| Argument | Type | Required | Notes |
+|---|---|---|---|
+| `scene` | string | yes |  |
+| `ref` | string | yes |  |
+| `at` | number | no | Start in seconds (default 0) |
+| `duration` | number | no | Seconds |
+| `gain_db` | number | no |  |
+| `project` | string | no | Project id from open_project/create_project; defaults to the last opened project. |
+
 ## `validate` (read-only)
 
 Problems in the project (missing assets or media, lines without takes, export blockers) with fixes.

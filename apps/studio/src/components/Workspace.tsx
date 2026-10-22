@@ -9,6 +9,7 @@ import { AssetsPanel } from './AssetsPanel.js';
 import { CanvasView } from './CanvasView.js';
 import { PropertiesPanel } from './PropertiesPanel.js';
 import { Timeline } from './Timeline.js';
+import { EpisodeView } from './EpisodeView.js';
 import { ExportDialog } from './ExportDialog.js';
 import { JobsButton } from './JobsButton.js';
 import { WorkerBadge } from './WorkerBadge.js';
@@ -140,10 +141,16 @@ function Shell() {
         {panels.right && <PropertiesPanel mode={mode} />}
       </div>
       {panels.timeline && <ResizeHandle label="Resize timeline" value={tlH} min={160} max={600} defaultValue={332} onChange={setTlH} dir={-1} orientation="horizontal" />}
-      {panels.timeline && <Timeline />}
+      {panels.timeline && <TimelineArea />}
       <span className="fr-sr" aria-live="polite">{mode} mode</span>
     </div>
   );
+}
+
+function TimelineArea() {
+  const { studio } = useCtx();
+  const episode = useStudio(studio, (s) => !!s.episodeView);
+  return episode ? <EpisodeView /> : <Timeline />;
 }
 
 function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right' | 'timeline') => void; panels: { left: boolean; right: boolean; timeline: boolean } }) {
@@ -193,6 +200,8 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
     ] },
     { id: 'scene', label: 'Scene', items: [
       { id: 'voice', label: 'Design a voice…', onSelect: () => openVoiceDesigner(undefined) },
+      { id: 'tpl-save-ep', label: 'Save episode as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message }), 'episode') },
+      { id: 'episode-view', label: 'Episode view', checked: !!studio.state.episodeView, onSelect: () => studio.set({ episodeView: !studio.state.episodeView }) },
       { id: 'tpl-save', label: 'Save scene as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message })) },
       { kind: 'separator', id: 's-go' },
       ...project.project.episodes.flatMap((e) => (project.episodes[e]?.scenes ?? []).map((s) => ({ id: `go-${s}`, label: `Go to ${project.scenes[s]?.name ?? s}`, checked: s === sceneId, onSelect: () => studio.set({ scene: s, selection: [], time: 0 }) }))),
@@ -260,7 +269,11 @@ function goToScene(studio: Studio, scene: string | undefined) {
 export async function deleteSelection(studio: Studio) {
   const s = studio.state;
   if (!s.scene) return;
-  const cmds = s.selection.flatMap((x) => (x.kind === 'instance' ? [{ name: 'instance.remove', params: { scene: s.scene, id: x.id } }] : x.kind === 'clip' ? [{ name: 'clip.remove', params: { scene: s.scene, id: x.id } }] : []));
+  const clips = s.selection.filter((x) => x.kind === 'clip').map((x) => x.id);
+  const cmds = [
+    ...s.selection.filter((x) => x.kind === 'instance').map((x) => ({ name: 'instance.remove', params: { scene: s.scene, id: x.id } })),
+    ...(clips.length ? [{ name: 'clip.remove', params: { scene: s.scene, ids: clips, ...(s.ripple ? { ripple: true } : {}) } }] : []),
+  ];
   if (cmds.length) {
     await studio.exec(cmds);
     studio.set({ selection: [] });
@@ -309,6 +322,12 @@ function useShortcuts(setPanels: (fn: (p: { left: boolean; right: boolean; timel
       } else if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault();
         void import('../lib/api.js').then(({ api }) => api.save(st.state.pid));
+      } else if (e.key === ' ' && e.shiftKey) {
+        // Play from the selection (FR-TML-05): from the earliest selected clip.
+        e.preventDefault();
+        const scene = st.state.scene ? st.state.project!.scenes[st.state.scene] : undefined;
+        const starts = st.state.selection.filter((x) => x.kind === 'clip').map((x) => scene?.clips.find((c) => c.id === x.id)?.start).filter((v): v is number => v !== undefined);
+        st.set({ ...(starts.length ? { time: Math.min(...starts) } : {}), playing: true });
       } else if (e.key === ' ') {
         e.preventDefault();
         st.set({ playing: !st.state.playing });

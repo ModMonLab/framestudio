@@ -1,6 +1,6 @@
 /** Resolves a character asset + look + family into a composer spec (FR-CHR-01, FR-CHR-09, FR-WRD-01). */
 import type { AssetManifest, StyleFamily } from '@frame/schema';
-import { DEFAULT_BODY, type BodyParams, type CharacterSpec, type FamilyStyle, type ResolvedPart, type PartData } from '@frame/rig';
+import { DEFAULT_BODY, type BodyParams, type CharacterSpec, type FamilyStyle, type ResolvedPart, type PartData, type RigVariant } from '@frame/rig';
 
 export interface AssetResolver {
   manifest(ref: string): AssetManifest | undefined;
@@ -46,6 +46,8 @@ export interface ResolveResult {
   spec: CharacterSpec;
   look: LookData | undefined;
   missing: string[];
+  /** Merged rig variant of the character's identity options (FR-CHR-11). */
+  variant: RigVariant;
 }
 
 /** Assembles the composer spec. Missing parts are reported, never invented. */
@@ -85,7 +87,7 @@ export function resolveCharacter(m: AssetManifest, lookId: string | undefined, f
   }
 
   const look = c.looks.find((l) => l.id === (lookId ?? c.defaultLook)) ?? c.looks[0];
-  const refs = [...Object.values(c.parts), ...(c.details ?? []), ...(look?.garments ?? []), ...(look?.accessories ?? []), ...extraParts];
+  const refs = [...Object.values(c.parts), ...(c.rigVariant ? [c.rigVariant] : []), ...(c.details ?? []), ...(look?.garments ?? []), ...(look?.accessories ?? []), ...extraParts];
   const parts: ResolvedPart[] = [];
   for (const ref of refs) {
     const a = get(ref);
@@ -98,5 +100,30 @@ export function resolveCharacter(m: AssetManifest, lookId: string | undefined, f
     if (data.colors) for (const [k, v] of Object.entries(data.colors)) if (!(k in colors)) colors[k] = v;
   }
   Object.assign(colors, look?.colors ?? {});
-  return { spec: { family, style, body, params, colors, parts, options }, look, missing };
+  const variant = mergeVariants(parts.map((p) => p.data.variant));
+  Object.assign(body, variant.body ?? {});
+  Object.assign(colors, variant.palette ?? {});
+  return { spec: { family, style, body, params, colors, parts, options }, look, missing, variant };
+}
+
+export function mergeVariants(vs: (RigVariant | undefined)[]): RigVariant {
+  const out: RigVariant = {};
+  for (const v of vs) {
+    if (!v) continue;
+    if (v.posture) out.posture = v.posture;
+    if (v.rolling) out.rolling = v.rolling;
+    if (v.truncate) out.truncate = { ...out.truncate, ...v.truncate };
+    if (v.replace) out.replace = { ...out.replace, ...v.replace };
+    if (v.body) out.body = { ...out.body, ...v.body };
+    if (v.palette) out.palette = { ...out.palette, ...v.palette };
+  }
+  return out;
+}
+
+/** The rig variant of a character instance without composing it (posture and locomotion need it first). */
+export function characterVariant(m: AssetManifest, lookId: string | undefined, assets: AssetResolver): RigVariant {
+  const c = m.data as CharacterData;
+  const look = c.looks.find((l) => l.id === (lookId ?? c.defaultLook)) ?? c.looks[0];
+  const refs = [...(c.rigVariant ? [c.rigVariant] : []), ...(c.details ?? []), ...(look?.accessories ?? [])];
+  return mergeVariants(refs.map((r) => (assets.manifest(r)?.data as PartData | undefined)?.variant));
 }

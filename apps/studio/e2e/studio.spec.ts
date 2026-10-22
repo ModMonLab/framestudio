@@ -119,10 +119,17 @@ test('dropping a character on a chair seats it on the seat anchor, in front of t
   const maya = st.scenes[sid].instances.find((i: { name: string }) => i.name === 'Maya Bennett');
   // Wait until the Studio has the new chair (it arrives over the live connection).
   await expect(page.getByRole('treeitem', { name: /Spare chair/ }).first()).toBeVisible();
-  await page.waitForTimeout(500);
   // The wide camera shows the whole stage (centre 960,560, width 1920): stage → canvas is a uniform scale.
+  // Wait until the canvas has settled (fonts and panels can resize it just after load); the drop maps through it.
   const canvas = page.getByTestId('stage-canvas');
-  const box = (await canvas.boundingBox())!;
+  let box = (await canvas.boundingBox())!;
+  await expect.poll(async () => {
+    await page.waitForTimeout(250);
+    const b = (await canvas.boundingBox())!;
+    const same = Math.abs(b.width - box.width) < 0.5 && Math.abs(b.x - box.x) < 0.5 && Math.abs(b.y - box.y) < 0.5;
+    box = b;
+    return same;
+  }).toBe(true);
   const k = box.width / 1920;
   const toScreen = (x: number, y: number) => [box.x + x * k, box.y + (y - 20) * k] as const;
   const [x0, y0] = toScreen(maya.transform.x, maya.transform.y - 420); // her head, above the chair she sits on
@@ -131,6 +138,8 @@ test('dropping a character on a chair seats it on the seat anchor, in front of t
   await page.mouse.down();
   await page.mouse.move(x1, y1, { steps: 6 });
   await page.mouse.up();
+  // Seated on the spare chair: the seat command (not a plain move) ran.
+  await expect(page.getByRole('button', { name: /^Undo Seat Maya Bennett on Spare chair/ }).first()).toBeVisible();
   await expect.poll(async () => (await state()).scenes[sid].instances.find((i: { id: string }) => i.id === maya.id).transform.x, { timeout: 10_000 }).toBeLessThan(400);
   st = await state();
   const m = st.scenes[sid].instances.find((i: { id: string }) => i.id === maya.id);
@@ -657,4 +666,98 @@ test('a template starts a new scene with the chosen cast; Replace cast keeps its
   for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight');
   await page.waitForTimeout(800);
   await previewMatchesServer(page, 5 * 48000, sid);
+});
+
+test('timeline: box selection, moving several clips, ripple delete, marker rename and numeric timing (FR-TML-02/04/07)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const sfx = st.scenes[sid].tracks.find((t: { kind: string }) => t.kind === 'sfx').id;
+  const add = async (a: number, b: number, name: string) => (await (await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'clip.add', params: { scene: sid, track: sfx, start: a * 48000, end: b * 48000, name, params: {} } }] } })).json()).commands[0].params.id as string;
+  const a = await add(1, 2, 'Cue A');
+  const b = await add(2, 3, 'Cue B');
+  const c = await add(4, 5, 'Cue C');
+  const at = async (id: string) => (await state()).scenes[sid].clips.find((x: { id: string }) => x.id === id);
+  const tl = page.getByRole('region', { name: 'Timeline' });
+  await expect(tl.getByRole('button', { name: /: Cue C$/ })).toBeVisible();
+  await tl.getByRole('button', { name: 'Zoom to fit' }).click();
+  // Box-select A and B by dragging across the empty part of their lane, from before A to inside B.
+  await tl.getByRole('button', { name: /: Cue A$/ }).scrollIntoViewIfNeeded();
+  const ba = (await tl.getByRole('button', { name: /: Cue A$/ }).boundingBox())!;
+  const bb = (await tl.getByRole('button', { name: /: Cue B$/ }).boundingBox())!;
+  await page.mouse.move(ba.x - 12, ba.y + ba.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2 + 2, { steps: 6 });
+  await page.mouse.up();
+  await expect(tl.getByRole('button', { name: /: Cue A$/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(tl.getByRole('button', { name: /: Cue B$/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(tl.getByRole('button', { name: /: Cue C$/ })).toHaveAttribute('aria-pressed', 'false');
+  // Dragging one of them moves both.
+  const b2 = (await tl.getByRole('button', { name: /: Cue B$/ }).boundingBox())!;
+  const px = b2.width; // one second
+  await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b2.x + b2.width / 2 + px / 2, b2.y + b2.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => [(await at(a)).start, (await at(b)).start]).toEqual([1.5 * 48000, 2.5 * 48000]);
+  // Ripple delete: C moves up by the removed length (2 s).
+  await tl.getByRole('button', { name: 'Ripple' }).click();
+  await page.keyboard.press('Delete');
+  await expect.poll(async () => (await at(c)).start).toBe(2 * 48000);
+  expect(await at(a)).toBeUndefined();
+  // Numeric timing in Properties: C starts at 6 s and lasts 0.5 s.
+  await tl.getByRole('button', { name: /: Cue C$/ }).click();
+  await page.getByRole('tab', { name: 'Properties' }).click();
+  await page.getByRole('spinbutton', { name: 'Start' }).fill('6');
+  await page.getByRole('spinbutton', { name: 'Start' }).press('Enter');
+  await expect.poll(async () => (await at(c)).start).toBe(6 * 48000);
+  await page.getByRole('spinbutton', { name: 'Length' }).fill('0.5');
+  await page.getByRole('spinbutton', { name: 'Length' }).press('Enter');
+  await expect.poll(async () => (await at(c)).end).toBe(6.5 * 48000);
+  // Marker rename by double-click.
+  await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'marker.add', params: { scene: sid, name: 'Marker 1', at: 3 * 48000 } }] } });
+  page.once('dialog', (d) => void d.accept('Punchline'));
+  await tl.getByRole('button', { name: 'Marker Marker 1' }).dblclick();
+  await expect.poll(async () => (await state()).scenes[sid].markers[0].name).toBe('Punchline');
+});
+
+test('a new project starts from a template; the episode view reorders scenes and sets the transition into a scene (FR-PRJ-01, FR-TML-09, FR-FX-03)', async ({ page }) => {
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-e2e-new-')), 'Comedy.frame');
+  await page.goto('/');
+  const form = page.getByRole('region', { name: 'New project' }).or(page.locator('form').filter({ has: page.getByRole('button', { name: 'Create project' }) })).first();
+  await form.getByRole('textbox', { name: 'Folder' }).fill(dir);
+  await form.getByRole('textbox', { name: 'Name' }).fill('Coffee bits');
+  await form.getByRole('button', { name: /^Start from: / }).click();
+  await page.getByRole('option', { name: 'Comedy exchange' }).click();
+  await form.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('tab', { name: 'Direct' })).toBeVisible();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  let st = await state();
+  expect(st.project.name).toBe('Coffee bits');
+  const ep = st.episodes[st.project.episodes[0]];
+  expect(ep.scenes.map((id: string) => st.scenes[id].name)).toEqual(['Comedy exchange']);
+  // A second scene from another template, then the episode view.
+  await page.request.post(`/api/projects/${pid}/templates/apply`, { data: { ref: 'tpl.news-segment@1' } });
+  await expect.poll(async () => (await state()).episodes[ep.id].scenes.length).toBe(2);
+  await page.getByRole('menuitem', { name: 'Scene' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Episode view' }).click();
+  const view = page.getByRole('region', { name: 'Episode' });
+  await expect(view.getByRole('button', { name: 'Open News segment' })).toBeVisible();
+  // Transition into the news segment: crossfade from the comedy scene's last picture.
+  await view.getByRole('button', { name: /^Into News segment: / }).click();
+  await page.getByRole('option', { name: 'Crossfade' }).click();
+  await expect.poll(async () => {
+    const s2 = await state();
+    const sc = s2.scenes[s2.episodes[ep.id].scenes[1]];
+    const shot = sc.tracks.find((t: { kind: string }) => t.kind === 'shot').id;
+    return sc.clips.find((c: { track: string; start: number }) => c.track === shot && c.start === 0)?.params.transition;
+  }).toBe('tr.crossfade@1');
+  // Reorder: the news segment first.
+  await view.getByRole('button', { name: 'Move News segment earlier' }).click();
+  await expect.poll(async () => { const s3 = await state(); return s3.episodes[ep.id].scenes.map((id: string) => s3.scenes[id].name); }).toEqual(['News segment', 'Comedy exchange']);
+  st = await state();
+  await new AxeBuilder({ page }).include('[aria-label="Episode"]').analyze().then((r) => expect(r.violations.map((v) => v.id)).toEqual([]));
 });

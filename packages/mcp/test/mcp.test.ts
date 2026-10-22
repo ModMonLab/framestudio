@@ -175,4 +175,97 @@ describe('Frame MCP server (FR-AGT-01..04)', () => {
     expect(done.json.state, JSON.stringify(done.json)).toBe('succeeded');
     expect(fs.existsSync(done.json.result.output)).toBe(true);
   });
+
+  it.skipIf(!WORKER)('AC-13: an agent produces a 3-scene episode with 2 characters, takes, recipes, shots and music, then renders it; a concurrent human edit is resolved by re-reading', async () => {
+    const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-mcp-')), 'Episode.frame');
+    const created = await call('create_project', { path: dir, name: 'Agent episode' });
+    expect(created.error, JSON.stringify(created.json)).toBe(false);
+    const pid = created.json.id as string;
+    let sum = (await call('get_project')).json;
+    const episode = sum.episodes[0].id as string;
+    const s1 = sum.episodes[0].scenes[0].id as string;
+    // Brief: "Two friends at a coffee shop, three short scenes: hello, an idea, a toast."
+    const more = await call('apply_commands', { label: 'Add scenes', commands: [
+      { name: 'scene.rename', params: { id: s1, name: 'Hello' } },
+      { name: 'scene.setDuration', params: { id: s1, durationS: 8 } },
+      { name: 'scene.add', params: { episode, name: 'An idea', durationS: 8, kit: 'kit.coffee-shop@1' } },
+      { name: 'scene.add', params: { episode, name: 'A toast', durationS: 8, kit: 'kit.coffee-shop@1' } },
+    ] });
+    expect(more.error, JSON.stringify(more.json)).toBe(false);
+    sum = (await call('get_project')).json;
+    const scenes = sum.episodes[0].scenes.map((x: { id: string }) => x.id) as string[];
+    expect(scenes).toHaveLength(3);
+
+    // Two characters, each placed in every scene, each with a designed voice.
+    const a = (await call('create_character', { name: 'Maya', from: 'chr.maya-bennett@1', place: { scene: scenes[0], x: 700 } })).json;
+    const b = (await call('create_character', { name: 'Theo', from: 'chr.theo-lambert@1', place: { scene: scenes[0], x: 1200 } })).json;
+    const inst: Record<string, [string, string]> = { [scenes[0]!]: [a.instance, b.instance] };
+    for (const sc of scenes.slice(1)) {
+      const r = await call('apply_commands', { label: 'Place cast', commands: [
+        { name: 'instance.add', params: { scene: sc, kind: 'character', asset: a.ref, name: 'Maya', transform: { x: 700, y: 1000 }, character: { look: 'everyday', view: 'three', posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false } } } },
+        { name: 'instance.add', params: { scene: sc, kind: 'character', asset: b.ref, name: 'Theo', transform: { x: 1200, y: 1000, flipX: true }, character: { look: 'barista', view: 'three', posture: 'standing', auto: { idle: true, listening: true, blinks: true, talkingGestures: false } } } },
+      ] });
+      expect(r.error, JSON.stringify(r.json)).toBe(false);
+      inst[sc] = [r.json.commands[0].params.id, r.json.commands[1].params.id];
+    }
+    for (const [who, desc, k] of [['Maya', 'Warm, curious host voice', 0], ['Theo', 'Bright, playful voice', 1]] as const) {
+      const v = await call('design_voice', { name: `${who} voice`, description: desc, seed: 5 + k, assign_to: scenes.map((sc) => ({ scene: sc, instance: inst[sc]![k] })) });
+      expect(v.error, JSON.stringify(v.json)).toBe(false);
+    }
+
+    // Lines (dry run first), takes, a recipe, shots and music in every scene.
+    const script: Record<string, [number, string][]> = {
+      [scenes[0]!]: [[0, 'Morning! The usual?'], [1, 'You know me too well.']],
+      [scenes[1]!]: [[1, 'What if we opened a podcast here?'], [0, 'In the coffee shop? I love it.']],
+      [scenes[2]!]: [[0, 'To our first episode.'], [1, 'Cheers to that!']],
+    };
+    const music = (await call('search_assets', { kind: 'music', limit: 1 })).json.results[0].ref as string;
+    for (const sc of scenes) {
+      const cmds = script[sc]!.map(([k, text], i) => ({ name: 'line.add', params: { scene: sc, speaker: inst[sc]![k], text, start: Math.round((0.5 + i * 3) * 48000), durationS: 2.5 } }));
+      const rev = (await call('get_project')).json.revision as number;
+      const dry = await call('apply_commands', { dry_run: true, commands: cmds });
+      expect(dry.json.dryRun).toBe(true);
+      expect((await call('get_project')).json.revision).toBe(rev);
+      const added = await call('apply_commands', { base_revision: rev, label: 'Write lines', commands: cmds });
+      expect(added.error, JSON.stringify(added.json)).toBe(false);
+      const lines = added.json.commands.map((c: { params: { id: string } }) => c.params.id);
+      const takes = await call('generate_takes', { scene: sc, lines });
+      expect(takes.json.state, JSON.stringify(takes.json)).toBe('succeeded');
+      const recipe = await call('apply_recipe', { scene: sc, ref: 'rcp.double-take-gag@1', roles: { reactor: inst[sc]![1], target: inst[sc]![0] }, at: 5.5 });
+      expect(recipe.error, JSON.stringify(recipe.json)).toBe(false);
+      expect(recipe.json.clips).toBeGreaterThan(0);
+      const shots = await call('auto_coverage', { scene: sc });
+      expect(shots.error, JSON.stringify(shots.json)).toBe(false);
+      expect(shots.json.shots).toBeGreaterThan(1);
+      const snd = await call('add_sound', { scene: sc, ref: music, gain_db: -6 });
+      expect(snd.error, JSON.stringify(snd.json)).toBe(false);
+    }
+
+    // Every change is the agent's; the project validates with no blocking problems.
+    const detail = (await call('get_scene', { scene: scenes[1] })).json.scene;
+    expect(detail.clips.filter((c: { source: string }) => c.source.startsWith('agent:') || c.source === 'auto' || c.source.startsWith('recipe:')).length).toBe(detail.clips.length);
+    const problems = (await call('validate')).json.problems as { blocksExport?: boolean; code: string }[];
+    expect(problems.filter((p) => p.blocksExport).map((p) => p.code)).toEqual([]);
+
+    // A person edits scene 2 while the agent works: the agent's stale write conflicts and succeeds after re-reading.
+    const stale = (await call('get_project')).json.revision as number;
+    const line2 = detail.clips.find((c: { line?: unknown }) => c.line).id as string;
+    expect((await human('POST', `/api/projects/${pid}/commands`, { commands: [{ name: 'line.setDelivery', params: { scene: scenes[1], id: line2, delivery: { emotion: 'excited' } } }] })).status).toBe(200);
+    const clash = await call('apply_commands', { base_revision: stale, commands: [{ name: 'line.setDelivery', params: { scene: scenes[1], id: line2, delivery: { emotion: 'curious' } } }] });
+    expect(clash.json.error.code).toBe('REVISION_CONFLICT');
+    const reread = (await call('get_scene', { scene: scenes[1] })).json;
+    expect(reread.scene.clips.find((c: { id: string }) => c.id === line2).line.delivery.emotion).toBe('excited');
+    const ok = await call('apply_commands', { base_revision: reread.revision, commands: [{ name: 'marker.add', params: { scene: scenes[1], name: 'Idea lands', at: 4 * 48000 } }] });
+    expect(ok.error, JSON.stringify(ok.json)).toBe(false);
+
+    // A preview frame and the whole episode as a video.
+    const frame = await call('render_frame', { scene: scenes[2], t: 1, width: 320, height: 180 });
+    expect(frame.content.find((c) => c.type === 'image')?.mimeType).toBe('image/png');
+    const r = await call('render_video', { scenes, width: 320, height: 180 });
+    const done = await call('job_status', { job: r.json.job, wait_seconds: 240 });
+    expect(done.json.state, JSON.stringify(done.json)).toBe('succeeded');
+    expect(fs.existsSync(done.json.result.output)).toBe(true);
+    expect(done.json.result.durationS).toBeCloseTo(24, 0);
+    expect(done.json.result.scenes).toEqual(scenes);
+  });
 });

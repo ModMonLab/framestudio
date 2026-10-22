@@ -210,15 +210,18 @@ defineCommand({
 
 defineCommand({
   name: 'clip.remove',
-  summary: 'Delete clips (undoable). Takes of deleted lines are kept until cleaned up.',
-  params: Type.Object({ scene: Id, ids: Type.Array(Id, { minItems: 1 }) }, { additionalProperties: false }),
+  summary: 'Delete clips (undoable). Takes of deleted lines are kept until cleaned up. Ripple closes the gaps on their tracks.',
+  params: Type.Object({ scene: Id, ids: Type.Array(Id, { minItems: 1 }), ripple: Type.Optional(Type.Boolean()) }, { additionalProperties: false }),
   label: (p) => (p.ids.length === 1 ? 'Delete clip' : `Delete ${p.ids.length} clips`),
-  touches: (p) => p.ids.map((id) => clipKey(p.scene, id)),
+  touches: (p) => (p.ripple ? [`scenes/${p.scene}`] : p.ids.map((id) => clipKey(p.scene, id))),
   apply: (d, p) => {
     const scene = sceneOf(d, p.scene);
     for (const id of p.ids) assertUnlocked(scene, clipOf(scene, id).track);
     const ids = new Set(p.ids);
+    const removed = scene.clips.filter((c) => ids.has(c.id)).sort((a, b) => b.start - a.start);
     scene.clips = scene.clips.filter((c) => !ids.has(c.id));
+    // Ripple (FR-TML-02): later clips on the same track move up by the removed length, latest first.
+    if (p.ripple) for (const r of removed) for (const c of scene.clips) if (c.track === r.track && c.start >= r.end) { c.start -= r.end - r.start; c.end -= r.end - r.start; }
   },
 });
 
@@ -246,6 +249,20 @@ defineCommand({
   touches: (p) => [`scenes/${p.scene}/markers/${p.id}`],
   apply: (d, p) => {
     sceneOf(d, p.scene).markers.push({ id: p.id as never, name: p.name, at: p.at });
+  },
+});
+
+defineCommand({
+  name: 'marker.update',
+  summary: 'Rename or move a marker.',
+  params: Type.Object({ scene: Id, id: Id, name: Type.Optional(Type.String({ minLength: 1 })), at: Type.Optional(TicksT) }, { additionalProperties: false }),
+  label: (p) => (p.name ? `Rename marker to ${p.name}` : 'Move marker'),
+  touches: (p) => [`scenes/${p.scene}/markers/${p.id}`],
+  apply: (d, p) => {
+    const m = sceneOf(d, p.scene).markers.find((x) => x.id === p.id);
+    if (!m) fail('NOT_FOUND', `Marker ${p.id} not found`);
+    if (p.name !== undefined) m.name = p.name;
+    if (p.at !== undefined) m.at = p.at;
   },
 });
 

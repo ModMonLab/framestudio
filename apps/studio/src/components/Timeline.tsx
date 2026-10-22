@@ -1,8 +1,8 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
 import { useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Bot, ChevronRight, Lock, Maximize, SkipBack, Sparkles, Video, Volume2 } from 'lucide-react';
-import { conflictingClipIds, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
-import type { Clip, Scene, Track } from '@frame/schema';
+import { AlertTriangle, Bot, ChevronRight, Eye, EyeOff, Lock, Maximize, Scan, SkipBack, Sparkles, SplitSquareHorizontal, Video, Volume2 } from 'lucide-react';
+import { applyOverrides, conflictingClipIds, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
+import type { Clip, MouthBlock, MouthShape, Scene, Track } from '@frame/schema';
 import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
@@ -29,6 +29,8 @@ export function Timeline() {
   const time = useStudio(studio, (s) => s.time);
   const playing = useStudio(studio, (s) => s.playing);
   const selection = useStudio(studio, (s) => s.selection);
+  const ripple = useStudio(studio, (s) => !!s.ripple);
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number; add: boolean } | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const [pxPerSec, setPx] = useState(60);
@@ -64,6 +66,28 @@ export function Timeline() {
     studio.set({ time: Math.max(0, Math.min(scene.duration - 1, t)), playing: false });
   };
   const selIds = new Set(selection.map((s) => s.id));
+  const selClips = scene.clips.filter((c) => selIds.has(c.id));
+  // Zoom to selection (FR-TML-08): the selected clips fill the visible width.
+  const zoomTo = (start: number, end: number) => {
+    const el = scroller.current;
+    const w = (el?.clientWidth ?? 800) - HEADER - 40;
+    const px = Math.max(10, Math.min(300, w / Math.max(0.25, (end - start) / 48000)));
+    setPx(px);
+    requestAnimationFrame(() => el?.scrollTo({ left: (start / 48000) * px - 20 }));
+  };
+  // Box selection (FR-TML-02): drag on empty lanes; Shift adds to the selection.
+  const endMarquee = () => {
+    const m = marquee;
+    setMarquee(null);
+    if (!m || (Math.abs(m.x1 - m.x0) < 4 && Math.abs(m.y1 - m.y0) < 4)) return;
+    const [l, r, t, b] = [Math.min(m.x0, m.x1), Math.max(m.x0, m.x1), Math.min(m.y0, m.y1), Math.max(m.y0, m.y1)];
+    const hits = [...(scroller.current?.querySelectorAll<HTMLElement>('[data-clip]') ?? [])].filter((el) => {
+      const rc = el.getBoundingClientRect();
+      return rc.right >= l && rc.left <= r && rc.bottom >= t && rc.top <= b;
+    }).map((el) => ({ kind: 'clip' as const, id: el.dataset.clip! }));
+    studio.set({ selection: m.add ? [...studio.state.selection.filter((x) => !hits.some((h) => h.id === x.id)), ...hits] : hits });
+  };
+  const longScene = scene.duration > 90 * 48000;
 
   return (
     <section className="st-timeline" aria-label="Timeline">
@@ -98,9 +122,12 @@ export function Timeline() {
         >Auto coverage</Button>
         <div style={{ width: 170 }}><SearchField label="Filter tracks" placeholder="Filter tracks" value={q} onChange={setQ} /></div>
         <Segmented label="Track filter" value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'picture', label: 'Picture' }, { value: 'audio', label: 'Audio' }]} />
+        <Button icon={<SplitSquareHorizontal size={13} />} aria-pressed={ripple} title="Ripple: moving, trimming or deleting a clip shifts the later clips on its track" onClick={() => studio.set({ ripple: !ripple })}>Ripple</Button>
+        <IconButton label="Zoom to selection" icon={<Scan size={14} />} disabled={!selClips.length} disabledReason="Select clips first" onClick={() => zoomTo(Math.min(...selClips.map((c) => c.start)), Math.max(...selClips.map((c) => c.end)))} />
         <IconButton label="Zoom to fit" icon={<Maximize size={14} />} onClick={() => { const w = (scroller.current?.clientWidth ?? 800) - HEADER - 40; setPx(Math.max(10, Math.min(300, w / Math.max(1, scene.duration / 48000)))); }} />
         <div style={{ width: 220 }}><SliderRow inline label="Zoom" value={pxPerSec} min={10} max={300} defaultValue={60} format={(v) => `${Math.round(v)}`} onChange={(v) => setPx(v)} /></div>
       </div>
+      {longScene && <MiniMap scene={scene} pxPerSec={pxPerSec} scroller={scroller} />}
       <div className="st-tl-body" ref={scroller}>
         <div className="st-tl-grid" style={{ width: HEADER + width }}>
           <div className="st-tl-ruler-row">
@@ -108,8 +135,9 @@ export function Timeline() {
             <div className="st-tl-ruler" style={{ width }} onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); seekFromEvent(e); }} onPointerMove={(e) => e.buttons & 1 && seekFromEvent(e)} role="slider" aria-label="Playhead" aria-valuemin={0} aria-valuemax={scene.duration / 48000} aria-valuenow={time / 48000} aria-valuetext={formatTimecode(time)} tabIndex={0}>
               {ticksFor(scene.duration, pxPerSec).map((s) => <span key={s} className="st-tick" style={{ left: s * pxPerSec }}>{s % 60 === 0 && s >= 60 ? `${s / 60}:00` : `${s}s`}</span>)}
               {scene.markers.map((m) => (
-                <button key={m.id} type="button" className="st-marker" style={{ left: x(m.at) }} title={`${m.name} (right-click to delete)`} aria-label={`Marker ${m.name}`}
+                <button key={m.id} type="button" className="st-marker" style={{ left: x(m.at) }} title={`${m.name} (double-click to rename, right-click to delete)`} aria-label={`Marker ${m.name}`}
                   onPointerDown={(e) => { e.stopPropagation(); studio.set({ time: m.at, playing: false }); }}
+                  onDoubleClick={(e) => { e.stopPropagation(); const name = window.prompt('Marker name', m.name)?.trim(); if (name && name !== m.name) void studio.exec([{ name: 'marker.update', params: { scene: scene.id, id: m.id, name } }], `Rename marker to ${name}`); }}
                   onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); void studio.exec([{ name: 'marker.remove', params: { scene: scene.id, id: m.id } }], `Delete marker ${m.name}`); }} />
               ))}
               {scene.loop && <span className="st-loop" style={{ left: x(scene.loop.start), width: x(scene.loop.end - scene.loop.start) }} />}
@@ -136,7 +164,15 @@ export function Timeline() {
                     <div
                       className="st-tl-lane"
                       style={{ width }}
-                      onPointerDown={(e) => { if (e.target === e.currentTarget) { seekFromEvent(e); studio.set({ selection: [] }); } }}
+                      onPointerDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
+                        seekFromEvent(e);
+                        if (!e.shiftKey) studio.set({ selection: [] });
+                        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                        setMarquee({ x0: e.clientX, y0: e.clientY, x1: e.clientX, y1: e.clientY, add: e.shiftKey });
+                      }}
+                      onPointerMove={(e) => marquee && setMarquee({ ...marquee, x1: e.clientX, y1: e.clientY })}
+                      onPointerUp={endMarquee}
                       onDragOver={(e) => { if (e.dataTransfer.types.includes(DRAG_TYPE) && (t.kind === 'face' || t.kind === 'acting')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }}
                       onDrop={(e) => {
                         const raw = e.dataTransfer.getData(DRAG_TYPE);
@@ -160,6 +196,7 @@ export function Timeline() {
             );
           })}
           <div className="st-playhead" style={{ left: HEADER + x(time) }} aria-hidden />
+          {marquee && (Math.abs(marquee.x1 - marquee.x0) > 3 || Math.abs(marquee.y1 - marquee.y0) > 3) && <Marquee m={marquee} grid={scroller.current} />}
         </div>
       </div>
     </section>
@@ -176,12 +213,23 @@ function ticksFor(duration: number, pxPerSec: number): number[] {
 
 function TrackHeader({ scene, track }: { scene: Scene; track: Track }) {
   const { studio } = useCtx();
-  const set = (patch: Partial<Track>) => void studio.exec([{ name: 'track.update', params: { scene: scene.id, id: track.id, set: patch } }]);
+  const openMenu = useContextMenu();
+  const set = (patch: Partial<Track>, label?: string) => void studio.exec([{ name: 'track.update', params: { scene: scene.id, id: track.id, set: patch } }], label);
   const audio = AUDIO.has(track.kind) && track.kind !== 'lipsync';
+  // Track controls (FR-TML-07): rename and per-track gain from the header's menu.
+  const menu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    openMenu({ x: e.clientX, y: e.clientY, label: `${track.name} track`, items: [
+      { id: 'rename', label: 'Rename…', onSelect: () => { const n = window.prompt('Track name', track.name)?.trim(); if (n) set({ name: n }, `Rename track to ${n}`); } },
+      ...(audio ? [{ id: 'gain', label: `Gain (${track.gainDb >= 0 ? '+' : ''}${track.gainDb} dB)…`, onSelect: () => { const v = Number(window.prompt('Track gain in dB (−60 to +12)', String(track.gainDb))); if (Number.isFinite(v)) set({ gainDb: Math.max(-60, Math.min(12, Math.round(v * 10) / 10)) }, `${track.name} gain ${v} dB`); } }] : []),
+      { id: 'hide', label: track.hidden ? 'Show in the picture' : 'Hide from the picture', onSelect: () => set({ hidden: !track.hidden }) },
+    ] });
+  };
   return (
-    <div className="st-tl-head" style={{ width: HEADER }}>
+    <div className="st-tl-head" style={{ width: HEADER }} onContextMenu={menu} title={audio && track.gainDb ? `${track.name} · ${track.gainDb > 0 ? '+' : ''}${track.gainDb} dB` : track.name}>
       <span className="st-tl-name st-tl-name--lane">{track.name}</span>
       <span className="fr-spacer" />
+      {!audio && <button type="button" className="st-ms" aria-pressed={!!track.hidden} aria-label={`${track.hidden ? 'Show' : 'Hide'} ${track.name}`} onClick={() => set({ hidden: !track.hidden })}>{track.hidden ? <EyeOff size={11} aria-hidden /> : <Eye size={11} aria-hidden />}</button>}
       {audio && <button type="button" className="st-ms" aria-pressed={track.mute} aria-label={`Mute ${track.name}`} onClick={() => set({ mute: !track.mute })}>M</button>}
       {audio && <button type="button" className="st-ms" aria-pressed={track.solo} aria-label={`Solo ${track.name}`} onClick={() => set({ solo: !track.solo })}>S</button>}
       <button type="button" className="st-ms" aria-pressed={track.lock} aria-label={`Lock ${track.name}`} onClick={() => set({ lock: !track.lock })}><Lock size={11} aria-hidden /></button>
@@ -209,7 +257,12 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict
   // Snapping (FR-TML-02): frames, the playhead, markers and other clips' edges within 8 px.
   const snap = (t: number): number => {
     const frame = 48000 / fps;
-    const targets = [time, ...scene.markers.map((m) => m.at), ...scene.clips.filter((c) => c.id !== clip.id).flatMap((c) => [c.start, c.end])];
+    // Word boundaries of aligned takes snap too (FR-TML-02).
+    const words = scene.clips.flatMap((c) => {
+      const take = c.line?.take ? project.takes[c.line.take] : undefined;
+      return (take?.alignment?.words ?? []).flatMap((w) => [c.start + Math.round((w.start - (c.sourceIn ?? 0) / 48000) * 48000), c.start + Math.round((w.end - (c.sourceIn ?? 0) / 48000) * 48000)]);
+    });
+    const targets = [time, ...scene.markers.map((m) => m.at), ...scene.clips.filter((c) => c.id !== clip.id).flatMap((c) => [c.start, c.end]), ...words];
     const tol = (8 / pxPerSec) * 48000;
     let best = Math.round(t / frame) * frame;
     let d = tol;
@@ -235,13 +288,17 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict
     const mode = drag.mode;
     setDrag(null);
     if (track.lock || Math.abs(drag.dx) < 2) return;
+    const ripple = !!studio.state.ripple;
     if (mode === 'move') {
       const dt = shownStart - clip.start;
-      if (dt !== 0) void studio.exec([{ name: 'clip.move', params: { scene: scene.id, ids: [clip.id], delta: dt } }], `Move ${label.slice(0, 24)}`);
+      // Selected clips move together; with ripple the later clips on their tracks follow.
+      const sel = studio.state.selection.filter((s) => s.kind === 'clip').map((s) => s.id);
+      const ids = sel.includes(clip.id) ? sel : [clip.id];
+      if (dt !== 0) void studio.exec([{ name: 'clip.move', params: { scene: scene.id, ids, delta: dt, ...(ripple ? { ripple: true } : {}) } }], ids.length > 1 ? `Move ${ids.length} clips` : `Move ${label.slice(0, 24)}`);
     } else {
       // Trimming media clips moves their source in-point; nothing is time-stretched (FR-TML-03).
       const to = mode === 'start' ? shownStart : shownEnd;
-      if (to !== (mode === 'start' ? clip.start : clip.end)) void studio.exec([{ name: 'clip.trim', params: { scene: scene.id, id: clip.id, edge: mode, to } }], `Trim ${label.slice(0, 24)}`);
+      if (to !== (mode === 'start' ? clip.start : clip.end)) void studio.exec([{ name: 'clip.trim', params: { scene: scene.id, id: clip.id, edge: mode, to, ...(ripple && mode === 'end' ? { ripple: true } : {}) } }], `Trim ${label.slice(0, 24)}`);
     }
   };
   return (
@@ -252,9 +309,13 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict
       title={`${label}${state ? ` · ${state}` : ''}${conflict ? ' · In conflict (see Problems)' : ''}${agent ? ` · added by agent ${agent}` : ''}`}
       aria-pressed={selected}
       aria-label={`${track.name}: ${label}${state ? `, ${state}` : ''}${conflict ? ', in conflict' : ''}${agent ? ', added by an agent' : ''}`}
+      data-clip={clip.id}
       onPointerDown={(e) => {
         e.stopPropagation();
-        studio.set({ selection: e.shiftKey ? [...studio.state.selection, { kind: 'clip', id: clip.id }] : [{ kind: 'clip', id: clip.id }] });
+        // Shift adds; pressing an already selected clip keeps the selection so several clips drag together.
+        const cur = studio.state.selection;
+        if (e.shiftKey) studio.set({ selection: cur.some((x) => x.id === clip.id) ? cur : [...cur, { kind: 'clip', id: clip.id }] });
+        else if (!cur.some((x) => x.id === clip.id)) studio.set({ selection: [{ kind: 'clip', id: clip.id }] });
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         // The outer 6 px of a clip are trim handles (Design System §6.2); lines keep their take length.
         const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -279,16 +340,71 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected, conflict
   );
 }
 
-/** Lip-sync lane (Design System §6.2): mouth-shape blocks from each line's chosen take, letter in mono 9 px. */
+const MOUTHS: { shape: MouthShape; label: string }[] = [
+  { shape: 'X', label: 'X · rest' }, { shape: 'A', label: 'A · closed (M, B, P)' }, { shape: 'B', label: 'B · teeth (K, S, T…)' }, { shape: 'C', label: 'C · open (EH, AE)' },
+  { shape: 'D', label: 'D · wide open (AA)' }, { shape: 'E', label: 'E · rounded (AO, ER)' }, { shape: 'F', label: 'F · puckered (OO, W)' }, { shape: 'G', label: 'G · lip bite (F, V)' }, { shape: 'H', label: 'H · tongue (L, TH)' },
+];
+
+/**
+ * Lip-sync lane (Design System §6.2): mouth-shape blocks from each line's chosen take, letter in mono 9 px. Clicking a
+ * block changes its shape (FR-LIP-04); edits are stored on the line as overrides, so they survive re-alignment.
+ */
 function LipLane({ project, scene, owner, x }: { project: ProjectState; scene: Scene; owner: string; x: (t: number) => number }) {
+  const { studio } = useCtx();
+  const openMenu = useContextMenu();
   const dlg = scene.tracks.find((t) => t.owner === owner && t.kind === 'dialogue');
-  const blocks: { start: number; end: number; shape: string; key: string }[] = [];
+  const blocks: { start: number; end: number; shape: string; key: string; line: string; take: { start: number; end: number }; edited: boolean }[] = [];
   for (const c of scene.clips) {
     if (c.track !== dlg?.id || !c.line?.take) continue;
     const take = project.takes[c.line.take];
     if (!take?.alignment || lineTakeState(project, c) !== 'Ready') continue;
-    const mt = mouthTrackFromAlignment(take.alignment, { fps: project.project.frameRate });
-    for (const [i, b] of mt.blocks.entries()) blocks.push({ start: c.start + b.start * 48000, end: c.start + b.end * 48000, shape: b.shape, key: `${c.id}:${i}` });
+    const overrides = (c.line.mouthOverrides ?? []) as MouthBlock[];
+    const mt = applyOverrides(mouthTrackFromAlignment(take.alignment, { fps: project.project.frameRate }).blocks, overrides);
+    for (const [i, b] of mt.entries()) blocks.push({ start: c.start + b.start * 48000, end: c.start + b.end * 48000, shape: b.shape, key: `${c.id}:${i}`, line: c.id, take: { start: b.start, end: b.end }, edited: overrides.some((o) => o.start < b.end && o.end > b.start) });
   }
-  return <>{blocks.map((b) => <span key={b.key} className="st-mouth" style={{ left: x(b.start), width: Math.max(1, x(b.end - b.start)) }} title={`Mouth ${b.shape}`}>{x(b.end - b.start) > 9 ? b.shape : ''}</span>)}</>;
+  const edit = (b: (typeof blocks)[number], shape: MouthShape | null) => {
+    const c = scene.clips.find((x) => x.id === b.line)!;
+    const others = ((c.line!.mouthOverrides ?? []) as MouthBlock[]).filter((o) => o.end <= b.take.start || o.start >= b.take.end);
+    const next = shape ? [...others, { shape, start: b.take.start, end: b.take.end }].sort((p, q) => p.start - q.start) : others;
+    void studio.exec([{ name: 'line.setMouthOverrides', params: { scene: scene.id, id: c.id, blocks: next.length ? next : null } }], shape ? `Mouth ${shape}` : 'Reset mouth block');
+  };
+  const menu = (e: React.MouseEvent, b: (typeof blocks)[number]) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenu({ x: e.clientX, y: e.clientY, label: 'Mouth shape', items: [
+      ...MOUTHS.map((m) => ({ id: m.shape, label: m.label, checked: m.shape === b.shape, onSelect: () => edit(b, m.shape) })),
+      { kind: 'separator' as const, id: 's' },
+      { id: 'reset', label: 'Back to the aligned shape', disabled: !b.edited, disabledReason: 'Not edited', onSelect: () => edit(b, null) },
+    ] });
+  };
+  return <>{blocks.map((b) => <button type="button" key={b.key} className={`st-mouth ${b.edited ? 'st-mouth--edited' : ''}`} style={{ left: x(b.start), width: Math.max(1, x(b.end - b.start)) }} title={`Mouth ${b.shape}${b.edited ? ' (edited)' : ''} — click to change`} aria-label={`Mouth ${b.shape} at ${formatTimecode(b.start)}${b.edited ? ', edited' : ''}`} onClick={(e) => menu(e, b)} onContextMenu={(e) => menu(e, b)}>{x(b.end - b.start) > 9 ? b.shape : ''}</button>)}</>;
+}
+
+/** Selection rectangle in the timeline grid (client coordinates → grid coordinates). */
+function Marquee({ m, grid }: { m: { x0: number; y0: number; x1: number; y1: number }; grid: HTMLDivElement | null }) {
+  const r = grid?.firstElementChild?.getBoundingClientRect();
+  if (!r) return null;
+  return <span className="st-marquee" aria-hidden style={{ left: Math.min(m.x0, m.x1) - r.left, top: Math.min(m.y0, m.y1) - r.top, width: Math.abs(m.x1 - m.x0), height: Math.abs(m.y1 - m.y0) }} />;
+}
+
+/** Overview of a long scene (FR-TML-08): every clip as a strip; the visible window can be dragged or clicked. */
+function MiniMap({ scene, pxPerSec, scroller }: { scene: Scene; pxPerSec: number; scroller: React.RefObject<HTMLDivElement | null> }) {
+  const [, force] = useState(0);
+  const el = scroller.current;
+  const span = scene.duration / 48000;
+  const view = el ? { left: Math.max(0, el.scrollLeft) / pxPerSec, len: Math.max(0, el.clientWidth - HEADER) / pxPerSec } : { left: 0, len: span };
+  const go = (e: React.PointerEvent) => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const s = ((e.clientX - r.left) / r.width) * span;
+    el?.scrollTo({ left: Math.max(0, (s - view.len / 2) * pxPerSec) });
+    force((n) => n + 1);
+  };
+  const kinds = new Map(scene.tracks.map((t) => [t.id, t.kind]));
+  return (
+    <div className="st-minimap" role="slider" aria-label="Timeline overview" aria-valuemin={0} aria-valuemax={Math.round(span)} aria-valuenow={Math.round(view.left)} tabIndex={0}
+      onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); go(e); }} onPointerMove={(e) => e.buttons & 1 && go(e)}>
+      {scene.clips.map((c) => <span key={c.id} className={`st-mini-clip st-cat--${CATEGORY[kinds.get(c.track) ?? ''] ?? 'effect'}`} style={{ left: `${(c.start / scene.duration) * 100}%`, width: `${Math.max(0.2, ((c.end - c.start) / scene.duration) * 100)}%` }} />)}
+      <span className="st-mini-view" style={{ left: `${(view.left / span) * 100}%`, width: `${Math.min(100, (view.len / span) * 100)}%` }} />
+    </div>
+  );
 }

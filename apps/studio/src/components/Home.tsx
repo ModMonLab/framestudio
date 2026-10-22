@@ -1,7 +1,7 @@
 /** Home and project browser (Design System §7.3): open a project folder; recent projects. */
 import { useEffect, useState } from 'react';
 import { FolderOpen } from 'lucide-react';
-import { AppBar, Button, EmptyState, Panel, TextField, useTheme, IconButton } from '@frame/ui';
+import { AppBar, Button, EmptyState, Panel, Select, TextField, useTheme, IconButton } from '@frame/ui';
 import { Moon, Sun } from 'lucide-react';
 import { api, ApiError } from '../lib/api.js';
 
@@ -73,7 +73,7 @@ export function Home() {
               </div>
               <Button variant="primary" type="submit" loading={busy} disabled={!path.trim() || server !== 'ok'} disabledReason={server !== 'ok' ? 'The server is not reachable' : 'Enter a project folder'}>Open</Button>
             </form>
-            <p className="fr-hint">Create a project with <code className="fr-mono">frame init MyShow.frame</code>, then open its folder here.</p>
+            <p className="fr-hint">Or create one below (also <code className="fr-mono">frame init MyShow.frame</code>).</p>
             {error && (
               <div role="alert" className="fr-error-text">
                 {error.message}{error.hint ? ` ${error.hint}` : ''}
@@ -82,6 +82,7 @@ export function Home() {
             )}
           </div>
         </Panel>
+        <NewProject disabled={server !== 'ok'} onCreated={(r) => { rememberProject(r.root, r.name); location.hash = `#/p/${encodeURIComponent(r.id)}`; }} />
         <Panel title="Projects" label="Projects" style={{ width: 560 }}>
           {open.length === 0 && recent.length === 0 ? (
             <EmptyState title="No projects yet">Projects you open appear here.</EmptyState>
@@ -98,5 +99,49 @@ export function Home() {
         </Panel>
       </main>
     </div>
+  );
+}
+
+/** New project (FR-PRJ-01): empty, or from a production template; name, style family, frame rate, folder. */
+function NewProject({ disabled, onCreated }: { disabled: boolean; onCreated: (r: { id: string; root: string; name: string }) => void }) {
+  const [folder, setFolder] = useState('');
+  const [name, setName] = useState('');
+  const [family, setFamily] = useState<'flat' | 'illustrated'>('flat');
+  const [fps, setFps] = useState('24');
+  const [template, setTemplate] = useState('empty');
+  const [templates, setTemplates] = useState<{ value: string; label: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  useEffect(() => {
+    if (disabled) return;
+    api.library('', 'tpl', undefined, 100).then((r) => setTemplates(r.results.map((h) => ({ value: h.ref, label: h.name })))).catch(() => setTemplates([]));
+  }, [disabled]);
+  const create = async () => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      const r = await api.create({ path: folder.trim(), ...(name.trim() ? { name: name.trim() } : {}), styleFamily: family, frameRate: Number(fps), ...(template !== 'empty' ? { template } : {}) });
+      onCreated(r);
+    } catch (e) {
+      const err = e as ApiError;
+      setError(`${err.message}${err.hint ? ` ${err.hint}` : ''}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Panel title="New project" label="New project" style={{ width: 560 }}>
+      <form style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }} onSubmit={(e) => { e.preventDefault(); if (folder.trim()) void create(); }}>
+        <TextField label="Folder" placeholder="/path/to/NewShow.frame" value={folder} onChange={setFolder} icon={<FolderOpen size={14} />} />
+        <TextField label="Name" placeholder="Defaults to the folder name" value={name} onChange={setName} />
+        <div className="st-grid2">
+          <Select label="Style" value={family} onChange={(v) => setFamily(v as 'flat' | 'illustrated')} options={[{ value: 'flat', label: 'Flat' }, { value: 'illustrated', label: 'Illustrated' }]} />
+          <Select label="Frame rate" value={fps} onChange={setFps} options={[{ value: '24', label: '24 fps' }, { value: '25', label: '25 fps' }, { value: '30', label: '30 fps' }]} />
+        </div>
+        <Select label="Start from" value={template} onChange={setTemplate} options={[{ value: 'empty', label: 'Empty project' }, ...templates]} />
+        <div><Button variant="primary" type="submit" loading={busy} disabled={disabled || !folder.trim()} disabledReason={disabled ? 'The server is not reachable' : 'Choose a folder for the project'}>Create project</Button></div>
+        {error && <p role="alert" className="fr-error-text">{error}</p>}
+      </form>
+    </Panel>
   );
 }

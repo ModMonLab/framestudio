@@ -3,15 +3,15 @@
  * (FR-RND-01/02). Studio preview, thumbnails, CLI renders and export all call this.
  */
 import type { Camera, Clip, Instance, MouthBlock, Scene, StyleFamily, Take } from '@frame/schema';
-import { composeCharacter, placedArt, NEUTRAL_FACE, REST_POSE, VIEW_ANGLE, type FaceState, type FamilyStyle, type MouthLetter, type PartData, type Pose, type ViewArt, buildPath, ellipsePath, resolveFill, resolveColor, buildPalette, evalPoint, type Mapper } from '@frame/rig';
+import { composeCharacter, placedArt, NEUTRAL_FACE, REST_POSE, VIEW_ANGLE, type FaceState, type FamilyStyle, type MouthLetter, type PartData, type Pose, type ViewArt, buildPath, ellipsePath, resolveFill, resolveColor, buildPalette, evalPoint, bodyDims, type CharacterSpec, type RigVariant, type Mapper } from '@frame/rig';
 import type { Frame, GroupItem, Item, Mat } from '@frame/render';
 import type { ProjectState } from '../state.js';
 import { hash32, prng } from '../ids.js';
 import { TICKS_PER_SECOND } from '../time.js';
 import { lineTakeState } from '../validate.js';
 import { applyOverrides, mouthTrackFromAlignment, mouthTrackFromEnvelope, shapeAt } from './lipsync.js';
-import { clipWeight, mirrorKeys, postureAt, sample, type ActionData, type ExpressionData, type Key } from './data.js';
-import { resolveCharacter, type AssetResolver } from './character.js';
+import { clipWeight, keySpeed, mirrorKeys, postureAt, sample, samplePrincipled, type ActionData, type ExpressionData, type Key, type Principles } from './data.js';
+import { characterVariant, resolveCharacter, type AssetResolver } from './character.js';
 import { motionAt, type Motion } from './locomotion.js';
 import { holderAt, propStateAt, type Interaction } from './interact.js';
 import { bubbleItems, graphicItems, worldTextItems, type BubbleStyle, type GraphicStyle, type WorldTextStyle } from './text.js';
@@ -31,6 +31,11 @@ export interface EvalOptions {
   background?: string;
   /** Override family (Studio style toggle previews the other family). */
   family?: StyleFamily;
+  /**
+   * The previous scene's last picture (FR-FX-03, between scenes): a transition on the scene's first shot blends from
+   * it instead of from black. Supplied by episode playback and export.
+   */
+  before?: () => Item[];
 }
 
 export interface CaptionLine {
@@ -82,7 +87,7 @@ export interface CameraState {
 
 /** Active camera at t: shot track → camera, then camera-move clips (FR-CAM-02/03). */
 export function cameraAt(scene: Scene, t: number, assets: AssetResolver, aspect?: string): CameraState {
-  const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute).map((tr) => tr.id));
+  const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   const shot = scene.clips.find((c) => c.enabled && shotTracks.has(c.track) && t >= c.start && t < c.end);
   const camId = (shot?.params.camera as string | undefined) ?? scene.defaultCamera;
   const cam = scene.cameras.find((c) => c.id === camId) ?? scene.cameras[0]!;
@@ -91,7 +96,7 @@ export function cameraAt(scene: Scene, t: number, assets: AssetResolver, aspect?
   let width = ov ? ov.width : cam.width;
   let rotation = cam.rotation;
   let shake: [number, number] = [0, 0];
-  const moveTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'camera-move' && !tr.mute).map((tr) => tr.id));
+  const moveTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'camera-move' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   for (const c of scene.clips) {
     if (!c.enabled || !moveTracks.has(c.track) || t < c.start) continue;
     const move = (c.asset ? (assets.manifest(c.asset)?.data as { move?: CameraMove } | undefined)?.move : undefined) ?? (c.params.move as CameraMove | undefined);
@@ -167,8 +172,10 @@ export function viewMatrix(scene: Scene, cs: CameraState, outW: number, outH: nu
 
 /* ------------------------------------------------------------------ performance */
 
+const num01 = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
+
 function activeClips(scene: Scene, owner: string, kind: string, t: number): Clip[] {
-  const tracks = new Set(scene.tracks.filter((tr) => tr.owner === owner && tr.kind === kind && !tr.mute).map((tr) => tr.id));
+  const tracks = new Set(scene.tracks.filter((tr) => tr.owner === owner && tr.kind === kind && !tr.mute && !tr.hidden).map((tr) => tr.id));
   return scene.clips.filter((c) => c.enabled && tracks.has(c.track) && t >= c.start && t < c.end).sort((a, b) => a.start - b.start);
 }
 
@@ -206,6 +213,8 @@ export interface PerfResult {
   overlays: Record<string, number>;
   speaking: boolean;
   extraParts: string[];
+  /** Distance rolled (character units) for rolling rig variants; turns the wheels (FR-CHR-11). */
+  rolled?: number;
 }
 
 function blinkFactor(t: number, seed: number): number {
@@ -258,8 +267,14 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
   const actionOf = (r: string) => (assets.manifest(r)?.data as { action?: ActionData } | undefined)?.action;
   // Posture persists after posture-changing actions end (sit down → seated until stand up, FR-ACT-03).
   const pose: Pose = JSON.parse(JSON.stringify({ ...REST_POSE, posture: postureAt(scene, inst.id, ch.posture, t, actionOf) }));
+  // Identity options with a rig variant (FR-CHR-11): a held posture, and rolling instead of walking.
+  const man = inst.asset ? assets.manifest(inst.asset) : undefined;
+  const variant = man ? characterVariant(man, ch.look, assets) : {};
+  if (variant.posture) pose.posture = variant.posture;
+  let rolled: number | undefined;
+  if (variant.rolling && motion) rolled = motion.distance / Math.max(1e-6, inst.transform.scale);
   // Walking (FR-ACT-04): the gait follows the distance travelled, in character units along the body's forward axis.
-  if (motion?.moving && motion.gait) {
+  else if (motion?.moving && motion.gait) {
     const facing = Math.sin((VIEW_ANGLE[motion.view ?? ch.view] * Math.PI) / 180) || 1;
     pose.gait = { distance: motion.distance / Math.max(1e-6, inst.transform.scale) / facing, stride: motion.gait.stride, lift: motion.gait.lift };
   }
@@ -294,8 +309,15 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     const speed = (c.params.speed as number | undefined) ?? 1;
     const u = a.loop ? ((sec(t - c.start) * speed) / a.duration) % 1 : Math.min(1, sec(t - c.start) / durS);
     const keys = c.params.hand && a.hand && c.params.hand !== a.hand && a.hand !== 'both' ? mirrorKeys(a.keys) : a.keys;
+    // Motion principles (FR-ACT-09): per-clip anticipation, overshoot and squash/stretch over the action's own curves.
+    const pr: Principles = { anticipation: num01(c.params.anticipation), overshoot: num01(c.params.overshoot), squash: num01(c.params.squash) };
+    if (pr.squash) {
+      const now = keySpeed(keys as Record<string, Key[]>, u, a.loop);
+      const next = keySpeed(keys as Record<string, Key[]>, Math.min(1, u + 0.08), a.loop);
+      pose.stretch += Math.max(-0.15, Math.min(0.15, pr.squash * 0.05 * (now - 0.7 * Math.max(0, next - now)))) * w;
+    }
     for (const [k, ks] of Object.entries(keys)) {
-      const v = sample(ks as Key[], u);
+      const v = samplePrincipled(ks as Key[], u, pr, a.loop);
       if (k.startsWith('face.')) {
         // Face controls written by an action (e.g. a wince during a shrug) apply after expressions.
         if (typeof v === 'number') actionFace.push([k.slice(5), v, w, !!a.additive]);
@@ -309,7 +331,17 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     }
     if (a.resultPosture && u >= 0.999) pose.posture = a.resultPosture as Pose['posture'];
     if (c.params.prop) extraParts.push(String(c.params.prop));
+    // Pose overrides (FR-ACT-10): offsets on named controls keyed at clip-normalised times, added on top.
+    const overrides = c.params.pose as Record<string, Key[]> | undefined;
+    if (overrides && typeof overrides === 'object') {
+      for (const [k, ks] of Object.entries(overrides)) {
+        if (!Array.isArray(ks) || !ks.length) continue;
+        const v = sample(ks, Math.min(1, sec(t - c.start) / durS));
+        if (v !== undefined && typeof v !== 'string') setPath(pose, k, v, w, true);
+      }
+    }
   }
+  if (variant.posture) pose.posture = variant.posture;
 
   // Expressions (FR-EXP-01/04) with per-clip fine-tune overrides (FR-EXP-02).
   let restMouthW = 0;
@@ -410,7 +442,7 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
       pose.head = { ...pose.head, yaw: pose.head.yaw + dir[0] * 10 };
     }
   }
-  return { pose, face, mouth, gaze, overlays, speaking, extraParts };
+  return { pose, face, mouth, gaze, overlays, speaking, extraParts, ...(rolled !== undefined ? { rolled } : {}) };
 }
 
 /** Performance state of a character instance at t (pose, face, mouth, gaze) — for tests, readouts and tools. */
@@ -436,12 +468,20 @@ export function characterJointsAt(state: ProjectState, sceneId: string, instance
   const ctx = motionContext(scene, t, o.assets);
   const mo = ctx.motion(inst);
   const perf = perform(state, scene, inst, t, o.assets, state.project.frameRate, mo, ctx.posOf);
-  const { spec } = resolveCharacter(man, inst.character.look, family, o.styles[family], o.assets, perf.extraParts);
-  const composed = composeCharacter(spec, { view: mo.view ?? inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
+  const { spec, variant } = resolveCharacter(man, inst.character.look, family, o.styles[family], o.assets, perf.extraParts);
+  const composed = composeCharacter(withWheels(spec, variant, perf), { view: mo.view ?? inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
   const k = inst.transform.scale;
   const out: Record<string, [number, number]> = {};
   for (const [name, j] of Object.entries(composed.joints)) out[name] = [mo.x + j.p[0] * k, mo.y + j.p[1] * k];
   return out;
+}
+
+/** Rolling rig variants: wheel rotation from the distance rolled, as `wheel.cos`/`wheel.sin` art parameters. */
+function withWheels(spec: CharacterSpec, variant: RigVariant, perf: PerfResult): CharacterSpec {
+  if (!variant.rolling) return spec;
+  const d = bodyDims(spec.body);
+  const a = (perf.rolled ?? 0) / Math.max(1e-6, variant.rolling.radius * (d.thigh + d.shin));
+  return { ...spec, params: { ...spec.params, 'wheel.cos': Math.cos(a), 'wheel.sin': Math.sin(a) } };
 }
 
 /** Per-frame motion lookups: each character's position and facing at t (memoised within the frame). */
@@ -543,7 +583,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
   const style = o.styles[family];
   const issues: string[] = [];
   // Effects and atmosphere clips (FR-FX-01/02) on effect tracks; a freeze holds the picture (sound and captions go on).
-  const fxTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'effect' && !tr.mute).map((tr) => tr.id));
+  const fxTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'effect' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   const fxClips = scene.clips.filter((c) => c.enabled && fxTracks.has(c.track) && c.asset && tIn >= c.start && tIn < c.end).sort((a, b) => a.start - b.start);
   const fxData = (c: Clip) => o.assets.manifest(c.asset!)?.data as { effect?: EffectData; atmosphere?: AtmoData } | undefined;
   const freeze = fxClips.find((c) => fxData(c)?.effect?.type === 'freeze');
@@ -593,8 +633,8 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
     }
     const mo = motions.motion(inst);
     const perf = perform(state, scene, inst, t, o.assets, fps, mo, motions.posOf);
-    const { spec, missing } = resolveCharacter(man, inst.character.look, family, style, o.assets, perf.extraParts);
-    const composed = composeCharacter(spec, { view: mo.view ?? inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
+    const { spec, missing, variant } = resolveCharacter(man, inst.character.look, family, style, o.assets, perf.extraParts);
+    const composed = composeCharacter(withWheels(spec, variant, perf), { view: mo.view ?? inst.character.view, flip: mo.flip, pose: perf.pose, face: perf.face, mouth: perf.mouth, gaze: perf.gaze, overlays: perf.overlays });
     const r = { composed, perf, missing };
     composedCache.set(inst.id, r);
     return r;
@@ -673,7 +713,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
     return out;
   };
   // Shot transitions (FR-FX-03): the incoming shot's transition blends from the previous shot's picture.
-  const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute).map((tr) => tr.id));
+  const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   const shot = scene.clips.find((c) => c.enabled && shotTracks.has(c.track) && t >= c.start && t < c.end);
   const trData = shot?.params.transition ? (o.assets.manifest(String(shot.params.transition))?.data as { transition?: TransitionData } | undefined)?.transition : undefined;
   const trDur = Math.round(Number(shot?.params.transitionS ?? 0.5) * TICKS_PER_SECOND);
@@ -681,7 +721,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
   if (shot && trData && trData.type !== 'cut' && t < shot.start + trDur) {
     const u = (t - shot.start) / Math.max(1, trDur);
     const prevShot = scene.clips.some((c) => c.enabled && shotTracks.has(c.track) && c.end === shot.start) || shot.start > 0;
-    const before = prevShot ? drawInstances(cameraAt(scene, Math.max(0, shot.start - 1), o.assets, o.aspect)) : [];
+    const before = prevShot ? drawInstances(cameraAt(scene, Math.max(0, shot.start - 1), o.assets, o.aspect)) : (o.before?.() ?? []);
     const after = drawInstances(cs);
     const subject = typeof shot.params.camera === 'string' ? scene.cameras.find((c) => c.id === shot.params.camera)?.subjects[0] : undefined;
     const fb = subject ? boxes[subject] : undefined;
@@ -723,7 +763,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
     }
   }
   // World text (signs, screens) is part of the picture, on the stage (FR-TXT-05).
-  const textTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'text' && !tr.mute).map((tr) => tr.id));
+  const textTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'text' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   const textClips = scene.clips.filter((c) => c.enabled && textTracks.has(c.track) && c.asset && tIn >= c.start && tIn < c.end).sort((a, b) => a.start - b.start);
   const textData = (c: Clip) => o.assets.manifest(c.asset!)?.data as { bubble?: BubbleStyle; graphic?: GraphicStyle; world?: WorldTextStyle } | undefined;
   for (const c of textClips) {

@@ -159,3 +159,42 @@ export function rmsEnvelope(samples: Float32Array, sampleRate: number, windowS =
   }
   return out;
 }
+
+/** FR-LIP-06 measures for one line: bilabial closures on time and mouth activity over voiced time. */
+export interface LipSyncAccuracy {
+  bilabials: number;
+  bilabialsOnTime: number;
+  voicedS: number;
+  coveredS: number;
+}
+
+/**
+ * Lip-sync accuracy (FR-LIP-06, AC-09): a bilabial (M/B/P) is on time when a closed-lips block (A) starts within ±1
+ * frame of the phoneme's start, or already covers it (consecutive bilabials share one closure). Coverage is the share
+ * of voiced phoneme time where the mouth is not at rest.
+ */
+export function lipSyncAccuracy(al: Alignment, blocks: MouthBlock[], fps = 24): LipSyncAccuracy {
+  const frame = 1 / fps + 1e-6;
+  const out: LipSyncAccuracy = { bilabials: 0, bilabialsOnTime: 0, voicedS: 0, coveredS: 0 };
+  const closed = blocks.filter((b) => b.shape === 'A');
+  for (const p of al.phonemes) {
+    if (p.end <= p.start) continue;
+    const shape = shapeForPhoneme(p.p);
+    if (shape === 'X') continue;
+    out.voicedS += p.end - p.start;
+    for (const b of blocks) if (b.shape !== 'X') out.coveredS += Math.max(0, Math.min(b.end, p.end) - Math.max(b.start, p.start));
+    if (shape === 'A') {
+      out.bilabials++;
+      if (closed.some((b) => Math.abs(b.start - p.start) <= frame || (b.start <= p.start && b.end > p.start))) out.bilabialsOnTime++;
+    }
+  }
+  return out;
+}
+
+/** Sums per-line measures into the corpus rates FR-LIP-06 sets thresholds on (≥ 90 % on time, ≥ 95 % coverage). */
+export function lipSyncSummary(lines: LipSyncAccuracy[]): { lines: number; bilabialRate: number; coverage: number; pass: boolean } {
+  const s = lines.reduce((a, l) => ({ b: a.b + l.bilabials, o: a.o + l.bilabialsOnTime, v: a.v + l.voicedS, c: a.c + l.coveredS }), { b: 0, o: 0, v: 0, c: 0 });
+  const bilabialRate = s.b ? s.o / s.b : 1;
+  const coverage = s.v ? Math.min(1, s.c / s.v) : 1;
+  return { lines: lines.length, bilabialRate, coverage, pass: bilabialRate >= 0.9 && coverage >= 0.95 };
+}

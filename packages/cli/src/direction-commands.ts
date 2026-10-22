@@ -1,6 +1,6 @@
 /** `frame recipe apply|save|list`, `frame scene coverage`, `frame camera frame`, `frame template list|apply|save`, `frame cast replace` (FR-RCP, FR-CAM-01/04/05, FR-TPL, FR-CLI-05). */
 import { FrameError } from '@frame/schema';
-import { recipeFromClips, secondsToTicks, templateFromScene, type TemplateData } from '@frame/core';
+import { lipSyncAccuracy, lipSyncSummary, mouthTrackFromAlignment, recipeFromClips, secondsToTicks, templateFromScene, templateFromScenes, type LipSyncAccuracy, type TemplateData } from '@frame/core';
 import { autoCoverageForLibrary, frameCameraCommand, recipeCommandsForLibrary, replaceCastCommands, templateCommandsForLibrary } from '@frame/io';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { randomUUID } from 'node:crypto';
@@ -150,10 +150,11 @@ command({
   args: [
     { name: 'scene', description: 'Scene id', positional: true, required: true },
     { name: 'name', description: 'Template name', required: true },
+    { name: 'episode', description: "Save every scene of the scene's episode as one project template", type: 'boolean' },
   ],
   run: async (ctx) => {
     const { state, sceneId } = await setup(ctx);
-    const data = templateFromScene(state, sceneId);
+    const data = ctx.args.episode ? templateFromScenes(state, state.episodes[state.sceneEpisode[sceneId]!]!.scenes) : templateFromScene(state, sceneId);
     const id = `user.${randomUUID()}`;
     const manifest = {
       schemaVersion: 1, id, version: 1, kind: 'tpl', name: String(ctx.args.name), category: 'Production templates', group: 'My templates', tags: ['template', 'mine'], synonyms: [], families: ['flat', 'illustrated'], views: [], viewExemptions: {}, anchors: {}, capabilities: [], parameters: [], dependencies: [], layering: {}, previews: {},
@@ -178,4 +179,29 @@ command({
     return out(await mutate(ctx, cmds, `Recast as ${o.lib.manifest(String(ctx.args.character))?.name ?? 'character'}`));
   },
   human,
+});
+
+command({
+  path: ['lipsync', 'accuracy'], summary: 'Measure lip-sync accuracy on every line with an aligned take (FR-LIP-06, AC-09): bilabial closures within ±1 frame, mouth activity over voiced time.', args: [
+    { name: 'scene', description: 'Only this scene (default: all scenes)' },
+  ],
+  run: async (ctx) => {
+    const { state } = await readProject(ctx);
+    const fps = state.project.frameRate;
+    const lines: (LipSyncAccuracy & { scene: string; line: string; text: string; method: string })[] = [];
+    for (const sc of Object.values(state.scenes)) {
+      if (ctx.args.scene && sc.id !== ctx.args.scene && sc.name !== ctx.args.scene) continue;
+      for (const c of sc.clips) {
+        const take = c.line?.take ? state.takes[c.line.take] : undefined;
+        if (!c.line || !take?.alignment || !take.alignment.phonemes.length) continue;
+        const m = lipSyncAccuracy(take.alignment, mouthTrackFromAlignment(take.alignment, { fps }).blocks, fps);
+        lines.push({ ...m, scene: sc.id, line: c.id, text: c.line.text, method: take.alignment.method });
+      }
+    }
+    const s = lipSyncSummary(lines);
+    return { ...s, fps, perLine: lines.map((l) => ({ line: l.line, scene: l.scene, text: l.text, method: l.method, bilabials: l.bilabials, onTime: l.bilabialsOnTime, coverage: l.voicedS ? Math.min(1, l.coveredS / l.voicedS) : 1 })) };
+  },
+  human: (r) => r.lines
+    ? `${r.lines} lines at ${r.fps} fps · bilabials within ±1 frame ${(r.bilabialRate * 100).toFixed(1)} % (≥ 90 %) · mouth active over voiced time ${(r.coverage * 100).toFixed(1)} % (≥ 95 %) · ${r.pass ? 'PASS' : 'FAIL'}${r.perLine.some((l: { method: string }) => l.method === 'fixture') ? '\n  note: some takes are fixture audio from the test worker — not real speech' : ''}`
+    : 'No lines with aligned takes yet.',
 });

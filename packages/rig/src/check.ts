@@ -17,7 +17,7 @@ export interface RigIssue {
 const FAMILIES: StyleFamily[] = ['flat', 'illustrated'];
 const VIEWS: View[] = ['front', 'three', 'side', 'back'];
 const SLOTS = new Set<string>(SLOT_ORDER);
-const SPACES = new Set<FitSpace>(['head', 'face', 'torso', 'pelvis', 'neck', 'handL', 'handR', 'hand', 'footL', 'footR', 'foot', 'eye', 'eyeL', 'eyeR', 'brow', 'browL', 'browR', 'mouth', 'nose', 'ear', 'earL', 'earR', 'stage', 'upperArmL', 'upperArmR', 'foreArmL', 'foreArmR', 'thighL', 'thighR', 'shinL', 'shinR']);
+const SPACES = new Set<FitSpace>(['head', 'face', 'torso', 'pelvis', 'neck', 'handL', 'handR', 'hand', 'footL', 'footR', 'foot', 'eye', 'eyeL', 'eyeR', 'brow', 'browL', 'browR', 'mouth', 'nose', 'ear', 'earL', 'earR', 'stage', 'upperArmL', 'upperArmR', 'foreArmL', 'foreArmR', 'thighL', 'thighR', 'shinL', 'shinR', 'seat']);
 /** Palette roots produced by buildPalette and the family style (suffixes .shade/.deep/.light/.line are derived). */
 const PALETTE = /^(#[0-9a-fA-F]{3,8}|white|black|mouth|teeth|tongue|line|eyewhite|lash|[a-z][a-zA-Z0-9-]*(\.(shade|deep|light|line|blush|[a-z0-9-]+))*)$/;
 
