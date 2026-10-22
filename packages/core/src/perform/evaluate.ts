@@ -14,6 +14,7 @@ import { clipWeight, mirrorKeys, postureAt, sample, type ActionData, type Expres
 import { resolveCharacter, type AssetResolver } from './character.js';
 import { motionAt, type Motion } from './locomotion.js';
 import { holderAt, propStateAt, type Interaction } from './interact.js';
+import { atmosphereItems, effectItems, gradeMatrix, SILHOUETTE_MATRIX, transitionItems, type AtmoData, type EffectData, type TransitionData } from './fx.js';
 import { captionItems, DEFAULT_CAPTION_STYLE, stripPauseMarkers, type CaptionStyle } from '../captions.js';
 
 
@@ -534,12 +535,18 @@ function drawPropArt(data: PartData, family: StyleFamily, state: string, colors:
 /**
  * Evaluates a scene at time t (ticks) into a display list in output pixels.
  */
-export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o: EvalOptions): EvaluatedFrame {
+export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number, o: EvalOptions): EvaluatedFrame {
   const scene = state.scenes[sceneId];
   if (!scene) throw new Error(`Scene ${sceneId} not found`);
   const family = o.family ?? state.project.styleFamily;
   const style = o.styles[family];
   const issues: string[] = [];
+  // Effects and atmosphere clips (FR-FX-01/02) on effect tracks; a freeze holds the picture (sound and captions go on).
+  const fxTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'effect' && !tr.mute).map((tr) => tr.id));
+  const fxClips = scene.clips.filter((c) => c.enabled && fxTracks.has(c.track) && c.asset && tIn >= c.start && tIn < c.end).sort((a, b) => a.start - b.start);
+  const fxData = (c: Clip) => o.assets.manifest(c.asset!)?.data as { effect?: EffectData; atmosphere?: AtmoData } | undefined;
+  const freeze = fxClips.find((c) => fxData(c)?.effect?.type === 'freeze');
+  const t = freeze ? freeze.start : tIn;
   const cs = cameraAt(scene, t, o.assets, o.aspect);
   const designAspect = state.project.output.width / state.project.output.height;
   const fps = state.project.frameRate;
@@ -591,77 +598,142 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
     composedCache.set(inst.id, r);
     return r;
   };
-  for (const inst of sorted) {
-    const view = viewMatrix(scene, cs, o.width, o.height, designAspect, held.get(inst.id)?.holder.parallax ?? inst.parallax);
-    const [px, py] = parentOffset(inst);
-    const mo = motions.motion(inst);
-    let tr = { ...inst.transform, x: mo.x, y: mo.y, flipX: mo.flip };
-    const hold = held.get(inst.id);
-    if (hold) {
-      // Attach the prop's grip anchor to the holder's grip (hand) anchor; it mirrors with the holder.
-      const hc = composeInst(hold.holder);
-      const hm = motions.motion(hold.holder);
-      const a = hc?.composed.anchors[`grip${hold.hand}`] ?? hc?.composed.anchors[`wrist${hold.hand}`];
-      if (a) {
-        const pm = inst.asset ? o.assets.manifest(inst.asset) : undefined;
-        const g = ((pm?.anchors as Record<string, unknown> | undefined)?.grip as [number, number] | undefined) ?? [0, 0];
-        const k = hold.holder.transform.scale;
-        const flip = hm.flip;
-        tr = { ...tr, x: hm.x + a[0] * k - g[0] * tr.scale * (flip ? -1 : 1), y: hm.y + a[1] * k - g[1] * tr.scale, flipX: flip, rotation: 0 };
+  // Silhouette treatment (K1): attached characters, or all characters, draw as black shapes.
+  const silhouettes = new Set<string>();
+  for (const c of fxClips) if (fxData(c)?.effect?.type === 'silhouette') {
+    const at = c.params.attach;
+    for (const i of scene.instances) if (i.kind === 'character' && (typeof at !== 'string' || at === 'screen' || at === i.id)) silhouettes.add(i.id);
+  }
+  const drawInstances = (camState: CameraState): Item[] => {
+    const out: Item[] = [];
+    for (const inst of sorted) {
+      const view = viewMatrix(scene, camState, o.width, o.height, designAspect, held.get(inst.id)?.holder.parallax ?? inst.parallax);
+      const [px, py] = parentOffset(inst);
+      const mo = motions.motion(inst);
+      let tr = { ...inst.transform, x: mo.x, y: mo.y, flipX: mo.flip };
+      const hold = held.get(inst.id);
+      if (hold) {
+        // Attach the prop's grip anchor to the holder's grip (hand) anchor; it mirrors with the holder.
+        const hc = composeInst(hold.holder);
+        const hm = motions.motion(hold.holder);
+        const a = hc?.composed.anchors[`grip${hold.hand}`] ?? hc?.composed.anchors[`wrist${hold.hand}`];
+        if (a) {
+          const pm = inst.asset ? o.assets.manifest(inst.asset) : undefined;
+          const g = ((pm?.anchors as Record<string, unknown> | undefined)?.grip as [number, number] | undefined) ?? [0, 0];
+          const k = hold.holder.transform.scale;
+          const flip = hm.flip;
+          tr = { ...tr, x: hm.x + a[0] * k - g[0] * tr.scale * (flip ? -1 : 1), y: hm.y + a[1] * k - g[1] * tr.scale, flipX: flip, rotation: 0 };
+        }
       }
+      const local: Mat = mul(T(tr.x + px, tr.y + py), mul(R(tr.rotation), S(tr.scale * (tr.flipX && inst.kind !== 'character' ? -1 : 1), tr.scale)));
+      const m = mul(view, local);
+      let content: Item[] = [];
+      if (inst.kind === 'character' && inst.asset && inst.character) {
+        const r = composeInst(inst);
+        if (!r) {
+          issues.push(`${inst.name}: character ${inst.asset} not found`);
+          continue;
+        }
+        const { composed, perf, missing } = r;
+        mouths[inst.id] = perf.mouth;
+        for (const mref of missing) issues.push(`${inst.name}: missing asset ${mref}`);
+        for (const i of composed.issues) issues.push(`${inst.name}: ${i}`);
+        content = [composed.item];
+        const b = composed.bounds;
+        boxes[inst.id] = screenBox(m, b.x, b.y, b.w, b.h);
+      } else if ((inst.kind === 'prop' || inst.kind === 'set-piece') && inst.asset) {
+        const man = o.assets.manifest(inst.asset);
+        // Kit set pieces carry their art inside the kit (params.part); props carry it directly.
+        const kitPart = (man?.data as { kit?: { parts: Record<string, { art: PartData; bounds: [number, number, number, number] }> } } | undefined)?.kit?.parts[String(inst.params.part ?? '')];
+        const data = kitPart?.art ?? (man?.data as PartData | undefined);
+        if (!data?.families) {
+          issues.push(`${inst.name}: ${inst.asset} not found`);
+          continue;
+        }
+        content = drawPropArt(data, family, propStateAt(scene, inst, t, actionOf), (inst.params.colors as Record<string, string> | undefined) ?? {}, style, t, hash32(inst.id));
+        const bb = kitPart?.bounds ?? (man!.anchors as { bounds?: [number, number, number, number] }).bounds ?? [-100, -200, 200, 200];
+        boxes[inst.id] = screenBox(m, bb[0], bb[1], bb[2], bb[3]);
+      } else if (inst.kind === 'image' && inst.asset) {
+        // Imported images (FR-IMP-01): raster media or a parsed vector drawing, centred on the instance origin.
+        const data = o.assets.manifest(inst.asset)?.data as ImportedImageData | undefined;
+        const drawn = data ? importedImageItems(data) : undefined;
+        if (!drawn) {
+          issues.push(`${inst.name}: ${inst.asset} not found`);
+          continue;
+        }
+        content = drawn.items;
+        boxes[inst.id] = screenBox(m, -drawn.w / 2, -drawn.h / 2, drawn.w, drawn.h);
+      } else if (inst.kind === 'text') {
+        content = [{ k: 'text', text: String(inst.params.text ?? ''), x: 0, y: 0, size: Number(inst.params.size ?? 48), family: String(inst.params.font ?? 'Inter'), weight: Number(inst.params.weight ?? 700), color: String(inst.params.color ?? '#FFFFFF'), align: 'center' }];
+      }
+      if (!content.length) continue;
+      out.push({ k: 'group', id: inst.id, tf: m, ...(inst.opacity < 1 ? { op: inst.opacity } : {}), ...(silhouettes.has(inst.id) ? { colorMatrix: SILHOUETTE_MATRIX } : {}), items: content } as GroupItem);
     }
-    const local: Mat = mul(T(tr.x + px, tr.y + py), mul(R(tr.rotation), S(tr.scale * (tr.flipX && inst.kind !== 'character' ? -1 : 1), tr.scale)));
-    const m = mul(view, local);
-    let content: Item[] = [];
-    if (inst.kind === 'character' && inst.asset && inst.character) {
-      const r = composeInst(inst);
-      if (!r) {
-        issues.push(`${inst.name}: character ${inst.asset} not found`);
-        continue;
+    return out;
+  };
+  // Shot transitions (FR-FX-03): the incoming shot's transition blends from the previous shot's picture.
+  const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute).map((tr) => tr.id));
+  const shot = scene.clips.find((c) => c.enabled && shotTracks.has(c.track) && t >= c.start && t < c.end);
+  const trData = shot?.params.transition ? (o.assets.manifest(String(shot.params.transition))?.data as { transition?: TransitionData } | undefined)?.transition : undefined;
+  const trDur = Math.round(Number(shot?.params.transitionS ?? 0.5) * TICKS_PER_SECOND);
+  let picture: Item[];
+  if (shot && trData && trData.type !== 'cut' && t < shot.start + trDur) {
+    const u = (t - shot.start) / Math.max(1, trDur);
+    const prevShot = scene.clips.some((c) => c.enabled && shotTracks.has(c.track) && c.end === shot.start) || shot.start > 0;
+    const before = prevShot ? drawInstances(cameraAt(scene, Math.max(0, shot.start - 1), o.assets, o.aspect)) : [];
+    const after = drawInstances(cs);
+    const subject = typeof shot.params.camera === 'string' ? scene.cameras.find((c) => c.id === shot.params.camera)?.subjects[0] : undefined;
+    const fb = subject ? boxes[subject] : undefined;
+    picture = transitionItems(trData, before, after, u, o.width, o.height, fb ? [fb.x + fb.w / 2, fb.y + fb.h * 0.25] : [o.width / 2, o.height / 2]);
+  } else picture = drawInstances(cs);
+  items.push(...picture);
+
+  // Effects attached to the screen, a stage point or a character, then atmosphere layers in front of the stage.
+  const viewNow = viewMatrix(scene, cs, o.width, o.height, designAspect, 1);
+  let grade: number[] | undefined;
+  for (const c of fxClips) {
+    const d = fxData(c);
+    const k = clipWeight(tIn, c.start, c.end, c.blendIn, c.blendOut) * Number(c.params.intensity ?? 1);
+    const s = sec(tIn - c.start);
+    const seed = hash32(c.id);
+    if (d?.atmosphere) {
+      const a = { ...d.atmosphere, ...(typeof c.params.color === 'string' ? { color: c.params.color } : {}) };
+      const g = gradeMatrix(a, k);
+      if (g) grade = g;
+      else items.push(...atmosphereItems(a, o.width, o.height, s, k, seed));
+    } else if (d?.effect) {
+      const e = { ...d.effect, ...(typeof c.params.color === 'string' ? { color: c.params.color } : {}), ...(typeof c.params.symbol === 'string' ? { symbol: c.params.symbol as never } : {}) };
+      const at = c.params.attach;
+      let x = o.width / 2;
+      let y = o.height / 2;
+      let r = o.height * 0.12;
+      const b = typeof at === 'string' ? boxes[at] : undefined;
+      if (b) {
+        // Character effects sit above the head (symbols) or at the centre (impacts), following the character.
+        r = Math.max(8, b.h * 0.18);
+        x = b.x + b.w / 2 + (e.type === 'symbol' ? b.w * 0.25 : 0);
+        y = e.type === 'symbol' ? b.y - r * 0.15 : b.y + b.h * 0.4;
+      } else if (at && typeof at === 'object' && 'x' in (at as object)) {
+        const p = at as { x: number; y: number };
+        x = viewNow[0] * p.x + viewNow[2] * p.y + viewNow[4];
+        y = viewNow[1] * p.x + viewNow[3] * p.y + viewNow[5];
       }
-      const { composed, perf, missing } = r;
-      mouths[inst.id] = perf.mouth;
-      for (const mref of missing) issues.push(`${inst.name}: missing asset ${mref}`);
-      for (const i of composed.issues) issues.push(`${inst.name}: ${i}`);
-      content = [composed.item];
-      const b = composed.bounds;
-      boxes[inst.id] = screenBox(m, b.x, b.y, b.w, b.h);
-    } else if ((inst.kind === 'prop' || inst.kind === 'set-piece') && inst.asset) {
-      const man = o.assets.manifest(inst.asset);
-      // Kit set pieces carry their art inside the kit (params.part); props carry it directly.
-      const kitPart = (man?.data as { kit?: { parts: Record<string, { art: PartData; bounds: [number, number, number, number] }> } } | undefined)?.kit?.parts[String(inst.params.part ?? '')];
-      const data = kitPart?.art ?? (man?.data as PartData | undefined);
-      if (!data?.families) {
-        issues.push(`${inst.name}: ${inst.asset} not found`);
-        continue;
-      }
-      content = drawPropArt(data, family, propStateAt(scene, inst, t, actionOf), (inst.params.colors as Record<string, string> | undefined) ?? {}, style, t, hash32(inst.id));
-      const bb = kitPart?.bounds ?? (man!.anchors as { bounds?: [number, number, number, number] }).bounds ?? [-100, -200, 200, 200];
-      boxes[inst.id] = screenBox(m, bb[0], bb[1], bb[2], bb[3]);
-    } else if (inst.kind === 'image' && inst.asset) {
-      // Imported images (FR-IMP-01): raster media or a parsed vector drawing, centred on the instance origin.
-      const data = o.assets.manifest(inst.asset)?.data as ImportedImageData | undefined;
-      const drawn = data ? importedImageItems(data) : undefined;
-      if (!drawn) {
-        issues.push(`${inst.name}: ${inst.asset} not found`);
-        continue;
-      }
-      content = drawn.items;
-      boxes[inst.id] = screenBox(m, -drawn.w / 2, -drawn.h / 2, drawn.w, drawn.h);
-    } else if (inst.kind === 'text') {
-      content = [{ k: 'text', text: String(inst.params.text ?? ''), x: 0, y: 0, size: Number(inst.params.size ?? 48), family: String(inst.params.font ?? 'Inter'), weight: Number(inst.params.weight ?? 700), color: String(inst.params.color ?? '#FFFFFF'), align: 'center' }];
+      items.push(...effectItems(e, x, y, r, o.width, o.height, (tIn - c.start) / Math.max(1, c.end - c.start), s, k, seed));
     }
-    if (!content.length) continue;
-    items.push({ k: 'group', id: inst.id, tf: m, ...(inst.opacity < 1 ? { op: inst.opacity } : {}), items: content } as GroupItem);
+  }
+  if (grade) {
+    // Colour grades (J1) apply to the picture and effects, not to captions.
+    const graded = items.splice(0, items.length);
+    items.push({ k: 'group', items: graded, colorMatrix: grade });
   }
 
   // Captions (FR-TXT-01): active lines, stacked for concurrent speakers.
   const captions: CaptionLine[] = [];
   for (const c of scene.clips) {
-    if (!c.enabled || !c.line || c.line.caption?.hidden || c.line.muted || t < c.start || t >= c.end) continue;
+    if (!c.enabled || !c.line || c.line.caption?.hidden || c.line.muted || tIn < c.start || tIn >= c.end) continue;
     const take = c.line.take ? (state.takes[c.line.take] as Take | undefined) : undefined;
     const speaker = scene.instances.find((i) => i.id === c.line!.speaker)?.name ?? '';
-    captions.push({ speaker, text: c.line.caption?.text ?? stripMarkers(c.line.text), words: take?.alignment?.words, local: sec(t - c.start + (c.sourceIn ?? 0)), duration: sec(c.end - c.start) });
+    captions.push({ speaker, text: c.line.caption?.text ?? stripMarkers(c.line.text), words: take?.alignment?.words, local: sec(tIn - c.start + (c.sourceIn ?? 0)), duration: sec(c.end - c.start) });
   }
   const cap = state.project.captions;
   if (o.captions && cap.enabled && captions.length) {

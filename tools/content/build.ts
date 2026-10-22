@@ -22,6 +22,7 @@ import { OUTPUT_PRESETS } from './output-specs.js';
 import { renderSound, SR } from './sounds.js';
 import { FRAMINGS, MOVES } from './camera-specs.js';
 import { RECIPES, SHOT_RECIPES } from './recipe-specs.js';
+import { ATMOSPHERE, EFFECTS, TRANSITIONS } from './fx-specs.js';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
@@ -196,6 +197,9 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
       if (MOVES[s]) return { data: { move: MOVES[s] }, tags: ['camera', 'move'], parameters: [{ key: 'intensity', type: 'number', default: 1, range: [0, 2], label: 'Intensity' }] };
       return undefined;
     case 'rcp': return RECIPES[s] ? { data: { recipe: RECIPES[s] }, tags: ['recipe'] } : undefined;
+    case 'atmo': return ATMOSPHERE[s] ? { data: { atmosphere: ATMOSPHERE[s] }, tags: ['atmosphere'], parameters: [{ key: 'intensity', type: 'number', default: 1, range: [0, 2], label: 'Intensity' }, { key: 'color', type: 'color', default: ATMOSPHERE[s]!.color ?? '#FFFFFF', label: 'Colour' }] } : undefined;
+    case 'fx': return EFFECTS[s] ? { data: { effect: EFFECTS[s] }, tags: ['effect'], parameters: [{ key: 'intensity', type: 'number', default: 1, range: [0, 2], label: 'Intensity' }] } : undefined;
+    case 'tr': return TRANSITIONS[s] ? { data: { transition: TRANSITIONS[s] }, tags: ['transition'] } : undefined;
     case 'txt': return CAPTION_STYLES[s] ? { data: { caption: CAPTION_STYLES[s] }, families: ['flat', 'illustrated'], tags: ['caption'] } : undefined;
     case 'out': return OUTPUT_PRESETS[s] ? { data: { output: OUTPUT_PRESETS[s] }, tags: ['export'] } : undefined;
     default: return undefined;

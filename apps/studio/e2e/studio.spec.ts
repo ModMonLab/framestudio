@@ -206,6 +206,29 @@ test('applies a line-anchored recipe from the Assets panel and generates coverag
   await previewMatchesServer(page, 0);
 });
 
+test('atmosphere, effects and a shot transition added from the Assets panel preview exactly like the export (FR-FX-01..04)', async ({ page }) => {
+  await openProject(page, sample(true));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  const search = page.getByRole('searchbox', { name: /^Search/ }).or(page.getByRole('textbox', { name: /^Search/ })).first();
+  for (const name of ['Heavy rain', 'Golden hour']) {
+    await search.fill(name);
+    await page.getByRole('button', { name: new RegExp(`^${name}`) }).first().click();
+    await page.getByRole('button', { name: 'Add at playhead' }).click();
+  }
+  await search.fill('Crossfade');
+  await page.getByRole('button', { name: /^Crossfade/ }).first().click();
+  await page.getByRole('button', { name: 'Add to scene' }).click();
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const assets = st.scenes[sid].clips.map((c: { asset?: string }) => c.asset);
+  expect(assets).toContain('atmo.heavy-rain@1');
+  expect(assets).toContain('atmo.golden-hour@1');
+  expect(st.scenes[sid].clips.some((c: { params: { transition?: string } }) => c.params.transition === 'tr.crossfade@1')).toBe(true);
+  await page.waitForTimeout(1000);
+  await previewMatchesServer(page, 0);
+});
+
 test('agent changes are tagged and a person reverts the agent session from Activity (FR-AGT-04/05, AC-13)', async ({ page }) => {
   await openProject(page, sample(false));
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);

@@ -38,7 +38,7 @@ const FILTERS: Record<string, { title: string; kinds?: string[]; empty: string }
 const PART_KINDS = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'feet', 'top', 'outer', 'bottom', 'dress', 'shoe', 'acc', 'skin-detail', 'makeup']);
 
 /** Kinds that can be placed or applied from this panel. */
-const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img', 'rcp', 'cam', 'sfx']);
+const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img', 'rcp', 'cam', 'sfx', 'atmo', 'fx', 'tr']);
 
 export function AssetsPanel({ filter }: { filter: string }) {
   const { studio } = useCtx();
@@ -157,7 +157,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
           }} options={[...prefs.collections.map((c) => ({ value: c.id, label: `${c.items.includes(idOf(pickedHit.ref)) ? '✓ ' : ''}${c.name}` })), { value: '__new', label: 'New collection…' }]} /></span>}
           {PART_KINDS.has(pickedHit.kind) && <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/part/${encodeURIComponent(pickedHit.ref)}`)}>Open in part editor</Button>}
           {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Save to my library</Button>}
-          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' ? 'Add at playhead' : pickedHit.kind === 'txt' ? 'Use for captions' : pickedHit.kind === 'rcp' ? 'Apply…' : 'Add to scene'}</Button>
+          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' ? 'Use for captions' : pickedHit.kind === 'rcp' ? 'Apply…' : 'Add to scene'}</Button>
         </div>
       )}
     </Panel>
@@ -211,6 +211,24 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
     case 'rcp':
       studio.set({ recipe: { ref: h.ref, name: h.name } });
       return undefined;
+    case 'atmo':
+    case 'fx': {
+      // Atmosphere and effects are timed clips on the scene's effect track; effects attach to the selected object.
+      const track = scene.tracks.find((t) => t.owner === 'scene' && t.kind === 'effect');
+      if (!track) return undefined;
+      const attach = s.selection.find((x) => x.kind === 'instance')?.id;
+      const len = h.kind === 'atmo' ? Math.max(48000, scene.duration - at) : 96000;
+      await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + len), asset: h.ref, blendIn: h.kind === 'atmo' ? 24000 : 0, blendOut: h.kind === 'atmo' ? 24000 : 0, params: h.kind === 'fx' && attach ? { attach } : {} } }], `Add ${h.name}`);
+      return undefined;
+    }
+    case 'tr': {
+      // A transition goes on the shot that starts at or before the playhead (FR-FX-03).
+      const shotTrack = scene.tracks.find((t) => t.owner === 'scene' && t.kind === 'shot');
+      const shot = scene.clips.filter((c) => c.track === shotTrack?.id && c.start <= at).sort((a, b) => b.start - a.start)[0];
+      if (!shot) return 'Add a shot first: transitions blend into the shot that starts at the playhead.';
+      await studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: shot.id, set: { params: { transition: h.ref, transitionS: shot.params.transitionS ?? 0.5 } } } }], `${h.name} into shot`);
+      return `${h.name} added to the shot starting at ${(shot.start / 48000).toFixed(1)} s.`;
+    }
     case 'sfx': {
       // Library sounds go on the Sound FX track at the playhead (FR-SND-01).
       const m = (await api.manifest(h.ref, s.pid)) as { data: { sound?: { media?: { durationS?: number } } } };

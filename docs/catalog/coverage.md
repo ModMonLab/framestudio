@@ -2,7 +2,7 @@
 
 Generated 2026-10-22 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
 
-**Green: 0 / 1254 (0 %)** · manifests present: 540 / 1254 (43.1 %)
+**Green: 0 / 1254 (0 %)** · manifests present: 623 / 1254 (49.7 %)
 
 An item is green when it has a manifest, both families and all four views (or documented exemptions) where they apply, passes the validators (schema and, for character-attached items, the rig check), has previews in both families, is approved in visual review (CAT-06) and carries a redistributable, commercial-use licence with provenance.
 
@@ -48,9 +48,9 @@ An item is green when it has a manifest, both families and all four views (or do
 | I1 Location kits | `kit` | 16 | 1 | 0 |
 | I2 Ready-made sets | `set` | 32 | 0 | 0 |
 | I3 Environment layers | `layer` | 10 | 0 | 0 |
-| J1 Scene atmosphere | `atmo` | 54 | 0 | 0 |
-| K1 Motion and visual effects | `fx` | 38 | 0 | 0 |
-| K2 Transitions | `tr` | 18 | 0 | 0 |
+| J1 Scene atmosphere | `atmo` | 54 | 42 | 0 |
+| K1 Motion and visual effects | `fx` | 38 | 24 | 0 |
+| K2 Transitions | `tr` | 18 | 17 | 0 |
 | M1 Camera language | `cam` | 49 | 40 | 0 |
 | N1 Music | `music` | 20 | 0 | 0 |
 | N2 Musical cues and stings | `cue` | 12 | 0 | 0 |
@@ -957,40 +957,40 @@ An item is green when it has a manifest, both families and all four views (or do
 | `layer.props` | — | — | — | — | — | — (no manifest) |
 | `layer.foreground` | — | — | — | — | — | — (no manifest) |
 | `layer.atmosphere-overlay` | — | — | — | — | — | — (no manifest) |
-| `atmo.light-rain` | — | — | — | — | — | — (no manifest) |
-| `atmo.heavy-rain` | — | — | — | — | — | — (no manifest) |
-| `atmo.storm-with-lightning` | — | — | — | — | — | — (no manifest) |
-| `atmo.snow` | — | — | — | — | — | — (no manifest) |
-| `atmo.blizzard` | — | — | — | — | — | — (no manifest) |
-| `atmo.fog` | — | — | — | — | — | — (no manifest) |
-| `atmo.mist` | — | — | — | — | — | — (no manifest) |
-| `atmo.wind-with-leaves` | — | — | — | — | — | — (no manifest) |
-| `atmo.wind-with-debris` | — | — | — | — | — | — (no manifest) |
-| `atmo.hail` | — | — | — | — | — | — (no manifest) |
+| `atmo.light-rain` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.heavy-rain` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.storm-with-lightning` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.snow` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.blizzard` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.fog` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.mist` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.wind-with-leaves` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.wind-with-debris` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.hail` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.heat-haze` | — | — | — | — | — | — (no manifest) |
-| `atmo.dust-motes` | — | — | — | — | — | — (no manifest) |
-| `atmo.fireflies` | — | — | — | — | — | — (no manifest) |
-| `atmo.floating-petals` | — | — | — | — | — | — (no manifest) |
-| `atmo.bubbles` | — | — | — | — | — | — (no manifest) |
-| `atmo.embers` | — | — | — | — | — | — (no manifest) |
-| `atmo.confetti` | — | — | — | — | — | — (no manifest) |
-| `atmo.smoke` | — | — | — | — | — | — (no manifest) |
-| `atmo.steam` | — | — | — | — | — | — (no manifest) |
-| `atmo.sparkles` | — | — | — | — | — | — (no manifest) |
-| `atmo.day` | — | — | — | — | — | — (no manifest) |
-| `atmo.golden-hour` | — | — | — | — | — | — (no manifest) |
-| `atmo.dusk` | — | — | — | — | — | — (no manifest) |
-| `atmo.night` | — | — | — | — | — | — (no manifest) |
-| `atmo.moonlight` | — | — | — | — | — | — (no manifest) |
-| `atmo.neon-glow` | — | — | — | — | — | — (no manifest) |
-| `atmo.window-light-shafts` | — | — | — | — | — | — (no manifest) |
-| `atmo.spotlight` | — | — | — | — | — | — (no manifest) |
-| `atmo.flicker` | — | — | — | — | — | — (no manifest) |
-| `atmo.lightning-flash` | — | — | — | — | — | — (no manifest) |
-| `atmo.colour-wash` | — | — | — | — | — | — (no manifest) |
-| `atmo.vignette` | — | — | — | — | — | — (no manifest) |
-| `atmo.god-rays` | — | — | — | — | — | — (no manifest) |
-| `atmo.drifting-clouds` | — | — | — | — | — | — (no manifest) |
+| `atmo.dust-motes` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.fireflies` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.floating-petals` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.bubbles` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.embers` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.confetti` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.smoke` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.steam` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.sparkles` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.day` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.golden-hour` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.dusk` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.night` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.moonlight` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.neon-glow` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.window-light-shafts` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.spotlight` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.flicker` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.lightning-flash` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.colour-wash` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.vignette` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.god-rays` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.drifting-clouds` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.traffic` | — | — | — | — | — | — (no manifest) |
 | `atmo.crowd-silhouettes` | — | — | — | — | — | — (no manifest) |
 | `atmo.swaying-trees` | — | — | — | — | — | — (no manifest) |
@@ -1000,17 +1000,17 @@ An item is green when it has a manifest, both families and all four views (or do
 | `atmo.ceiling-fan` | — | — | — | — | — | — (no manifest) |
 | `atmo.blurred-plants` | — | — | — | — | — | — (no manifest) |
 | `atmo.curtain-edge` | — | — | — | — | — | — (no manifest) |
-| `atmo.rain-on-glass` | — | — | — | — | — | — (no manifest) |
+| `atmo.rain-on-glass` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.window-frame` | — | — | — | — | — | — (no manifest) |
 | `atmo.crowd-heads` | — | — | — | — | — | — (no manifest) |
-| `atmo.warm-grade` | — | — | — | — | — | — (no manifest) |
-| `atmo.cool-grade` | — | — | — | — | — | — (no manifest) |
-| `atmo.noir` | — | — | — | — | — | — (no manifest) |
-| `atmo.sepia` | — | — | — | — | — | — (no manifest) |
-| `atmo.pastel` | — | — | — | — | — | — (no manifest) |
-| `atmo.high-contrast` | — | — | — | — | — | — (no manifest) |
-| `atmo.desaturated` | — | — | — | — | — | — (no manifest) |
-| `atmo.retro-vhs` | — | — | — | — | — | — (no manifest) |
+| `atmo.warm-grade` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.cool-grade` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.noir` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.sepia` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.pastel` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.high-contrast` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.desaturated` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.retro-vhs` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.anticipation` | — | — | — | — | — | — (no manifest) |
 | `fx.squash-and-stretch` | — | — | — | — | — | — (no manifest) |
 | `fx.overshoot-and-settle` | — | — | — | — | — | — (no manifest) |
@@ -1020,53 +1020,53 @@ An item is green when it has a manifest, both families and all four views (or do
 | `fx.jiggle` | — | — | — | — | — | — (no manifest) |
 | `fx.follow-through` | — | — | — | — | — | — (no manifest) |
 | `fx.smear-frame` | — | — | — | — | — | — (no manifest) |
-| `fx.impact-flash` | — | — | — | — | — | — (no manifest) |
-| `fx.impact-star` | — | — | — | — | — | — (no manifest) |
-| `fx.dust-puff` | — | — | — | — | — | — (no manifest) |
-| `fx.shockwave-ring` | — | — | — | — | — | — (no manifest) |
-| `fx.screen-flash` | — | — | — | — | — | — (no manifest) |
+| `fx.impact-flash` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.impact-star` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.dust-puff` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.shockwave-ring` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.screen-flash` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.hit-pause` | — | — | — | — | — | — (no manifest) |
-| `fx.speed-lines` | — | — | — | — | — | — (no manifest) |
-| `fx.radial-focus-lines` | — | — | — | — | — | — (no manifest) |
+| `fx.speed-lines` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.radial-focus-lines` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.swoosh-trail` | — | — | — | — | — | — (no manifest) |
 | `fx.motion-blur-streak` | — | — | — | — | — | — (no manifest) |
 | `fx.afterimage` | — | — | — | — | — | — (no manifest) |
-| `fx.dash-puff` | — | — | — | — | — | — (no manifest) |
-| `fx.question-mark` | — | — | — | — | — | — (no manifest) |
-| `fx.exclamation` | — | — | — | — | — | — (no manifest) |
-| `fx.hearts` | — | — | — | — | — | — (no manifest) |
-| `fx.anger-mark` | — | — | — | — | — | — (no manifest) |
-| `fx.sweat-drops` | — | — | — | — | — | — (no manifest) |
-| `fx.sparkles` | — | — | — | — | — | — (no manifest) |
-| `fx.gloom-cloud` | — | — | — | — | — | — (no manifest) |
-| `fx.light-bulb` | — | — | — | — | — | — (no manifest) |
-| `fx.zzz` | — | — | — | — | — | — (no manifest) |
-| `fx.music-notes` | — | — | — | — | — | — (no manifest) |
-| `fx.swirl` | — | — | — | — | — | — (no manifest) |
-| `fx.ellipsis-dots` | — | — | — | — | — | — (no manifest) |
-| `fx.spotlight-focus` | — | — | — | — | — | — (no manifest) |
-| `fx.dramatic-silhouette` | — | — | — | — | — | — (no manifest) |
-| `fx.tint` | — | — | — | — | — | — (no manifest) |
-| `fx.freeze-frame` | — | — | — | — | — | — (no manifest) |
+| `fx.dash-puff` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.question-mark` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.exclamation` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.hearts` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.anger-mark` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.sweat-drops` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.sparkles` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.gloom-cloud` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.light-bulb` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.zzz` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.music-notes` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.swirl` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.ellipsis-dots` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.spotlight-focus` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.dramatic-silhouette` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.tint` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.freeze-frame` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.split-tone` | — | — | — | — | — | — (no manifest) |
-| `tr.cut` | — | — | — | — | — | — (no manifest) |
-| `tr.fade-to-black` | — | — | — | — | — | — (no manifest) |
-| `tr.fade-to-white` | — | — | — | — | — | — (no manifest) |
-| `tr.crossfade` | — | — | — | — | — | — (no manifest) |
-| `tr.wipe-left` | — | — | — | — | — | — (no manifest) |
-| `tr.wipe-right` | — | — | — | — | — | — (no manifest) |
-| `tr.wipe-up` | — | — | — | — | — | — (no manifest) |
-| `tr.wipe-down` | — | — | — | — | — | — (no manifest) |
-| `tr.slide` | — | — | — | — | — | — (no manifest) |
-| `tr.push` | — | — | — | — | — | — (no manifest) |
-| `tr.iris-in` | — | — | — | — | — | — (no manifest) |
-| `tr.iris-out` | — | — | — | — | — | — (no manifest) |
-| `tr.zoom-blur` | — | — | — | — | — | — (no manifest) |
+| `tr.cut` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.fade-to-black` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.fade-to-white` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.crossfade` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.wipe-left` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.wipe-right` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.wipe-up` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.wipe-down` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.slide` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.push` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.iris-in` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.iris-out` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.zoom-blur` | missing (—) | n/a | ok | missing | pending | ok |
 | `tr.page-turn` | — | — | — | — | — | — (no manifest) |
-| `tr.ink-splash` | — | — | — | — | — | — (no manifest) |
-| `tr.glitch` | — | — | — | — | — | — (no manifest) |
-| `tr.whip-blur` | — | — | — | — | — | — (no manifest) |
-| `tr.shape-reveal` | — | — | — | — | — | — (no manifest) |
+| `tr.ink-splash` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.glitch` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.whip-blur` | missing (—) | n/a | ok | missing | pending | ok |
+| `tr.shape-reveal` | missing (—) | n/a | ok | missing | pending | ok |
 | `cam.extreme-wide` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.wide` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.full` | n/a | n/a | ok | n/a | pending | ok |
