@@ -206,6 +206,16 @@ describe('structure (FR-PRJ-02/03, FR-DAT-04)', () => {
     expect(moved[0]!.end % 1600).toBe(0);
   });
 
+  it('deleting an episode deletes all of its scenes', () => {
+    const { session } = newSession();
+    const ep = session.apply({ commands: [{ name: 'episode.add', params: { name: 'Two' } }] }).commands[0]!.params.id as string;
+    session.apply({ commands: [{ name: 'scene.add', params: { episode: ep, name: 'B' } }, { name: 'scene.add', params: { episode: ep, name: 'C' } }] });
+    const ids = [...session.state.episodes[ep]!.scenes];
+    expect(ids).toHaveLength(3);
+    session.apply({ commands: [{ name: 'episode.delete', params: { id: ep } }] });
+    for (const id of ids) expect(session.state.scenes[id]).toBeUndefined();
+  });
+
   it('duplicating an episode gives new IDs and keeps the same asset versions and takes', () => {
     const { session, scene, episode } = newSession();
     const maya = addCharacter(session, scene, 'Maya');

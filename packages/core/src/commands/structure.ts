@@ -157,7 +157,7 @@ defineCommand({
   apply: (d, p) => {
     const ep = episodeOf(d, p.id);
     if (d.project.episodes.length <= 1) fail('VALIDATION_FAILED', 'A project needs at least one episode');
-    for (const s of ep.scenes) deleteSceneData(d as ProjectState, s);
+    for (const s of [...ep.scenes]) deleteSceneData(d as ProjectState, s);
     delete d.episodes[p.id];
     d.project.episodes.splice(d.project.episodes.indexOf(p.id as never), 1);
   },
