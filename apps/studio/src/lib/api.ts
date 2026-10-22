@@ -104,6 +104,10 @@ export const api = {
   projectPackageUrl: (pid: string) => `/api/projects/${pid}/package`,
   importPackage: (pid: string, file: File, o: { newIds?: boolean; dryRun?: boolean } = {}) =>
     file.arrayBuffer().then((b) => req<{ format: string; roots: string[]; added: string[]; unchanged: string[]; renamed: { from: string; to: string }[]; missing: string[]; revision: number }>('POST', `/api/projects/${pid}/packages/import?${o.newIds ? 'onConflict=new-id&' : ''}${o.dryRun ? 'dryRun=true' : ''}`, new Uint8Array(b), { 'content-type': 'application/zip' })),
+  importFile: (pid: string, file: File, o: { rights: string; licence?: string; scene?: string; as?: string; at?: number; x?: number; y?: number }) => {
+    const q = new URLSearchParams({ name: file.name, rights: o.rights, ...(o.licence ? { licence: o.licence } : {}), ...(o.scene ? { scene: o.scene } : {}), ...(o.as ? { as: o.as } : {}), ...(o.at !== undefined ? { at: String(Math.round(o.at)) } : {}), ...(o.x !== undefined ? { x: String(o.x) } : {}), ...(o.y !== undefined ? { y: String(o.y) } : {}) });
+    return file.arrayBuffer().then((b) => req<{ kind: 'image' | 'audio'; asset?: string; instance?: string; clip?: string; warnings: string[]; revision: number }>('POST', `/api/projects/${pid}/import?${q}`, new Uint8Array(b), { 'content-type': 'application/octet-stream' }));
+  },
   versions: (pid: string) => req<{ versions: { id: string; name: string; createdAt: string; revision: number }[] }>('GET', `/api/projects/${pid}/versions`),
   saveVersion: (pid: string, name: string) => req<{ id: string; name: string; createdAt: string; revision: number }>('POST', `/api/projects/${pid}/versions`, { name }),
   compareVersion: (pid: string, vid: string) => req<VersionComparison>('GET', `/api/projects/${pid}/versions/${vid}/compare`),

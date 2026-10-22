@@ -234,3 +234,28 @@ test('project versions: save, compare and restore; packages import from the File
   await page.locator('input[aria-label="Import package"]').setInputFiles({ name: 'packed.framechar', mimeType: 'application/zip', buffer: await pkg.body() });
   await expect(page.getByText('Everything in the package is already in this project')).toBeVisible();
 });
+
+test('imports an SVG as an object with a rights statement; the preview still matches the export renderer (FR-IMP-01/02)', async ({ page }) => {
+  await openProject(page, sample(false));
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 10 10"><g id="sign"><rect width="10" height="10" fill="#22aa55"/></g></svg>';
+  await page.locator('input[aria-label="Import a file"]').setInputFiles({ name: 'green sign.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(svg) });
+  const dlg = page.getByRole('dialog', { name: 'Import green sign.svg' });
+  await dlg.getByRole('radio', { name: 'I have a licence to use it' }).click();
+  await expect(dlg.getByRole('button', { name: 'Import', exact: true })).toBeDisabled();
+  await dlg.getByRole('textbox', { name: 'Licence' }).fill('CC-BY-4.0');
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await dlg.getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(dlg).toBeHidden();
+  await expect(page.getByText('Imported green sign.svg')).toBeVisible();
+  await page.getByRole('button', { name: 'Layers', exact: true }).click();
+  await expect(page.getByRole('treeitem', { name: /green sign/ }).first()).toBeVisible();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const asset = Object.values(st.assets as Record<string, { kind: string; license: { id: string }; provenance: { sourceFile: string } }>).find((a) => a.kind === 'img')!;
+  expect(asset.license.id).toBe('CC-BY-4.0');
+  expect(asset.provenance.sourceFile).toBe('green sign.svg');
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 0);
+});

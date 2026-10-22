@@ -21,3 +21,4 @@ Each file records one decision: context, choice, alternatives, consequences, and
 | [0015](0015-studio-architecture.md) | Studio: server mirror via deltas, shared CPU renderer in the browser, hash routes, M1 builder scope | Accepted |
 | [0016](0016-mcp-server.md) | MCP server: low-level SDK `Server` (1.31.0) over the Frame Server API | Accepted |
 | [0017](0017-packages.md) | Packages: fflate 0.8.2 zip, declared contents, safe reader, refuse-or-rename conflicts | Accepted |
+| [0018](0018-file-import.md) | File import: sniffed rasters, SVG parsed as data (fast-xml-parser 5.2.5), rights statement on every import | Accepted |

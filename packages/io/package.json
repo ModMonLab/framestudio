@@ -12,6 +12,7 @@
     "@frame/render": "workspace:*",
     "@frame/rig": "workspace:*",
     "@frame/schema": "workspace:*",
+    "fast-xml-parser": "5.2.5",
     "fflate": "0.8.2"
   }
 }

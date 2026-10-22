@@ -11,7 +11,7 @@ import { rigCheck, type PartData } from '@frame/rig';
 import { AssetManifest, FrameError, issues, type PackageFormat } from '@frame/schema';
 import {
   exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash, readPackage, writeFileAtomic,
-  PACKAGE_EXTENSIONS, projectAssetSource, unresolvedReferences, type OpenProject,
+  PACKAGE_EXTENSIONS, projectAssetSource, unresolvedReferences, importFile, IMAGE_EXTS, AUDIO_EXTS, type OpenProject, type RightsStatement,
 } from '@frame/io';
 import { command, type CommandContext } from './framework.js';
 import { APP_VERSION } from './env.js';
@@ -267,6 +267,20 @@ function importCommand(ctx: CommandContext, expect: PackageFormat[]) {
   if (!fs.existsSync(file)) throw new FrameError('NOT_FOUND', `${file} does not exist`);
   const p = openProject(ctx);
   const source = ctx.io.env.FRAME_AGENT_SESSION ? `agent:${ctx.io.env.FRAME_AGENT_SESSION}` : 'cli';
+  const e = path.extname(file).slice(1).toLowerCase();
+  if (expect.length > 1 && ([...IMAGE_EXTS, ...AUDIO_EXTS] as string[]).includes(e)) {
+    // Images and audio (FR-IMP-01/02): validated, stored with provenance, optionally placed in a scene.
+    if (!ctx.args.rights) throw new FrameError('USAGE', 'State your rights to the file with --rights own|licensed|public-domain', undefined, 'Imports record a statement of rights and a licence (FR-IMP-02).');
+    const r = importFile(p, new Uint8Array(fs.readFileSync(file)), {
+      fileName: path.basename(file), rights: ctx.args.rights as RightsStatement, author: source, source,
+      ...(ctx.args.licence ? { licence: String(ctx.args.licence) } : {}),
+      ...(ctx.args.scene ? { scene: String(ctx.args.scene) } : {}), ...(ctx.args.as ? { as: ctx.args.as as never } : {}),
+      ...(ctx.args.at !== undefined ? { at: Math.round(Number(ctx.args.at) * 48000) } : {}),
+      dryRun: ctx.opts.dryRun,
+    });
+    if (!ctx.opts.dryRun) p.close();
+    return { file: true, ...r };
+  }
   const r = importAssetsIntoProject(p, projectLibrary(ctx, p), fs.readFileSync(file), { expect, onConflict: ctx.args['new-ids'] === true ? 'new-id' : 'refuse', dryRun: ctx.opts.dryRun, source });
   if (!ctx.opts.dryRun) p.close();
   return { dryRun: ctx.opts.dryRun, ...r.report, revision: r.revision };
@@ -276,14 +290,22 @@ const importArgs = [
   { name: 'file', description: 'Package file', positional: true, required: true },
   { name: 'new-ids', description: 'Give conflicting assets new IDs instead of refusing (FR-DAT-11)', type: 'boolean' as const },
 ];
+const fileImportArgs = [
+  ...importArgs,
+  { name: 'rights', description: 'Images and audio: own, licensed or public-domain (required)' },
+  { name: 'licence', description: 'Licence you hold when --rights licensed (e.g. CC-BY-4.0)' },
+  { name: 'scene', description: 'Place the image or audio in this scene' },
+  { name: 'as', description: 'object or background (images); music, ambience or sfx (audio)' },
+  { name: 'at', description: 'Audio start in seconds', type: 'number' as const },
+];
 const importHuman = (r: any) =>
-  [
+  r.file ? [`${r.dryRun ? 'Dry run: would import' : 'Imported'} ${r.kind}${r.asset ? ` ${r.asset}` : ''}${r.instance ? ` placed as ${r.instance}` : ''}${r.clip ? ` on clip ${r.clip}` : ''}`, ...r.warnings.map((w: string) => `  warning: ${w}`)].join('\n') : [
     `${r.dryRun ? 'Dry run: would add' : 'Added'} ${r.added.length} asset(s)${r.unchanged.length ? `, ${r.unchanged.length} already present` : ''}.`,
     ...r.renamed.map((x: any) => `  renamed ${x.from} → ${x.to}`),
     ...r.roots.map((x: string) => `  ${x}`),
   ].join('\n');
 
-command({ path: ['assets', 'import'], summary: 'Import a .frameasset, .framechar or .framevoice package into the project.', mutating: true, args: importArgs, run: (ctx) => importCommand(ctx, ['frameasset', 'framechar', 'framevoice']), human: importHuman });
+command({ path: ['assets', 'import'], summary: 'Import an image (PNG, JPEG, WebP, SVG), audio (WAV, MP3, FLAC, OGG, M4A) or a .frameasset/.framechar/.framevoice package into the project.', mutating: true, args: fileImportArgs, examples: ['frame assets import backdrop.png --rights own --scene <scene> --as background', 'frame assets import theme.mp3 --rights licensed --licence CC-BY-4.0 --scene <scene> --as music'], run: (ctx) => importCommand(ctx, ['frameasset', 'framechar', 'framevoice']), human: importHuman });
 command({ path: ['char', 'import'], summary: 'Import a .framechar package (character versions, custom parts, looks, voice).', mutating: true, args: importArgs, run: (ctx) => importCommand(ctx, ['framechar']), human: importHuman });
 command({ path: ['voice', 'import'], summary: 'Import a .framevoice package (consent record required for clones).', mutating: true, args: importArgs, run: (ctx) => importCommand(ctx, ['framevoice']), human: importHuman });
 

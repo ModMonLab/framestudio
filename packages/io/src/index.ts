@@ -7,3 +7,5 @@ export * from './export.js';
 export * from './package.js';
 export * from './assets-io.js';
 export * from './locks.js';
+export * from './import-image.js';
+export * from './import.js';

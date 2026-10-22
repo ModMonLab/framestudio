@@ -78,7 +78,9 @@ export class Rasterizer {
   private image(src: string): CkImage | null {
     if (this.imageCache.has(src)) return this.imageCache.get(src)!;
     const bytes = this.images(src);
-    const img = bytes ? this.ck.MakeImageFromEncoded(bytes) : null;
+    // Sources not available yet (the browser preview fetches media on demand) are asked for again next frame.
+    if (!bytes) return null;
+    const img = this.ck.MakeImageFromEncoded(bytes);
     this.imageCache.set(src, img);
     return img;
   }

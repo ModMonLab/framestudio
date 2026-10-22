@@ -146,3 +146,4 @@
 .st-versions .st-list__row[aria-pressed='true'] { background: var(--color-selected); }
 .st-version-detail { display: flex; flex-direction: column; gap: var(--space-4); align-items: flex-start; }
 .st-h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.st-form--flush { padding: 0; }

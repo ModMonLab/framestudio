@@ -13,7 +13,7 @@ import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
-  projectAssetSource, unresolvedReferences, computeLocks, PACKAGE_EXTENSIONS, type OutputPreset,
+  projectAssetSource, unresolvedReferences, computeLocks, importFile, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -80,7 +80,16 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   const jobs = { render: new JobQueue(1), voice: new JobQueue(1) };
   const styles = loadStyles(o.contentDir);
   let renderer: Promise<NodeRenderer> | undefined;
-  const getRenderer = () => (renderer ??= createNodeRenderer({ fontsDir: path.join(o.contentDir, 'fonts') }));
+  // Imported images resolve from the media store of whichever open project holds them (content-addressed).
+  const images = (src: string) => {
+    if (!src.startsWith('media:')) return undefined;
+    for (const p of hub.list()) {
+      const f = p.open.store.findMedia(src.slice(6));
+      if (f) return new Uint8Array(fs.readFileSync(f));
+    }
+    return undefined;
+  };
+  const getRenderer = () => (renderer ??= createNodeRenderer({ fontsDir: path.join(o.contentDir, 'fonts'), images }));
   const library = (p?: HubProject) => libraryFor({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}), projectAssets: Object.fromEntries(Object.entries(p?.open.state.assets ?? {}).map(([ref, m]) => [`assets/local/${ref}.json`, m])) });
 
   /* ---------------------------------------------------------------- security */
@@ -373,6 +382,26 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
+  /* ---------------------------------------------------------------- file import (FR-IMP-01/02) */
+  app.post<{ Params: { pid: string }; Querystring: { name: string; rights: string; licence?: string; attribution?: string; scene?: string; as?: string; at?: string; x?: string; y?: string; dryRun?: string }; Body: Buffer }>('/api/projects/:pid/import', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the file bytes as application/octet-stream');
+      const q = req.query;
+      const n = (v?: string) => (v !== undefined && v !== '' && Number.isFinite(Number(v)) ? Number(v) : undefined);
+      const res = importFile(p.open, new Uint8Array(req.body), {
+        fileName: String(q.name ?? ''), rights: q.rights as RightsStatement, author: sourceOf(req) === 'user' ? 'Studio user' : sourceOf(req), source: sourceOf(req),
+        ...(q.licence ? { licence: q.licence } : {}), ...(q.attribution ? { attribution: q.attribution } : {}),
+        ...(q.scene ? { scene: q.scene } : {}), ...(q.as ? { as: q.as as never } : {}),
+        ...(n(q.at) !== undefined ? { at: n(q.at)! } : {}), ...(n(q.x) !== undefined ? { x: n(q.x)! } : {}), ...(n(q.y) !== undefined ? { y: n(q.y)! } : {}),
+        dryRun: q.dryRun === 'true',
+      });
+      return res;
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- packages (FR-DAT-10/11, FR-IMP-04) */
   const download = (reply: FastifyReply, bytes: Uint8Array, name: string) =>
     reply.header('content-type', 'application/zip').header('content-disposition', `attachment; filename="${name.replace(/[^A-Za-z0-9._-]/g, '-')}"`).send(Buffer.from(bytes));
