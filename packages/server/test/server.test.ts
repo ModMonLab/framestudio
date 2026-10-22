@@ -204,4 +204,48 @@ describe('Frame Server (FR-ARC-01..05)', () => {
     srv.hub.checkExternal();
     expect((await api('GET', `/api/projects/${pid}/state`)).json.state.project.description).toBe('Edited in a text editor');
   });
+
+  it('holds autosave when files change on disk under unsaved work, then keeps the chosen version (FR-PER-05)', async () => {
+    const slow = await createServer({ contentDir: path.join(repo, 'content'), debounceMs: 60_000 });
+    try {
+      const call = async (method: string, url: string, body?: unknown) => {
+        const r = await slow.app.inject({ method: method as 'GET', url, ...(body !== undefined ? { payload: body as object } : {}) });
+        return r.json() as any;
+      };
+      const events: any[] = [];
+      slow.hub.onEvent((e) => events.push(e));
+      for (const keep of ['disk', 'mine'] as const) {
+        const dir = project();
+        const pid = (await call('POST', '/api/projects/open', { path: dir })).id;
+        const st = (await call('GET', `/api/projects/${pid}/state`)).state;
+        const scene = st.episodes[st.project.episodes[0]].scenes[0];
+        await call('POST', `/api/projects/${pid}/commands`, { commands: [{ name: 'scene.rename', params: { id: scene, name: 'Mine' } }] });
+        const pj = path.join(dir, 'project.json');
+        const doc = JSON.parse(fs.readFileSync(pj, 'utf8'));
+        doc.description = 'Edited elsewhere';
+        fs.writeFileSync(pj, JSON.stringify(doc, null, 2));
+        slow.hub.checkExternal();
+        expect(events.at(-1)).toMatchObject({ type: 'external', project: pid, files: ['project.json'], reloaded: false, conflicts: [] });
+        // Saving is held: the other program's edit is not overwritten.
+        expect((await call('POST', `/api/projects/${pid}/save`)).status).toBe('error');
+        expect(JSON.parse(fs.readFileSync(pj, 'utf8')).description).toBe('Edited elsewhere');
+        const r = await call('POST', `/api/projects/${pid}/external/resolve`, { keep });
+        expect(r.save.status).toBe('saved');
+        const after = (await call('GET', `/api/projects/${pid}/state`)).state;
+        const onDisk = JSON.parse(fs.readFileSync(pj, 'utf8')).description;
+        if (keep === 'disk') {
+          expect(after.project.description).toBe('Edited elsewhere');
+          expect(after.scenes[scene].name).not.toBe('Mine');
+        } else {
+          expect(after.scenes[scene].name).toBe('Mine');
+          expect(onDisk).toBe(after.project.description);
+        }
+        const again = events.length;
+        slow.hub.checkExternal();
+        expect(events.length).toBe(again);
+      }
+    } finally {
+      await slow.close();
+    }
+  });
 });

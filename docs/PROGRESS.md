@@ -38,13 +38,13 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-DAT-10 | Done | packages/io/test/package.test.ts (malicious archives); cli/test/packages.test.ts; server/test/packages.test.ts; decision 0017 | Packages are zip archives with a `manifest — Declared paths only, safe names, type allow-list, size limits, hashes verified, nothing executed |
 | FR-DAT-11 | Done | package.test.ts “refuses different content … new ID” | Importing a package never overwrites existing assets of the same `id@v — Identical skipped; conflicts refused or imported under new user IDs with references rewritten |
 | FR-DAT-12 | In progress | `frame schema <type>`; packages/schema | Every format has a published JSON Schema in `@frame/schema` and docume — docs/formats/ pending |
-| FR-PRJ-01 | In progress | Home “New project” form; POST /api/projects/create `template`; `frame init --template --cast`; m3-templates.test.ts; Studio e2e “a new project starts from a template…” | Create — Empty or from a production template; from a project package pending |
+| FR-PRJ-01 | Done | Home “New project” form (empty, template, or project package); POST /api/projects/create `template`; /api/projects/import-package; `frame init --template --cast`; m3-templates.test.ts; Studio e2e “a new project starts from a template…” | Create — Empty or from a production template; from a project package pending |
 | FR-PRJ-02 | Done | session.test.ts (duplicate/delete); cli episode group | Episodes |
 | FR-PRJ-03 | Done | session.test.ts (duration safety); cli scene group | Scenes — Tree drag reorder in Studio M1 |
-| FR-PRJ-04 | Not started | — | Notes and script |
-| FR-PRJ-05 | Not started | — | Project settings |
-| FR-PRJ-06 | Not started | — | Browser |
-| FR-PRJ-07 | In progress | store.test.ts “invalid folders” | Open folder — Studio open-folder UI |
+| FR-PRJ-04 | Done | core notes.ts (Markdown subset) + NotesEditor (project description, episode and scene notes; one undo step per edit); Script view (scene order, in-place edits, take states); export text/Fountain/PDF (io pdf.ts); script.test.ts, pdf.test.ts; e2e “the script view…”, “project settings, rich-text notes…” | Notes and script |
+| FR-PRJ-05 | Done | File ▸ Project settings…: name, description, style family (refused with a list via styleFamilyBlockers), frame rate (re-snap report), default output, captions, worker endpoint, render folder, agent permissions; e2e “project settings…” | Project settings |
+| FR-PRJ-06 | Done | Home browser: server recent list (io recent.ts) with thumbnails, last opened, episode/scene counts, pinned, templates; search and sort; open, reveal, duplicate (new id), export package, delete to OS trash; recent.test.ts; e2e “the project browser…” | Browser |
+| FR-PRJ-07 | Done | store.test.ts “invalid folders”; Home validation report for unreadable folders and “opened with problems” dialog; e2e “the project browser…” | Open folder — Studio open-folder UI |
 | FR-PER-01 | In progress | io/project.ts autosave; Studio save badge (Saved/Saving…/Unsaved/Not saved) | Autosave — Retry action in badge pending |
 | FR-PER-02 | In progress | session.test.ts (undo ≥200, labels) | Undo/redo — Studio single-step drags in M1 |
 | FR-PER-03 | Done | store.test.ts; server/test/versions.test.ts; Studio e2e “project versions…”; `frame versions compare|restore` | Versions (snapshots) — Save, list, compare summary (scenes, clips, character versions, assets), undoable restore and “open as a copy” (new folder, new project id) |
@@ -155,14 +155,14 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-TPL-01 | Done | tools/test/m3-templates.test.ts (all 16 P1 templates, 3 aspect ratios); `frame template apply`; Studio e2e “a template starts a new scene…” | Catalog P1 templates create complete projects or scenes — Templates add a scene with set, cast, framed cameras, shots, music, titles; suggested script in the scene notes |
 | FR-TPL-02 | Done | templateFromScenes; POST …/templates/save scope=episode; `frame template save --episode`; Scene menu; m3-templates.test.ts | Users can save any project or scene as a template (with optional place — Scenes or whole episodes; cast roles shared across scenes; caption style kept |
 | FR-TPL-03 | Done | replaceCastCommands; `frame cast replace`; Layers context menu “Replace cast…”; m3-templates.test.ts; Studio e2e | "Replace cast" swaps a template's characters with the user's character — Clips, gaze and shots stay with the instance; cameras framed on it are reframed |
-| FR-DLG-01 | In progress | Studio Audio tab “Add line at playhead”; CLI apply line.add | Lines are created from the timeline, the Script view, a character's Di — Script view pending |
-| FR-DLG-02 | Not started | — | A line has one canonical record (speaker, text, revision, delivery, ch |
-| FR-DLG-03 | In progress | session.test.ts take outdated/confirm | Editing a line's text increments its revision and marks takes generate |
-| FR-DLG-04 | In progress | validate.ts lineTakeState | Take states: Missing, Queued, Generating, Ready, Failed, Outdated, Mut |
-| FR-DLG-05 | In progress | line.chooseTake, take.remove | Multiple takes per line are kept |
-| FR-DLG-06 | In progress | line.chooseTake clip length | A line's clip length follows the chosen take's measured duration |
-| FR-DLG-07 | Not started | — | Overlapping speech between different speakers is allowed and mixed |
-| FR-DLG-08 | Not started | — | Pauses and beats: lines may contain explicit pause markers (`[pause 0 |
+| FR-DLG-01 | Done | Studio Audio tab “Add line at playhead”; Script view import; CLI `script import`; script.test.ts; e2e “the script view imports a script…” | Lines are created from the timeline, the Script view, a character's Di — Script view pending |
+| FR-DLG-02 | Done | Script view, timeline and Properties all edit the same line clip (line.setText/setSpeaker/setDelivery); e2e “the script view…” | A line has one canonical record (speaker, text, revision, delivery, ch |
+| FR-DLG-03 | Done | session.test.ts take outdated/confirm (take.confirm for recorded/uploaded takes) | Editing a line's text increments its revision and marks takes generate |
+| FR-DLG-04 | Done | validate.ts lineTakeState + TAKE_* problems blocksExport; Script view take column | Take states: Missing, Queued, Generating, Ready, Failed, Outdated, Mut |
+| FR-DLG-05 | Done | line.chooseTake (undoable), take.remove; Script view “Clean up unused takes” | Multiple takes per line are kept |
+| FR-DLG-06 | Done | line.chooseTake clip length + ripple (script.test.ts); SPEAKER_OVERLAP problem | A line's clip length follows the chosen take's measured duration |
+| FR-DLG-07 | Done | script.test.ts “overlapping speech mixes both takes and stacks both captions” | Overlapping speech between different speakers is allowed and mixed |
+| FR-DLG-08 | Done | worker synth_with_pauses ([pause Ns] and mid-line … beats; test_api.py); estimateSpeechSeconds; stripPauseMarkers for captions | Pauses and beats: lines may contain explicit pause markers (`[pause 0 |
 | FR-VOI-01 | In progress | project-local voice assets (asset.addLocal); Layers Voice row | Voice library — Voice library screen pending |
 | FR-VOI-02 | In progress | slice.test.ts; apps/studio/e2e/studio.spec.ts (fixture worker) | Design a voice — Design → candidates → audition → save works end to end; real Qwen3 output not verified here (no GPU) |
 | FR-VOI-03 | Done (fixture path) | Worker /v1/voices/range; `POST /voices/range` job; Studio "Emotional range…" dialog (audition, similarity, accept); `tools/test/slice.test.ts` (happy delivery uses the happy reference) and Studio e2e M1 slice | Emotional range bank — real-engine quality Not verified — requires reference machine (AC-03) |

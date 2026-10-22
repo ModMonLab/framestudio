@@ -8,6 +8,7 @@ import { api, type WorkerStatus } from '../lib/api.js';
 import { useStudio, type Mode } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
 import { RangeDialog } from './RangeDialog.js';
+import { NotesEditor } from './NotesEditor.js';
 
 type Tab = 'properties' | 'acting' | 'audio';
 const DEFAULT_TAB: Record<Mode, Tab> = { stage: 'properties', direct: 'acting', edit: 'audio' };
@@ -44,13 +45,15 @@ function useSections(id: string, defaults: Record<string, boolean>) {
 
 function SceneProps({ scene }: { scene: Scene }) {
   const { studio } = useCtx();
+  const episode = useStudio(studio, (s) => s.project?.episodes[s.project.sceneEpisode[scene.id] ?? '']);
   const [open, toggle] = useSections('scene', { scene: true });
   return (
     <Section title="Scene" open={open.scene!} onToggle={(o) => toggle('scene', o)}>
       <div className="st-grid2">
         <NumberField label="Duration" prefix="Len" unit=" s" precision={2} min={0.5} max={3600} value={scene.duration / 48000} onChange={(v, phase) => phase === 'commit' && void studio.exec([{ name: 'scene.setDuration', params: { id: scene.id, durationS: v, allowTruncate: false } }])} />
       </div>
-      <TextArea label="Notes" value={scene.notes} onChange={(v) => void studio.exec([{ name: 'scene.setNotes', params: { id: scene.id, notes: v } }])} rows={3} placeholder="Notes for this scene" />
+      <NotesEditor label="Scene notes" value={scene.notes} onCommit={(v) => void studio.exec([{ name: 'scene.setNotes', params: { id: scene.id, notes: v } }], 'Edit scene notes')} rows={3} placeholder="Notes for this scene" />
+      {episode && <NotesEditor label="Episode notes" value={episode.notes} onCommit={(v) => void studio.exec([{ name: 'episode.setNotes', params: { id: episode.id, notes: v } }], 'Edit episode notes')} rows={3} placeholder={`Notes for ${episode.name}`} />}
     </Section>
   );
 }

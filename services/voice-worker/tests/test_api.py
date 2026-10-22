@@ -81,6 +81,8 @@ def test_pause_markers_lengthen_audio(client):
     a = wait(client, client.post("/v1/synthesize", json={"text": "Wait for it.", "voice": v, "seed": 1}).json())["result"]["takes"][0]["durationS"]
     b = wait(client, client.post("/v1/synthesize", json={"text": "Wait [pause 1.0s] for it.", "voice": v, "seed": 1}).json())["result"]["takes"][0]["durationS"]
     assert b > a + 0.8
+    c = wait(client, client.post("/v1/synthesize", json={"text": "Wait… for it.", "voice": v, "seed": 1}).json())["result"]["takes"][0]["durationS"]
+    assert c > a + 0.3
 
 
 def test_errors_are_coded(client):

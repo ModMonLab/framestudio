@@ -16,3 +16,5 @@ export * from './media-files.js';
 export * from './recipes-apply.js';
 export * from './auto-coverage.js';
 export * from './templates-apply.js';
+export * from './pdf.js';
+export * from './recent.js';

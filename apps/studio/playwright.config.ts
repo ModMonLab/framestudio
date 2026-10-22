@@ -18,6 +18,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     // A throwaway user library: tests never touch the real profile (FR-AST-01).
-    env: { FRAME_USER_DIR: path.join(os.tmpdir(), `frame-e2e-user-${Date.now()}`, 'library'), ...(process.env.FRAME_TEST_WORKER_URL ? { FRAME_WORKER_URL: process.env.FRAME_TEST_WORKER_URL } : {}) },
+    // Deleting a project moves it to a throwaway trash, never the real one.
+    env: { FRAME_USER_DIR: path.join(os.tmpdir(), `frame-e2e-user-${Date.now()}`, 'library'), XDG_DATA_HOME: path.join(os.tmpdir(), `frame-e2e-data-${Date.now()}`), ...(process.env.FRAME_TEST_WORKER_URL ? { FRAME_WORKER_URL: process.env.FRAME_TEST_WORKER_URL } : {}) },
   },
 });

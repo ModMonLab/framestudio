@@ -1,7 +1,7 @@
 import { Clip, Episode, issues, Project, Scene, Take, type Problem, type Scene as SceneT, type Clip as ClipT, type Take as TakeT } from '@frame/schema';
 import type { ProjectState } from './state.js';
 import { takeMatchesRevision } from './commands/timeline.js';
-import { formatTimecode } from './time.js';
+import { formatTimecode, TICKS_PER_SECOND } from './time.js';
 import { clipChannels, postureAt, type ActionData } from './perform/data.js';
 import { characterVariant } from './perform/character.js';
 
@@ -169,7 +169,7 @@ export function validateProject(state: ProjectState, ctx: ValidationContext = {}
         add({ severity: 'error', code: 'MISSING_ASSET', message: `${inst.name} uses ${inst.asset}, which is not in the library`, blocksExport: true, target: { kind: 'instance', id: inst.id }, fix: { label: 'Relink asset' }, ...where });
       }
       if (inst.media && ctx.mediaExists && !ctx.mediaExists(inst.media)) {
-        add({ severity: 'error', code: 'MISSING_MEDIA', message: `${inst.name} image media is missing or its hash does not match`, blocksExport: true, target: { kind: 'instance', id: inst.id }, fix: { label: 'Relink media' }, ...where });
+        add({ severity: 'error', code: 'MISSING_MEDIA', message: `${inst.name} image media is missing or its hash does not match`, blocksExport: true, target: { kind: 'instance', id: inst.id }, fix: { label: 'Relink media', command: { job: 'relink', hash: inst.media } }, ...where });
       }
       if (inst.parent && !instanceIds.has(inst.parent)) add({ severity: 'error', code: 'MISSING_PARENT', message: `${inst.name} belongs to a missing group`, blocksExport: true, target: { kind: 'instance', id: inst.id }, ...where });
     }
@@ -179,10 +179,10 @@ export function validateProject(state: ProjectState, ctx: ValidationContext = {}
       if (!trackIds.has(c.track)) add({ severity: 'error', code: 'ORPHAN_CLIP', message: `A clip refers to a missing track`, blocksExport: true, target, ...where });
       if (c.end <= c.start) add({ severity: 'error', code: 'EMPTY_CLIP', message: `A clip has no duration`, blocksExport: true, target, ...where });
       if (c.end > scene.duration) {
-        add({ severity: 'error', code: 'PAST_SCENE_END', message: `${clipName(scene, c)} ends at ${formatTimecode(c.end)}, after the scene end (${formatTimecode(scene.duration)})`, blocksExport: true, target, fix: { label: 'Extend scene to fit' }, ...where });
+        add({ severity: 'error', code: 'PAST_SCENE_END', message: `${clipName(scene, c)} ends at ${formatTimecode(c.end)}, after the scene end (${formatTimecode(scene.duration)})`, blocksExport: true, target, fix: { label: 'Extend scene to fit', command: { name: 'scene.setDuration', params: { id: scene.id, durationS: Math.ceil(c.end / TICKS_PER_SECOND * 10) / 10 } } }, ...where });
       }
       if (c.asset && ctx.assetExists && !ctx.assetExists(c.asset)) add({ severity: 'error', code: 'MISSING_ASSET', message: `${clipName(scene, c)} uses ${c.asset}, which is not in the library`, blocksExport: true, target, ...where });
-      if (c.media && ctx.mediaExists && !ctx.mediaExists(c.media)) add({ severity: 'error', code: 'MISSING_MEDIA', message: `${clipName(scene, c)} audio is missing or its hash does not match`, blocksExport: true, target, fix: { label: 'Relink media' }, ...where });
+      if (c.media && ctx.mediaExists && !ctx.mediaExists(c.media)) add({ severity: 'error', code: 'MISSING_MEDIA', message: `${clipName(scene, c)} audio is missing or its hash does not match`, blocksExport: true, target, fix: { label: 'Relink media', command: { job: 'relink', hash: c.media } }, ...where });
       if (c.params.camera !== undefined && !cameraIds.has(String(c.params.camera))) add({ severity: 'error', code: 'MISSING_CAMERA', message: `A shot uses a missing camera`, blocksExport: true, target, ...where });
       if (c.line) {
         if (!instanceIds.has(c.line.speaker)) add({ severity: 'error', code: 'MISSING_SPEAKER', message: `A line's speaker is missing`, blocksExport: true, target, ...where });
@@ -196,25 +196,27 @@ export function validateProject(state: ProjectState, ctx: ValidationContext = {}
             Queued: `${speaker}'s take is still queued.`,
             Generating: `${speaker}'s take is still generating.`,
           };
-          add({ severity: st === 'Missing' || st === 'Queued' || st === 'Generating' ? 'warning' : 'error', code: `TAKE_${st.toUpperCase()}`, message: msg[st]!, blocksExport: true, target, ...where });
+          // Generation is a job, not a command: the fix names it and clients start it (FR-PER-06).
+          const gen = st === 'Missing' || st === 'Failed' || st === 'Outdated' ? { fix: { label: st === 'Failed' ? 'Retry generation' : 'Generate a take', command: { job: 'generate', scene: scene.id, line: c.id } } } : {};
+          add({ severity: st === 'Missing' || st === 'Queued' || st === 'Generating' ? 'warning' : 'error', code: `TAKE_${st.toUpperCase()}`, message: msg[st]!, blocksExport: true, target, ...gen, ...where });
         }
         const take = c.line.take ? state.takes[c.line.take] : undefined;
-        if (take?.media && ctx.mediaExists && !ctx.mediaExists(take.media.hash)) add({ severity: 'error', code: 'MISSING_MEDIA', message: `${speaker}'s take audio is missing or its hash does not match`, blocksExport: true, target, fix: { label: 'Relink media' }, ...where });
+        if (take?.media && ctx.mediaExists && !ctx.mediaExists(take.media.hash)) add({ severity: 'error', code: 'MISSING_MEDIA', message: `${speaker}'s take audio is missing or its hash does not match`, blocksExport: true, target, fix: { label: 'Relink media', command: { job: 'relink', hash: take.media.hash } }, ...where });
         if (c.line.text.length > 220) add({ severity: 'warning', code: 'LONG_LINE', message: `${speaker}'s line is very long for captions (${c.line.text.length} characters)`, blocksExport: false, target, ...where });
       }
       for (const i of issues(Clip, c, 3)) add({ severity: 'error', code: 'SCHEMA', message: `Clip ${i.path}: ${i.message}`, blocksExport: true, target, ...where });
     }
 
     for (const [a, b] of overlapsOnTracks(scene, ['shot'], () => 'shots')) {
-      add({ severity: 'error', code: 'SHOT_OVERLAP', message: `Shots overlap at ${formatTimecode(b.start)}`, blocksExport: true, target: { kind: 'clip', id: b.id }, details: [a.id, b.id], ...where } as Problem);
+      add({ severity: 'error', code: 'SHOT_OVERLAP', message: `Shots overlap at ${formatTimecode(b.start)}`, blocksExport: true, target: { kind: 'clip', id: b.id }, details: [a.id, b.id], fix: { label: 'Cut the earlier shot', command: { name: 'clip.trim', params: { scene: scene.id, id: a.id, edge: 'end', to: b.start } } }, ...where } as Problem);
     }
     for (const [a, b] of overlapsOnTracks(scene, ['dialogue'], (c) => c.line?.speaker)) {
       const who = scene.instances.find((i) => i.id === a.line?.speaker)?.name ?? 'A speaker';
-      add({ severity: 'error', code: 'SPEAKER_OVERLAP', message: `${who} has two lines overlapping at ${formatTimecode(b.start)}`, blocksExport: true, target: { kind: 'clip', id: b.id }, details: [a.id, b.id], ...where } as Problem);
+      add({ severity: 'error', code: 'SPEAKER_OVERLAP', message: `${who} has two lines overlapping at ${formatTimecode(b.start)}`, blocksExport: true, target: { kind: 'clip', id: b.id }, details: [a.id, b.id], fix: { label: 'Move the later line after the first', command: { name: 'clip.move', params: { scene: scene.id, ids: [b.id], delta: a.end - b.start } } }, ...where } as Problem);
     }
     for (const k of channelConflicts(scene, ctx)) {
       const who = scene.instances.find((i) => i.id === k.owner)?.name ?? 'A character';
-      add({ severity: 'error', code: 'CHANNEL_CONFLICT', message: `${who} has two ${k.channel} clips at ${formatTimecode(k.b.start)}`, blocksExport: true, target: { kind: 'clip', id: k.b.id }, details: [k.a.id, k.b.id], ...where } as Problem);
+      add({ severity: 'error', code: 'CHANNEL_CONFLICT', message: `${who} has two ${k.channel} clips at ${formatTimecode(k.b.start)}`, blocksExport: true, target: { kind: 'clip', id: k.b.id }, details: [k.a.id, k.b.id], ...(k.b.start > k.a.start ? { fix: { label: 'End the first clip where the second starts', command: { name: 'clip.trim', params: { scene: scene.id, id: k.a.id, edge: 'end', to: k.b.start } } } } : {}), ...where } as Problem);
     }
     for (const k of postureProblems(scene, ctx)) {
       const who = scene.instances.find((i) => i.id === k.owner)?.name ?? 'A character';

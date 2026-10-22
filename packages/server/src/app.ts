@@ -8,13 +8,14 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
   projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, templateCommandsForLibrary, replaceCastCommands, projectFromTemplateCommands, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
+  scriptPdf, styleFamilyBlockers, ProjectStore, RecentProjects, duplicateProject, moveToTrash, revealInFileManager,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
@@ -62,6 +63,8 @@ export interface ServerOptions {
   userDir?: string;
   /** Derived-data cache (thumbnails); defaults to <userDir>/../cache. */
   cacheDir?: string;
+  /** Recent projects registry (FR-PRJ-06); defaults to <userDir>/../recent.json. */
+  recentFile?: string;
 }
 
 const STATUS: Partial<Record<ErrorCode, number>> = {
@@ -94,10 +97,18 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return e ? { manifest: e.manifest, source: e.source } : undefined;
     };
   };
+  // Recent projects (FR-PRJ-06) live next to the user library, like the thumbnail cache.
+  const recentFile = o.recentFile ?? (o.userDir ? path.join(path.dirname(o.userDir), 'recent.json') : undefined);
+  const recent = recentFile ? new RecentProjects(recentFile) : undefined;
   const hub = new ProjectHub({
     ...(o.watchMs ? { watchMs: o.watchMs } : {}), ...(o.debounceMs !== undefined ? { debounceMs: o.debounceMs } : {}),
     onAttach: (open) => {
       open.locksFor = (state) => computeLocks(state, lockLookup());
+      try {
+        recent?.touch(open.store.root, open.state);
+      } catch {
+        /* the recent list is a convenience; never block opening a project */
+      }
     },
   });
   const jobs = { render: new JobQueue(1), voice: new JobQueue(1) };
@@ -199,6 +210,34 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
+  // Resolve files changed on disk while local changes were unsaved (FR-PER-05).
+  app.post<{ Params: { pid: string }; Body: { keep: 'disk' | 'mine' } }>('/api/projects/:pid/external/resolve', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const keep = req.body?.keep;
+      if (keep !== 'disk' && keep !== 'mine') throw new FrameError('USAGE', 'keep must be "disk" or "mine"');
+      p.open.resolveExternal(keep, () => new ProjectStore(p.root).load({ skipJournal: true }).state);
+      return { revision: p.open.session.revision, save: p.open.saveState };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Relink missing media (FR-PER-06): the chosen file must be the same content, verified by hash.
+  app.post<{ Params: { pid: string }; Querystring: { hash: string; ext?: string }; Body: Buffer }>('/api/projects/:pid/media/relink', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the file bytes as application/octet-stream');
+      const got = sha256(req.body);
+      if (got !== req.query.hash) throw new FrameError('VALIDATION_FAILED', 'That file is not the missing one (its contents differ)', { expected: req.query.hash, got }, 'Choose the original file, or replace the audio by uploading a new take.');
+      const bad = p.open.store.findMedia(got);
+      if (bad) fs.rmSync(bad, { force: true });
+      const ext = (req.query.ext ?? 'bin').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'bin';
+      p.open.store.putMedia(new Uint8Array(req.body), { ext, mime: 'application/octet-stream' });
+      return { relinked: got };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
   app.post<{ Params: { pid: string } }>('/api/projects/:pid/close', async (req, reply) => {
     try {
       hub.close(req.params.pid);
@@ -223,6 +262,13 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const body = req.body;
       if (!body || !Array.isArray(body.commands)) throw new FrameError('USAGE', 'commands[] is required');
       const batch: CommandBatch = { ...body, source: req.headers['x-frame-agent'] ? sourceOf(req) : body.source ?? 'user' };
+      // Switching style family re-renders all artwork; refuse it while any used asset has no art in the target (FR-PRJ-05).
+      for (const c of batch.commands) {
+        const family = c.name === 'project.setSettings' ? (c.params as { styleFamily?: string }).styleFamily : undefined;
+        if (!family || family === p.open.state.project.styleFamily) continue;
+        const blockers = styleFamilyBlockers(p.open.state, lockLookup(), family);
+        if (blockers.length) throw new FrameError('VALIDATION_FAILED', `${blockers.length} asset${blockers.length === 1 ? ' has' : 's have'} no ${family} artwork: ${blockers.slice(0, 5).map((b) => b.name).join(', ')}${blockers.length > 5 ? '…' : ''}`, { blockers }, 'Replace those assets or keep the current style family.');
+      }
       const r = p.open.session.apply(batch, { dryRun: body.dryRun === true });
       return { revision: r.revision, baseRevision: r.baseRevision, rebased: r.rebased, dryRun: r.dryRun, label: r.label, commands: r.commands, changed: r.changed, reports: r.reports };
     } catch (e) {
@@ -608,6 +654,53 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
+  /* ---------------------------------------------------------------- project settings (FR-PRJ-05) */
+  app.get<{ Params: { pid: string }; Querystring: { family?: string } }>('/api/projects/:pid/style-check', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const family = req.query.family;
+      if (family !== 'flat' && family !== 'illustrated') throw new FrameError('USAGE', 'family must be flat or illustrated');
+      return { family, blockers: styleFamilyBlockers(p.open.state, lockLookup(), family) };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- script (FR-PRJ-04, FR-DLG-01) */
+  app.get<{ Params: { pid: string }; Querystring: { format?: string } }>('/api/projects/:pid/script', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const name = p.open.state.project.name.replace(/[^\w .-]/g, '_');
+      if (req.query.format === 'pdf') {
+        reply.header('content-type', 'application/pdf');
+        reply.header('content-disposition', `attachment; filename="${name}.pdf"`);
+        return reply.send(Buffer.from(scriptPdf(p.open.state)));
+      }
+      const format = req.query.format === 'fountain' ? 'fountain' : req.query.format === 'text' ? 'text' : undefined;
+      if (!format) return { rows: scriptRows(p.open.state) };
+      reply.header('content-type', 'text/plain; charset=utf-8');
+      reply.header('content-disposition', `attachment; filename="${name}.${format === 'fountain' ? 'fountain' : 'txt'}"`);
+      return scriptText(p.open.state, format);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; sid: string }; Body: { text: string; dryRun?: boolean } }>('/api/projects/:pid/scenes/:sid/script/import', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body ?? ({} as never);
+      if (!p.open.state.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      const parsed = parseScript(String(b.text ?? ''));
+      if (!parsed.length) throw new FrameError('USAGE', 'No dialogue found', undefined, 'Write one line per speaker as "NAME: line", or use Fountain.');
+      const r = scriptImportCommands(p.open.state, req.params.sid, parsed);
+      if (r.unknown.length && !r.lines) throw new FrameError('VALIDATION_FAILED', `No character in this scene is called ${r.unknown.join(', ')}`, { unknown: r.unknown }, 'Add the characters first, or rename the speakers.');
+      const applied = p.open.session.apply({ commands: r.commands as never, source: sourceOf(req), label: `Import script (${r.lines} lines)` }, { dryRun: !!b.dryRun });
+      return { revision: applied.revision, lines: r.lines, unknown: r.unknown, ids: applied.commands.filter((c) => c.name === 'line.add').map((c) => c.params.id) };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- production templates (FR-TPL-01..03) */
   app.post<{ Params: { pid: string }; Body: { ref: string; episode?: string; cast?: Record<string, string>; looks?: Record<string, string>; name?: string } }>('/api/projects/:pid/templates/apply', async (req, reply) => {
     try {
@@ -830,6 +923,90 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   app.get('/api/library/defaults', async () => libraryDefaults);
   const thumbs = new Map<string, Buffer>();
   const thumbDir = o.cacheDir ? path.join(o.cacheDir, 'thumbnails') : o.userDir ? path.join(path.dirname(o.userDir), 'cache', 'thumbnails') : undefined;
+  /* ---------------------------------------------------------------- project browser (FR-PRJ-06) */
+  const needRecent = () => {
+    if (!recent) throw new FrameError('UNSUPPORTED', 'This server keeps no recent-projects list', undefined, 'Start it with `frame server start` (uses ~/.frame).');
+    return recent;
+  };
+  const knownRoot = (root: string | undefined) => {
+    const r = needRecent().list().find((e) => e.root === path.resolve(root ?? ''));
+    if (!r) throw new FrameError('NOT_FOUND', `${root} is not in the recent projects list`, undefined, 'Open the folder first.');
+    return r;
+  };
+  app.get('/api/recent', async (_req, reply) => {
+    try {
+      const open = hub.list();
+      return { projects: needRecent().list().map((e) => ({ ...e, open: open.find((p) => p.root === e.root)?.id ?? null })) };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Body: { root: string; pinned?: boolean; forget?: boolean } }>('/api/recent/update', async (req, reply) => {
+    try {
+      const e = knownRoot(req.body?.root);
+      if (req.body.forget) needRecent().forget(e.root);
+      else if (req.body.pinned !== undefined) needRecent().update(e.root, { pinned: req.body.pinned });
+      return { ok: true };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Body: { root: string; to: string; name?: string } }>('/api/recent/duplicate', async (req, reply) => {
+    try {
+      const e = knownRoot(req.body?.root);
+      if (!req.body.to) throw new FrameError('USAGE', 'to (the new folder) is required');
+      // An open project is saved first so the copy holds its latest state.
+      hub.list().find((p) => p.root === e.root)?.open.flush();
+      const name = req.body.name?.trim() || `${e.name} copy`;
+      duplicateProject(e.root, path.resolve(req.body.to), { projectId: randomId('prj'), name });
+      const p = hub.open(path.resolve(req.body.to));
+      return { id: p.id, root: p.root, name };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Body: { root: string } }>('/api/recent/trash', async (req, reply) => {
+    try {
+      if (req.headers['x-frame-agent']) throw new FrameError('PERMISSION_REQUIRED', 'Agents cannot delete projects from the browser', undefined, 'A person deletes projects in the Studio.');
+      const e = knownRoot(req.body?.root);
+      const open = hub.list().find((p) => p.root === e.root);
+      if (open) hub.close(open.id);
+      const where = moveToTrash(e.root);
+      needRecent().forget(e.root);
+      return { trashed: e.root, where };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Body: { root: string } }>('/api/recent/reveal', async (req, reply) => {
+    try {
+      // Only meaningful when the browser runs on the server's machine; loopback-only servers guarantee that.
+      revealInFileManager(knownRoot(req.body?.root).root);
+      return { ok: true };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.get<{ Querystring: { root: string } }>('/api/recent/thumbnail', async (req, reply) => {
+    try {
+      const e = knownRoot(req.query.root);
+      const file = thumbDir ? path.join(thumbDir, 'projects', `${sha256(Buffer.from(e.root)).slice(-24)}.png`) : undefined;
+      const p = hub.list().find((x) => x.root === e.root);
+      const sc = p ? p.open.state.scenes[p.open.state.episodes[p.open.state.project.episodes[0] ?? '']?.scenes[0] ?? ''] : undefined;
+      if (p && sc) {
+        const lib = library(p);
+        const ev = evaluateFrame(p.open.state, sc.id, Math.round(sc.duration / 2), { assets: { manifest: (r) => lib.manifest(r) }, styles, width: 320, height: 180 });
+        const png = Buffer.from((await getRenderer()).png(ev.frame));
+        if (file) writeFileAtomic(file, png);
+        return reply.header('content-type', 'image/png').header('cache-control', 'no-cache').send(png);
+      }
+      if (file && fs.existsSync(file)) return reply.header('content-type', 'image/png').header('cache-control', 'no-cache').send(fs.readFileSync(file));
+      throw new FrameError('NOT_FOUND', 'No thumbnail yet; open the project once');
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   app.get<{ Querystring: { ref: string; family?: string; w?: string; h?: string; project?: string } }>('/api/library/thumbnail', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
