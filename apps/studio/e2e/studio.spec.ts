@@ -761,3 +761,38 @@ test('a new project starts from a template; the episode view reorders scenes and
   st = await state();
   await new AxeBuilder({ page }).include('[aria-label="Episode"]').analyze().then((r) => expect(r.violations.map((v) => v.id)).toEqual([]));
 });
+
+test('the script view imports a script, edits a line in place and exports Fountain (FR-PRJ-04, FR-DLG-02)', async ({ page }) => {
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'frame-e2e-script-')), 'Script.frame');
+  await page.goto('/');
+  const form = page.getByRole('region', { name: 'New project' }).or(page.locator('form').filter({ has: page.getByRole('button', { name: 'Create project' }) })).first();
+  await form.getByRole('textbox', { name: 'Folder' }).fill(dir);
+  await form.getByRole('textbox', { name: 'Name' }).fill('Script test');
+  await form.getByRole('button', { name: /^Start from: / }).click();
+  await page.getByRole('option', { name: 'Comedy exchange' }).click();
+  await form.getByRole('button', { name: 'Create project' }).click();
+  await expect(page.getByRole('tab', { name: 'Direct' })).toBeVisible();
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const names = st.scenes[sid].instances.filter((i: { kind: string }) => i.kind === 'character').map((i: { name: string }) => i.name as string);
+  const lineCount = async () => (await state()).scenes[sid].clips.filter((c: { line?: unknown }) => c.line).length;
+  const before = await lineCount();
+  await page.getByRole('menuitem', { name: 'Scene' }).click();
+  await page.getByRole('menuitemcheckbox', { name: 'Script view' }).click();
+  const view = page.getByRole('region', { name: 'Script' });
+  await view.getByRole('button', { name: 'Import script…' }).click();
+  await page.getByRole('textbox', { name: 'Script' }).fill(`${names[0]}: Did you order the usual?\n${names[1]} (happy): Always.\nNobody: Hello?`);
+  await page.getByRole('button', { name: 'Add lines' }).click();
+  await expect(page.getByText(/No character in the scene is called Nobody/)).toBeVisible();
+  await expect.poll(lineCount).toBe(before + 2);
+  const field = view.getByRole('textbox', { name: `${names[0]}: line text` }).last();
+  await expect(field).toHaveValue('Did you order the usual?');
+  await field.fill('Did you order the usual, again?');
+  await field.press('Enter');
+  await expect.poll(async () => (await state()).scenes[sid].clips.some((c: { line?: { text: string } }) => c.line?.text === 'Did you order the usual, again?')).toBe(true);
+  const fountain = await (await page.request.get(`/api/projects/${pid}/script?format=fountain`)).text();
+  expect(fountain).toContain(`${names[1]!.toUpperCase()}\n(happy)\nAlways.`);
+  await new AxeBuilder({ page }).include('[aria-label="Script"]').analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
+});

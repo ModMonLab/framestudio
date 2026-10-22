@@ -10,6 +10,7 @@ import { CanvasView } from './CanvasView.js';
 import { PropertiesPanel } from './PropertiesPanel.js';
 import { Timeline } from './Timeline.js';
 import { EpisodeView } from './EpisodeView.js';
+import { ScriptView } from './ScriptView.js';
 import { ExportDialog } from './ExportDialog.js';
 import { JobsButton } from './JobsButton.js';
 import { WorkerBadge } from './WorkerBadge.js';
@@ -150,7 +151,8 @@ function Shell() {
 function TimelineArea() {
   const { studio } = useCtx();
   const episode = useStudio(studio, (s) => !!s.episodeView);
-  return episode ? <EpisodeView /> : <Timeline />;
+  const script = useStudio(studio, (s) => !!s.scriptView);
+  return script ? <ScriptView /> : episode ? <EpisodeView /> : <Timeline />;
 }
 
 function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right' | 'timeline') => void; panels: { left: boolean; right: boolean; timeline: boolean } }) {
@@ -201,7 +203,8 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
     { id: 'scene', label: 'Scene', items: [
       { id: 'voice', label: 'Design a voice…', onSelect: () => openVoiceDesigner(undefined) },
       { id: 'tpl-save-ep', label: 'Save episode as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message }), 'episode') },
-      { id: 'episode-view', label: 'Episode view', checked: !!studio.state.episodeView, onSelect: () => studio.set({ episodeView: !studio.state.episodeView }) },
+      { id: 'episode-view', label: 'Episode view', checked: !!studio.state.episodeView, onSelect: () => studio.set({ episodeView: !studio.state.episodeView, scriptView: false }) },
+      { id: 'script-view', label: 'Script view', checked: !!studio.state.scriptView, onSelect: () => studio.set({ scriptView: !studio.state.scriptView, episodeView: false }) },
       { id: 'tpl-save', label: 'Save scene as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message })) },
       { kind: 'separator', id: 's-go' },
       ...project.project.episodes.flatMap((e) => (project.episodes[e]?.scenes ?? []).map((s) => ({ id: `go-${s}`, label: `Go to ${project.scenes[s]?.name ?? s}`, checked: s === sceneId, onSelect: () => studio.set({ scene: s, selection: [], time: 0 }) }))),

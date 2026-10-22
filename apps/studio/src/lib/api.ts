@@ -90,6 +90,7 @@ export const api = {
   saveVoice: (pid: string, body: Record<string, unknown>) => req<{ ref: string; revision: number }>('POST', `/api/projects/${pid}/voices`, body),
   voiceRange: (pid: string, body: { voice: string; emotions?: string[]; text?: string }) => req<JobInfo>('POST', `/api/projects/${pid}/voices/range`, body),
   voiceVersion: (pid: string, body: { voice: string; accept: unknown[]; updateUsers: boolean }) => req<{ ref: string; revision: number; updated: number }>('POST', `/api/projects/${pid}/voices/version`, body),
+  importScript: (pid: string, scene: string, text: string) => req<{ revision: number; lines: number; unknown: string[]; ids: string[] }>('POST', `/api/projects/${pid}/scenes/${scene}/script/import`, { text }),
   generateTakes: (pid: string, body: { scene: string; lines: string[]; takes: number; seed?: number }) => req<JobInfo>('POST', `/api/projects/${pid}/takes/generate`, body),
   uploadTake: (pid: string, scene: string, line: string, file: File) => {
     const ext = (file.name.split('.').pop() ?? '').toLowerCase();

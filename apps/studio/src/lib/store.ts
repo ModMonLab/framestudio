@@ -40,6 +40,7 @@ export interface StudioState {
   ripple?: boolean;
   /** Episode view in the timeline area, and playback that continues into the next scene (FR-TML-05/09). */
   episodeView?: boolean;
+  scriptView?: boolean;
   episodePlay?: boolean;
   /** Template being applied as a new scene (FR-TPL-01), or a character being recast (FR-TPL-03). */
   template?: { ref: string; name: string };

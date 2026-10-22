@@ -207,3 +207,21 @@
 .st-ep-meta { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .st-ep-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-ep-num { font-variant-numeric: tabular-nums; opacity: .6; }
+
+/* Script view (FR-PRJ-04) */
+.st-script-body { overflow: auto; flex: 1; min-height: 0; padding: 0 var(--space-4) var(--space-4); }
+.st-script-table { width: 100%; border-collapse: collapse; margin-top: var(--space-4); }
+.st-script-table caption { text-align: left; font-weight: 600; padding: var(--space-2) 0; }
+.st-script-table th { text-align: left; font-weight: 500; color: var(--color-text2); padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-divider); }
+.st-script-table td { padding: 2px var(--space-3); border-bottom: 1px solid var(--color-divider); vertical-align: middle; }
+.st-script-table td:nth-child(2), .st-script-table td:nth-child(4) { width: 160px; }
+.st-script-table td:nth-child(3) { width: 100%; }
+.st-script-text { width: 100%; }
+.st-link { background: none; border: 0; padding: 0; color: var(--color-accent-text); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.st-link:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.st-sv-take { display: inline-block; padding: 0 var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--color-border); white-space: nowrap; }
+.st-sv-take--ok { color: var(--color-success); }
+.st-sv-take--bad { color: var(--color-danger); }
+.st-sv-take--warn { color: var(--color-warning-text); }
+.st-sv-take--busy { color: var(--color-info); }
+.st-sv-take--muted { color: var(--color-text3); }

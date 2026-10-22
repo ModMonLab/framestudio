@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
@@ -603,6 +603,35 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const cmd = frameCameraCommand(p.open.state, req.params.sid, String(b.preset ?? ''), b.subjects ?? [], Math.round(Number(b.at ?? 0)), { lib: library(p), styles, ...(b.camera ? { camera: b.camera } : {}), ...(b.name ? { name: b.name } : {}) });
       const r = p.open.session.apply({ commands: [cmd] as never, source: sourceOf(req), label: b.camera ? 'Reframe camera' : `Add ${String(cmd.params.name)}` });
       return { revision: r.revision, camera: b.camera ?? r.commands[0]!.params.id };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  /* ---------------------------------------------------------------- script (FR-PRJ-04, FR-DLG-01) */
+  app.get<{ Params: { pid: string }; Querystring: { format?: string } }>('/api/projects/:pid/script', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const format = req.query.format === 'fountain' ? 'fountain' : req.query.format === 'text' ? 'text' : undefined;
+      if (!format) return { rows: scriptRows(p.open.state) };
+      reply.header('content-type', 'text/plain; charset=utf-8');
+      reply.header('content-disposition', `attachment; filename="${p.open.state.project.name.replace(/[^\w .-]/g, '_')}.${format === 'fountain' ? 'fountain' : 'txt'}"`);
+      return scriptText(p.open.state, format);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  app.post<{ Params: { pid: string; sid: string }; Body: { text: string; dryRun?: boolean } }>('/api/projects/:pid/scenes/:sid/script/import', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body ?? ({} as never);
+      if (!p.open.state.scenes[req.params.sid]) throw new FrameError('NOT_FOUND', `Scene ${req.params.sid} not found`);
+      const parsed = parseScript(String(b.text ?? ''));
+      if (!parsed.length) throw new FrameError('USAGE', 'No dialogue found', undefined, 'Write one line per speaker as "NAME: line", or use Fountain.');
+      const r = scriptImportCommands(p.open.state, req.params.sid, parsed);
+      if (r.unknown.length && !r.lines) throw new FrameError('VALIDATION_FAILED', `No character in this scene is called ${r.unknown.join(', ')}`, { unknown: r.unknown }, 'Add the characters first, or rename the speakers.');
+      const applied = p.open.session.apply({ commands: r.commands as never, source: sourceOf(req), label: `Import script (${r.lines} lines)` }, { dryRun: !!b.dryRun });
+      return { revision: applied.revision, lines: r.lines, unknown: r.unknown, ids: applied.commands.filter((c) => c.name === 'line.add').map((c) => c.params.id) };
     } catch (e) {
       return sendError(reply, e);
     }

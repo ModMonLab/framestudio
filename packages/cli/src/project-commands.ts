@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FrameError, jsonSchema, schemas, type Command, type CommandBatch, type Problem } from '@frame/schema';
-import { compareStates, describeCommands, formatTimecode, lineTakeState, validateProject, ticksToSeconds, randomId, type ProjectState } from '@frame/core';
+import { compareStates, describeCommands, formatTimecode, lineTakeState, parseScript, scriptImportCommands, scriptText, validateProject, ticksToSeconds, randomId, type ProjectState } from '@frame/core';
 import { remote, remoteProject } from './remote.js';
 import { remoteState } from './remote.js';
 import { OpenProject, isProjectFolder, computeLocks, manifestHash, projectFromTemplateCommands } from '@frame/io';
@@ -394,6 +394,28 @@ command({
 /* ------------------------------------------------------------------ script view (FR-PRJ-04, read side) */
 
 command({
+  path: ['script', 'import'],
+  summary: 'Add lines to a scene from a script file: "NAME: line" per line, or Fountain. Speakers match the scene\'s characters by name.',
+  mutating: true,
+  args: [
+    { name: 'scene', description: 'Scene id or name', positional: true, required: true },
+    { name: 'file', description: 'Script file (.txt or .fountain)', positional: true, required: true },
+  ],
+  run: async (ctx) => {
+    const { state } = await readProject(ctx);
+    const sc = Object.values(state.scenes).find((x) => x.id === ctx.args.scene || x.name === ctx.args.scene);
+    if (!sc) throw new FrameError('NOT_FOUND', `Scene ${String(ctx.args.scene)} not found`);
+    const text = fs.readFileSync(path.resolve(ctx.io.cwd, String(ctx.args.file)), 'utf8');
+    const r = scriptImportCommands(state, sc.id, parseScript(text));
+    if (!r.lines) throw new FrameError('VALIDATION_FAILED', r.unknown.length ? `No character in this scene is called ${r.unknown.join(', ')}` : 'No dialogue found');
+    const res = await mutate(ctx, r.commands, `Import script (${r.lines} lines)`);
+    const { state: _s, ...rest } = res as typeof res & { state?: unknown };
+    return { ...rest, lines: r.lines, unknown: r.unknown };
+  },
+  human: (r) => `${r.dryRun ? 'Dry run: ' : ''}Imported ${r.lines} lines${r.unknown.length ? ` (no character for: ${r.unknown.join(', ')})` : ''}`,
+});
+
+command({
   path: ['script'],
   summary: 'Print every line in scene order with speaker, text, delivery and take status.',
   args: [{ name: 'format', description: 'text (default) or fountain' }],
@@ -416,10 +438,11 @@ command({
         })),
       })),
       format: ctx.args.format ?? 'text',
+      ...(ctx.args.format === 'fountain' ? { fountain: scriptText(s, 'fountain') } : {}),
     };
   },
   human: (r) =>
     r.format === 'fountain'
-      ? r.scenes.map((sc: any) => [`INT. ${sc.name.toUpperCase()}`, '', ...sc.lines.flatMap((l: any) => [l.speaker.toUpperCase(), l.text, ''])].join('\n')).join('\n')
+      ? r.fountain
       : r.scenes.map((sc: any) => [sc.name, ...sc.lines.map((l: any) => `  ${l.at}  ${l.speaker}: ${l.text}  [${l.take}]`)].join('\n')).join('\n\n'),
 });
