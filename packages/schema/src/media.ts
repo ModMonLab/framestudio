@@ -57,6 +57,7 @@ export const Take = Type.Object(
     fixture: Type.Boolean({ description: 'Produced by the fixture worker; never real speech (API-04).' }),
     seed: Type.Optional(Type.Integer()),
     settings: Type.Optional(Delivery),
+    reference: Type.Optional(Type.String({ description: 'Emotion of the voice reference the take was synthesised from, as reported by the engine (FR-VOI-03).' })),
     media: Type.Optional(MediaRef),
     durationS: Type.Optional(Type.Number({ minimum: 0 })),
     alignment: Type.Optional(Alignment),

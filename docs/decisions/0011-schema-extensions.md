@@ -7,3 +7,4 @@
 - **Defaults** (output preset, default style family, frame rate, caption style) live in `content/library.json`, not in code (FR-ARC-06).
 - **Agent tagging.** Clip `source` is `manual`, `auto`, `import`, `template`, `recipe:<id>` or `agent:<session>`; CLI commands run with `FRAME_AGENT_SESSION` set are tagged as agent changes.
 - **Amplitude envelope.** `alignment.envelope {windowS, values}` stores the RMS envelope of an uploaded or recorded take when no aligner is available; lip sync uses it (method `amplitude`, marked approximate) until the take is aligned (FR-LIP-02).
+- **Take reference.** `take.reference` records the emotion of the voice reference the engine synthesised from (reported by the worker in `settingsUsed.reference`), so the choice made for a line's delivery is visible and testable (FR-VOI-03).

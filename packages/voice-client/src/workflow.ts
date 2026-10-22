@@ -163,7 +163,8 @@ export async function generateTakes(client: VoiceClient, p: ProjectAccess, req: 
         const aj = await client.align({ audioHash: t.audioHash, transcript: stripPauses(line.text), language: req.language ?? vd.language });
         const al = await run(client, aj, ctl, [base + span * (0.6 + (0.4 * i) / res.takes.length), base + span * (0.6 + (0.4 * (i + 1)) / res.takes.length)], 'Aligning');
         const model = t.settingsUsed['model'];
-        p.apply([{ name: 'take.update', params: { id, set: { status: 'ready', media, durationS: t.durationS, alignment: toAlignment(al), ...(t.seed !== null ? { seed: t.seed } : {}), engine: res.engine, ...(typeof model === 'string' ? { model } : {}), fixture: res.fixture } } }], 'Take ready');
+        const reference = t.settingsUsed['reference'];
+        p.apply([{ name: 'take.update', params: { id, set: { status: 'ready', media, durationS: t.durationS, alignment: toAlignment(al), ...(t.seed !== null ? { seed: t.seed } : {}), engine: res.engine, ...(typeof model === 'string' ? { model } : {}), ...(typeof reference === 'string' ? { reference } : {}), fixture: res.fixture } } }], 'Take ready');
         out.takes.push({ line: lineId, take: id, status: 'ready' });
       }
       // Auto-select only when the line has no chosen take for its current text (FR-VOI-09).

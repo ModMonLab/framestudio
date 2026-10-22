@@ -87,6 +87,8 @@ describe.skipIf(!WORKER)('M1 vertical slice with the Voice Worker (AC-01 path, F
       const clip = st.scenes[scene].clips.find((c: any) => c.id === id);
       const take = st.takes[clip.line.take];
       expect(take).toMatchObject({ status: 'ready', fixture, source: 'generated' });
+      // A line delivered "happy" is synthesised from the accepted happy reference (FR-VOI-03).
+      expect(take.reference).toBe(id === lines[0] ? 'happy' : 'neutral');
       expect(take.alignment.words.length).toBeGreaterThan(3);
       // Lip sync from the alignment changes mouth shapes over the line.
       const shapes = new Set(mouthTrackFromAlignment(take.alignment, { fps: 24 }).blocks.map((b) => b.shape));
