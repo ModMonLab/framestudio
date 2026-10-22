@@ -210,7 +210,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-AGT-02 | Done | All 17 tools + `create_project`; JSON Schema inputs; reference `docs/reference/mcp-tools.md` (generated, checked). Evidence: `packages/mcp/test/mcp.test.ts` (in CI with the fixture worker for design_voice/generate_takes/render_video) | Minimum tools |
 | FR-AGT-03 | Done | `frame://schemas[/{type}]`, `frame://catalog` (refs, kinds, groups, capabilities), `frame://commands`, `frame://project/{id}/summary`; mcp.test.ts reads each | Resources |
 | FR-AGT-04 | Done | Engine guard on permissions; server tags every agent change `agent:<session>` (commands, characters, voices, takes); agent undo limited to its own step, no redo, no revert-source, renders only inside the project; person-only `POST /revert-source` reverts a session as one step. Evidence: mcp.test.ts | Safety and tagging |
-| FR-AGT-05 | Not started | — | Agent sessions appear in the Studio's activity log with the commands a |
+| FR-AGT-05 | Done | Studio Activity popover: agent sessions with their commands and "Revert session" (one undoable step), recent changes with source; agent-made clips marked in the timeline. Evidence: Studio e2e "agent changes are tagged…" (incl. axe on the popover) | Activity log |
 | FR-ONB-01 | Not started | — | First run: choose theme, check the voice worker connection (or skip), |
 | FR-ONB-02 | Not started | — | Contextual help: every panel has a help link |
 | FR-ONB-03 | Not started | — | Command palette (Ctrl/⌘ K) searches commands, assets, layers, scenes, |
@@ -266,7 +266,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | AC-10 | Not started | — | Conflicts and validation |
 | AC-11 | Not started | — | Versions and reuse |
 | AC-12 | Not started | — | Import and rigging assistant |
-| AC-13 | Not started | — | Agent production |
+| AC-13 | In progress | MCP path evidenced in `packages/mcp/test/mcp.test.ts` (create project, character, lines, dry run, conflict after human edit resolved by re-reading, voice → takes → frame and video) and Studio e2e (agent-tagged clips, session revert). Missing: recipes and music via MCP (recipes are M3), a 3-scene/2-character run by a real agent | Agent production |
 | AC-14 | Not started | — | Performance |
 | AC-15 | Not started | — | Determinism and sync |
 | AC-16 | In progress | crash.test.ts; store.test.ts disk-full retry | Reliability — External git merge pending |
@@ -292,7 +292,7 @@ H1 props (8 of 142), I1 kits (1 of 16), O1 caption styles (6 of 36), R1 output p
    acceptance report; owner runs the same with the Qwen3 engine (docs/acceptance/owner-checklist.md §1).
 3. Studio polish for UI-02: Problems panel,
    record in browser (FR-VOI-05), clip trim handles.
-4. Studio activity log with agent sessions and one-click revert (FR-AGT-05) on `POST /revert-source`; AC-13 run with a real agent.
+4. AC-13 end-to-end with a real agent once recipes (M3) and music exist; until then the MCP test covers the path.
 5. Freeze the part contract (end of M1) and start the content track (M5) in parallel with M2.
 6. M2: full character builder with part editing and character versions, part editor, importers and rigging
    assistant, packages (`.frameproj`, `.framechar`, `.framevoice`), asset library screens.

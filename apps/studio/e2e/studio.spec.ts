@@ -76,6 +76,32 @@ test('workspace opens a project, previews with the export renderer, edits throug
   expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
 });
 
+test('agent changes are tagged and a person reverts the agent session from Activity (FR-AGT-04/05, AC-13)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const speaker = st.scenes[sid].instances.find((i: { kind: string }) => i.kind === 'character').id;
+  // What an MCP agent does: commands with its session header.
+  const r = await page.request.post(`/api/projects/${pid}/commands`, { headers: { 'x-frame-agent': 'e2e-agent' }, data: { label: 'Agent line', commands: [{ name: 'line.add', params: { scene: sid, speaker, text: 'An agent wrote this line.', start: 48000 * 6, durationS: 2 } }] } });
+  expect(r.ok()).toBe(true);
+  const clip = page.getByRole('button', { name: /An agent wrote this line.*added by an agent/ });
+  await expect(clip).toBeVisible();
+  await page.getByRole('button', { name: /^Activity/ }).click();
+  const activity = page.getByRole('dialog', { name: 'Activity' });
+  await expect(activity.getByText('Agent e2e-agent', { exact: true })).toBeVisible();
+  await expect(activity.getByRole('list', { name: 'Recent changes' })).toContainText('Agent line');
+  const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  await activity.getByRole('button', { name: 'Revert session' }).click();
+  await expect(clip).toBeHidden();
+  await expect(activity.getByRole('button', { name: 'Revert session' })).toBeDisabled();
+  // The revert is one undoable step.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+z');
+  await expect(clip).toBeVisible();
+});
+
 test.describe(() => {
   test.skip(!WORKER, 'needs FRAME_TEST_WORKER_URL');
   test('M1 slice in the Studio: design voices, emotional range, generate aligned takes, export (FR-VOI-02/03/07/10, FR-RND-07)', async ({ page }) => {

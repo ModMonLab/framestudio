@@ -13,6 +13,7 @@ import { ExportDialog } from './ExportDialog.js';
 import { JobsButton } from './JobsButton.js';
 import { WorkerBadge } from './WorkerBadge.js';
 import { ProblemsButton } from './ProblemsButton.js';
+import { ActivityButton } from './ActivityButton.js';
 import { VoiceDesigner } from './VoiceDesigner.js';
 import { Builder } from './Builder.js';
 import { usePlayback } from '../lib/playback.js';
@@ -175,6 +176,7 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
       center={<Tabs label="Workspace mode" value={mode} onChange={(m: Mode) => studio.set({ mode: m })} tabs={[{ value: 'stage', label: 'Stage', shortcut: '1' }, { value: 'direct', label: 'Direct', shortcut: '2' }, { value: 'edit', label: 'Edit', shortcut: '3' }]} />}
       right={<>
         <ProblemsButton />
+        <ActivityButton />
         <WorkerBadge />
         <JobsButton />
         <IconButton label={resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} icon={resolved === 'dark' ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')} />

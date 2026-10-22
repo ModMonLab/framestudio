@@ -14,7 +14,7 @@ where it says "fixture path".
 | AC-06 – AC-10 | Not started | M3 direction features. |
 | AC-11 Versions and reuse | Not started | Project versions exist (`frame versions`); character versions are M2. |
 | AC-12 Import and rigging | Not started | M2. |
-| AC-13 Agent production | Not started | M4 (MCP). CLI server mode and agent attribution exist. |
+| AC-13 Agent production | In progress | MCP server and Studio activity log done (mcp.test.ts, Studio e2e). Recipes/music and a full real-agent run pending. |
 | AC-14 Performance | Not verified | Needs the reference project and machine. CPU export measured at ~8 fps for 1920×1080 in the build container (not the reference machine). |
 | AC-15 Determinism and sync | In progress | Preview, CLI and export pixel identity tests (studio e2e, slice.test.ts, export.test.ts); 20-frame and 10-minute sync runs pending. |
 | AC-16 Reliability | In progress | crash.test.ts (≥ 1000 edits with SIGKILL), disk-full retry test, external change reload; git merge flow pending. |

@@ -115,3 +115,11 @@
 .st-sev--error { color: var(--color-danger); }
 .st-sev--warning { color: var(--color-warning); }
 .st-context { padding: var(--space-2) 0; }
+
+/* Agent activity (FR-AGT-05) */
+.st-agent-mark { flex: none; opacity: 0.85; }
+.st-activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 360px; overflow: auto; }
+.st-activity__row { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; padding: 4px 2px; font-size: 12px; }
+.st-activity__session { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin-bottom: 8px; }
+.st-activity__session > div { flex: 1; min-width: 0; }
+.st-activity h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin: 8px 0 4px; color: var(--color-text3); }

@@ -1,6 +1,6 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
 import { useMemo, useRef, useState } from 'react';
-import { ChevronRight, Lock, SkipBack } from 'lucide-react';
+import { Bot, ChevronRight, Lock, SkipBack } from 'lucide-react';
 import { formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
 import type { Clip, Scene, Track } from '@frame/schema';
 import { IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow } from '@frame/ui';
@@ -174,6 +174,8 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected }: { proj
   const generating = state === 'Generating' || state === 'Queued';
   const muted = clip.line?.muted || !clip.enabled;
   const label = clipLabel(project, scene, clip, track);
+  // Changes made by agents stay visible to people (FR-AGT-04/05, AC-13).
+  const agent = clip.source?.startsWith('agent:') ? clip.source.slice(6) : undefined;
   const commitMove = () => {
     if (!drag) return;
     const dt = Math.round((drag.dx / pxPerSec) * fps) * (48000 / fps);
@@ -186,9 +188,9 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected }: { proj
       type="button"
       className={`fr-clip st-cat--${CATEGORY[track.kind]} ${selected ? 'fr-clip--selected' : ''} ${invalid ? 'fr-clip--invalid' : ''} ${generating ? 'fr-clip--generating' : ''} ${muted ? 'fr-clip--muted' : ''}`}
       style={{ left: x(clip.start) + (drag?.dx ?? 0), width: Math.max(4, x(clip.end - clip.start)) }}
-      title={`${label}${state ? ` · ${state}` : ''}`}
+      title={`${label}${state ? ` · ${state}` : ''}${agent ? ` · added by agent ${agent}` : ''}`}
       aria-pressed={selected}
-      aria-label={`${track.name}: ${label}${state ? `, ${state}` : ''}`}
+      aria-label={`${track.name}: ${label}${state ? `, ${state}` : ''}${agent ? ', added by an agent' : ''}`}
       onPointerDown={(e) => {
         e.stopPropagation();
         studio.set({ selection: e.shiftKey ? [...studio.state.selection, { kind: 'clip', id: clip.id }] : [{ kind: 'clip', id: clip.id }] });
@@ -204,6 +206,7 @@ function ClipChip({ project, scene, clip, track, x, pxPerSec, selected }: { proj
         openMenu({ x: e.clientX || r.left, y: e.clientY || r.bottom, items: clipMenu(studio, clip.id), label: 'Clip actions' });
       }}
     >
+      {agent && <Bot size={11} aria-hidden className="st-agent-mark" />}
       {generating ? 'Generating · ' : ''}{label}
     </button>
   );

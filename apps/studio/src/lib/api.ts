@@ -63,6 +63,9 @@ export interface WorkerStatus {
   capabilities?: { engines: { id: string; label: string; controls: { emotion: string[]; pace: unknown; instruction: boolean } }[]; limits: { minRefSeconds: number } };
 }
 
+/** One committed change in the project history (FR-PER-02, FR-AGT-05). */
+export interface HistoryEntry { revision: number; at: string; label: string; source: string; commands: { name: string }[] }
+
 export const api = {
   health: () => req<{ ok: boolean; version: string }>('GET', '/api/health'),
   projects: () => req<{ projects: { id: string; name: string; root: string; revision: number }[] }>('GET', '/api/projects'),
@@ -72,6 +75,8 @@ export const api = {
   undo: (pid: string) => req<{ revision: number; label: string }>('POST', `/api/projects/${pid}/undo`),
   redo: (pid: string) => req<{ revision: number; label: string }>('POST', `/api/projects/${pid}/redo`),
   save: (pid: string) => req<SaveState>('POST', `/api/projects/${pid}/save`),
+  history: (pid: string) => req<{ history: HistoryEntry[] }>('GET', `/api/projects/${pid}/history`),
+  revertSource: (pid: string, source: string) => req<{ revision: number; label: string }>('POST', `/api/projects/${pid}/revert-source`, { source }),
   validate: (pid: string) => req<{ revision: number; problems: Problem[] }>('GET', `/api/projects/${pid}/validate`),
   sceneAssets: (pid: string, scene: string) => req<{ revision: number; manifests: Record<string, unknown> }>('GET', `/api/projects/${pid}/scene-assets?scene=${encodeURIComponent(scene)}`),
   manifest: (ref: string, pid?: string) => req<unknown>('GET', `/api/library/manifest?ref=${encodeURIComponent(ref)}${pid ? `&project=${pid}` : ''}`),
