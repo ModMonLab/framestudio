@@ -213,23 +213,33 @@ export function Builder({ scene: sceneId, instance }: { scene: string; instance:
   const draftManifest = useMemo(() => (base && draft ? ({ ...base, name: draft.name, data: draft.data } as AssetManifest) : undefined), [base, draft]);
   const resolve = useCallback((r: string) => (inst && r === inst.asset ? draftManifest : assets.manifest(r)), [assets, draftManifest, inst]);
 
-  const views = useMemo(() => (sheet ? VIEWS.map((v) => v.value) : [view]), [sheet, view]);
+  // What the canvas shows: one view, the turnaround sheet (four views), or before/after (saved vs draft, FR-BLD-03).
+  const [compare, setCompare] = useState(false);
+  const savedManifest = useMemo(() => (base && saved ? ({ ...base, name: saved.name, data: saved.data } as AssetManifest) : undefined), [base, saved]);
+  const slots = useMemo(() => {
+    if (sheet) return VIEWS.map((v) => ({ key: v.value, view: v.value, caption: SHEET_LABEL[v.value], draft: true }));
+    if (compare) return [{ key: 'saved', view, caption: 'Saved version', draft: false }, { key: 'draft', view, caption: 'With your changes', draft: true }];
+    return [{ key: view, view, caption: '', draft: true }];
+  }, [sheet, compare, view]);
   useEffect(() => {
     if (!renderer || !styles || !scene || !inst || !draftManifest) return;
-    views.forEach((v, i) => {
+    slots.forEach((slot, i) => {
       const cv = canvases.current[i];
       if (!cv) return;
-      const { state, t } = isolate(project, scene, inst, v, lookId ?? (draftManifest.data as CharacterData).defaultLook, expression, gesture, lipT);
-      const w = sheet ? 360 : 900;
-      const h = Math.round(w * (sheet ? 1.5 : 0.75));
-      const probe = evaluateFrame(state, scene.id, t, { assets: { manifest: resolve }, styles: styles as never, width: 480, height: 270, family });
+      const shown = slot.draft ? draftManifest : savedManifest ?? draftManifest;
+      const res = (r: string) => (r === inst.asset ? shown : assets.manifest(r));
+      const lookFor = (shown.data as CharacterData).looks.some((l) => l.id === lookId) ? lookId! : (shown.data as CharacterData).defaultLook;
+      const { state, t } = isolate(project, scene, inst, slot.view, lookFor, expression, gesture, lipT);
+      const w = slots.length > 1 ? (sheet ? 360 : 440) : 900;
+      const h = Math.round(w * (sheet ? 1.5 : slots.length > 1 ? 1.2 : 0.75));
+      const probe = evaluateFrame(state, scene.id, t, { assets: { manifest: res }, styles: styles as never, width: 480, height: 270, family });
       const b = probe.boxes[inst.id];
       if (b) frameCamera(state, scene.id, b, frame, w / h);
-      const ev = evaluateFrame(state, scene.id, t, { assets: { manifest: resolve }, styles: styles as never, width: w, height: h, family, background: '#00000000' });
-      if (i === 0 && lipT !== null) setMouth(ev.mouths[inst.id] ?? 'X');
+      const ev = evaluateFrame(state, scene.id, t, { assets: { manifest: res }, styles: styles as never, width: w, height: h, family, background: '#00000000' });
+      if (i === slots.length - 1 && lipT !== null) setMouth(ev.mouths[inst.id] ?? 'X');
       blit(renderer, ev.frame, cv);
     });
-  }, [renderer, styles, project, scene, inst, views, frame, family, expression, gesture, lipT, assetVersion, sheet, draftManifest, lookId, resolve]);
+  }, [renderer, styles, project, scene, inst, slots, frame, family, expression, gesture, lipT, assetVersion, sheet, draftManifest, savedManifest, lookId, assets]);
 
   const parts = {
     head: useKind('head', pid), eyes: useKind('eyes', pid), brows: useKind('brow', pid), nose: useKind('nose', pid), mouth: useKind('mouth', pid), ears: useKind('ears', pid), hair: useKind('hair', pid),
@@ -335,16 +345,17 @@ export function Builder({ scene: sceneId, instance }: { scene: string; instance:
             <span className="fr-faint">Frame</span>
             <Segmented label="Framing" value={frame} onChange={setFrame} options={[{ value: 'full', label: 'Full body' }, { value: 'upper', label: 'Upper' }, { value: 'face', label: 'Face' }]} />
             <ToolbarSeparator />
-            <Chip selected={sheet} onClick={() => setSheet(!sheet)}>Turnaround sheet</Chip>
+            <Chip selected={sheet} onClick={() => { setSheet(!sheet); setCompare(false); }}>Turnaround sheet</Chip>
+            <Chip selected={compare} onClick={() => { setCompare(!compare); setSheet(false); }} disabled={!dirty} title={dirty ? 'Saved version next to your changes' : 'No changes to compare yet'}>Compare</Chip>
             <ToolbarSeparator />
             {look && draft && draft.data.looks.length > 1 && <span className="st-tb-select"><Select label="Preview look" value={look.id} onChange={setLookId} options={draft.data.looks.map((l) => ({ value: l.id, label: l.name }))} /></span>}
             <IconButton label="Randomise parts, build and colours" icon={<Shuffle size={16} />} onClick={doRandomise} disabled={!draft} disabledReason="Loading" />
           </Toolbar>
           <div className={`st-builder-canvas ${sheet ? 'st-builder-canvas--sheet' : ''}`}>
-            {!draft ? <EmptyState title="Loading the character…" /> : views.map((v, i) => (
-              <figure key={v} className="st-builder-view">
-                <canvas ref={(el) => { canvases.current[i] = el; }} aria-label={`${draft.name}, ${SHEET_LABEL[v]} view`} role="img" />
-                {sheet && <figcaption>{SHEET_LABEL[v]}</figcaption>}
+            {!draft ? <EmptyState title="Loading the character…" /> : slots.map((slot, i) => (
+              <figure key={slot.key} className="st-builder-view">
+                <canvas ref={(el) => { canvases.current[i] = el; }} aria-label={`${draft.name}, ${SHEET_LABEL[slot.view]} view${slot.caption && !sheet ? `, ${slot.caption.toLowerCase()}` : ''}`} role="img" />
+                {slot.caption && <figcaption>{slot.caption}</figcaption>}
               </figure>
             ))}
             <span className="st-shot">{family === 'flat' ? 'Flat style' : 'Illustrated style'}</span>

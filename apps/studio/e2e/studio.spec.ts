@@ -183,6 +183,10 @@ test('character builder edits a draft, checks the rig, saves a new character for
   await expect(tiles.getByRole('radio', { checked: true })).toHaveAttribute('title', current!);
   await page.getByRole('button', { name: 'Redo', exact: true }).click();
   await expect(tiles.getByRole('radio', { checked: true })).toHaveAttribute('title', otherName!);
+  // Compare shows the saved version next to the changes (FR-BLD-03).
+  await page.getByText('Compare', { exact: true }).click();
+  await expect(page.getByRole('img', { name: /saved version$/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /with your changes$/ })).toBeVisible();
   // Turnaround sheet shows all four views.
   await page.getByText('Turnaround sheet').click();
   await expect(page.getByRole('img', { name: /Maya Bennett, (Front|Three-quarter|Side|Back) view/ })).toHaveCount(4);
