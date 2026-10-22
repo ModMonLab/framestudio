@@ -82,6 +82,7 @@ function InstanceProps({ scene, inst }: { scene: Scene; inst: Instance }) {
         <SliderRow label="Opacity" value={Math.round(inst.opacity * 100)} min={0} max={100} defaultValue={100} format={(v) => `${Math.round(v)} %`} onChange={(v, phase) => phase === 'commit' && set({ opacity: v / 100 })} />
         <SliderRow label="Parallax" value={Math.round(inst.parallax * 100)} min={0} max={200} defaultValue={100} format={(v) => `${Math.round(v)} %`} onChange={(v, phase) => phase === 'commit' && set({ parallax: v / 100 })} />
         <ToggleRow label="Visible" checked={inst.visible} onChange={(v) => set({ visible: v })} />
+        <ToggleRow label="Locked" description="Locked objects select but do not move" checked={inst.locked} onChange={(v) => set({ locked: v }, `${v ? 'Lock' : 'Unlock'} ${inst.name}`)} />
       </Section>
       {inst.kind === 'character' && inst.character && (
         <Section title="Appearance" open={open.appearance!} onToggle={(o) => toggle('appearance', o)}>
@@ -154,7 +155,34 @@ function ClipProps({ scene, clip }: { scene: Scene; clip: Clip }) {
       <ToggleRow label="Enabled" checked={clip.enabled} onChange={(v) => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: clip.id, set: { enabled: v } } }])} />
     </Section>
     {acting && <MotionProps scene={scene} clip={clip} />}
+    {AUDIO_KINDS.has(scene.tracks.find((t) => t.id === clip.track)?.kind ?? '') && <ClipSound scene={scene} clip={clip} />}
     </>
+  );
+}
+
+const AUDIO_KINDS = new Set(['dialogue', 'music', 'ambience', 'sfx']);
+
+/** Clip sound (FR-SND-02/03): gain, pan, fades with curve, mute, and whether it ducks under dialogue. */
+function ClipSound({ scene, clip }: { scene: Scene; clip: Clip }) {
+  const { studio } = useCtx();
+  const [open, toggle] = useSections('clipsound', { sound: true });
+  const kind = scene.tracks.find((t) => t.id === clip.track)?.kind;
+  const p = clip.params as { gainDb?: number; pan?: number; fadeIn?: number; fadeOut?: number; fadeCurve?: string; mute?: boolean; duck?: boolean };
+  const set = (patch: Record<string, unknown>, label: string) => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: clip.id, set: { params: patch } } }], label);
+  const len = (clip.end - clip.start) / 48000;
+  const ducks = typeof p.duck === 'boolean' ? p.duck : kind === 'music' || kind === 'ambience';
+  return (
+    <Section title="Sound" summary={`${(p.gainDb ?? 0) >= 0 ? '+' : ''}${(p.gainDb ?? 0).toFixed(1)} dB`} open={open.sound!} onToggle={(o) => toggle('sound', o)}>
+      <SliderRow label="Gain" value={p.gainDb ?? 0} min={-40} max={12} step={0.5} defaultValue={0} format={(v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)} dB`} onChange={(v, ph) => ph === 'commit' && set({ gainDb: v }, `Clip gain ${v} dB`)} />
+      <SliderRow label="Pan" value={Math.round((p.pan ?? 0) * 100)} min={-100} max={100} defaultValue={0} format={(v) => (v === 0 ? 'Centre' : v < 0 ? `L ${-v}` : `R ${v}`)} onChange={(v, ph) => ph === 'commit' && set({ pan: v / 100 }, 'Clip pan')} />
+      <div className="st-grid2">
+        <NumberField label="Fade in" prefix="In" unit=" s" precision={2} min={0} max={len} value={p.fadeIn ?? 0} onChange={(v, ph) => ph === 'commit' && set({ fadeIn: v }, 'Fade in')} />
+        <NumberField label="Fade out" prefix="Out" unit=" s" precision={2} min={0} max={len} value={p.fadeOut ?? 0} onChange={(v, ph) => ph === 'commit' && set({ fadeOut: v }, 'Fade out')} />
+      </div>
+      <Segmented label="Fade curve" value={p.fadeCurve === 'equal-power' ? 'equal-power' : 'linear'} onChange={(v) => set({ fadeCurve: v }, 'Fade curve')} options={[{ value: 'linear', label: 'Linear' }, { value: 'equal-power', label: 'Equal power' }]} />
+      <ToggleRow label="Mute this clip" checked={!!p.mute} onChange={(v) => set({ mute: v }, v ? 'Mute clip' : 'Unmute clip')} />
+      {kind !== 'dialogue' && <ToggleRow label="Duck under dialogue" checked={ducks} onChange={(v) => set({ duck: v }, v ? 'Duck under dialogue' : 'Do not duck')} />}
+    </Section>
   );
 }
 
@@ -346,7 +374,10 @@ function SceneAudioProps({ scene }: { scene: Scene }) {
   return (
     <Section title="Mix" open={open.mix!} onToggle={(o) => toggle('mix', o)}>
       <SliderRow label="Duck music under dialogue" value={scene.audio.duckingDb} min={-40} max={0} defaultValue={-12} format={(v) => `${v} dB`} onChange={(v, p) => p === 'commit' && set({ duckingDb: v })} />
-      <p className="fr-hint">Select a character to manage its voice and lines.</p>
+      <SliderRow label="Duck attack" value={scene.audio.duckAttack} min={0} max={2} step={0.05} defaultValue={0.15} format={(v) => `${v.toFixed(2)} s`} onChange={(v, p) => p === 'commit' && set({ duckAttack: v })} />
+      <SliderRow label="Duck release" value={scene.audio.duckRelease} min={0} max={4} step={0.05} defaultValue={0.4} format={(v) => `${v.toFixed(2)} s`} onChange={(v, p) => p === 'commit' && set({ duckRelease: v })} />
+      <ToggleRow label="Room tone under dialogue gaps" description="Fills silences with the scene's ambience, quietly" checked={scene.audio.roomTone} onChange={(v) => void studio.exec([{ name: 'scene.setAudio', params: { id: scene.id, roomTone: v } }], v ? 'Room tone on' : 'Room tone off')} />
+      <p className="fr-hint">The ducking curve shows on music and ambience tracks. Select a character to manage its voice and lines.</p>
     </Section>
   );
 }

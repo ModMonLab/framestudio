@@ -17,6 +17,7 @@ import { FrameError, type Problem, type StyleFamily } from '@frame/schema';
 import { encodeWav, master, mixPlan, MIX_RATE, type PcmAudio } from './audio.js';
 import { ffmpegPath, ffmpegVersion } from './ffmpeg.js';
 import { writeFileAtomic } from './fsutil.js';
+import { encodePng } from './artwork.js';
 
 export type VideoCodec = 'h264' | 'h265' | 'vp9' | 'prores4444' | 'gif' | 'png';
 export type AudioCodec = 'aac' | 'opus' | 'pcm' | 'mp3';
@@ -70,6 +71,11 @@ export interface RenderOptions {
   styles: Record<StyleFamily, FamilyStyle>;
   renderer: NodeRenderer;
   resolveAudio: (src: AudioSource) => string | undefined;
+  /**
+   * Motion blur (FR-RND-09): each frame averages `samples` sub-frames spread over `shutter` (fraction of a frame,
+   * centred on the frame time). Deterministic: the same sub-frame times every run.
+   */
+  motionBlur?: { samples: number; shutter: number };
   /** Allow export with blocking problems (never used by the Studio; CLI --force for diagnostics). */
   force?: boolean;
   onProgress?: (p: RenderProgress) => void;
@@ -82,7 +88,7 @@ export interface RenderReport {
   files: string[];
   project: { id: string; name: string; revision: number };
   scenes: string[];
-  settings: { preset: string | null; width: number; height: number; fps: number; container: string; video: string | null; audio: string | null; captions: 'burned-in' | 'off'; family: StyleFamily };
+  settings: { preset: string | null; width: number; height: number; fps: number; container: string; video: string | null; audio: string | null; captions: 'burned-in' | 'off'; family: StyleFamily; motionBlur?: { samples: number; shutter: number }; quality?: RenderOptions['quality'] };
   durationS: number;
   frames: number;
   encoder: string;
@@ -163,7 +169,7 @@ export async function renderExport(o: RenderOptions): Promise<RenderReport> {
     files: [],
     project: { id: o.state.project.id, name: o.state.project.name, revision: o.revision },
     scenes: o.scenes,
-    settings: { preset: o.presetId ?? null, width: o.width, height: o.height, fps, container: p.container, video: p.video ?? null, audio: p.audio ?? null, captions: o.burnInCaptions ? 'burned-in' : 'off', family },
+    settings: { preset: o.presetId ?? null, width: o.width, height: o.height, fps, container: p.container, video: p.video ?? null, audio: p.audio ?? null, captions: o.burnInCaptions ? 'burned-in' : 'off', family, ...(o.motionBlur && o.motionBlur.samples > 1 ? { motionBlur: o.motionBlur } : {}), ...(o.quality ? { quality: o.quality } : {}) },
     durationS: 0,
     frames: 0,
     encoder: '',
@@ -263,13 +269,30 @@ export async function renderExport(o: RenderOptions): Promise<RenderReport> {
       for (const iss of ev.issues) if (!report.warnings.includes(iss)) report.warnings.push(iss);
       return ev.frame;
     };
+    const blur = o.motionBlur && o.motionBlur.samples > 1 ? o.motionBlur : undefined;
+    // RGBA for frame i, averaged over sub-frames when motion blur is on.
+    const pixelsAt = (i: number): Uint8Array => {
+      if (!blur) return o.renderer.rgba(frameAt(i));
+      const ft = frameTimes[i]!;
+      const seg = segOf(ft.scene);
+      const span = (TICKS_PER_SECOND / fps) * Math.max(0, Math.min(1, blur.shutter));
+      const acc = new Float32Array(o.width * o.height * 4);
+      for (let k = 0; k < blur.samples; k++) {
+        const t = Math.max(segs[seg]!.from, Math.min(segs[seg]!.to - 1, Math.round(ft.t + ((k + 0.5) / blur.samples - 0.5) * span)));
+        const px = o.renderer.rgba(evaluateFrame(o.state, ft.scene, t, { ...evalOpts, captions: caps.burn, ...(seg > 0 ? { before: before(seg) } : {}) }).frame);
+        for (let j = 0; j < px.length; j++) acc[j]! += px[j]!;
+      }
+      const out = new Uint8Array(acc.length);
+      for (let j = 0; j < acc.length; j++) out[j] = Math.round(acc[j]! / blur.samples);
+      return out;
+    };
     if (p.container === 'png') {
       const dir = path.resolve(o.out);
       fs.mkdirSync(dir, { recursive: true });
       for (let i = 0; i < frameTimes.length; i++) {
         checkCancel();
         const f = path.join(dir, `frame-${String(i + 1).padStart(6, '0')}.png`);
-        fs.writeFileSync(f, o.renderer.png(frameAt(i)));
+        fs.writeFileSync(f, blur ? encodePng(pixelsAt(i), o.width, o.height) : o.renderer.png(frameAt(i)));
         progress({ phase: 'Rendering', frame: i + 1, frames: frameTimes.length, fps: (i + 1) / Math.max(1e-6, now() - tr) });
       }
       report.files.push(dir);
@@ -305,7 +328,7 @@ export async function renderExport(o: RenderOptions): Promise<RenderReport> {
       try {
         for (let i = 0; i < frameTimes.length; i++) {
           if (o.signal?.aborted) break;
-          const rgba = o.renderer.rgba(frameAt(i));
+          const rgba = pixelsAt(i);
           if (!child.stdin.write(rgba)) await Promise.race([new Promise<void>((res) => child.stdin.once('drain', res)), exited]);
           progress({ phase: 'Rendering', frame: i + 1, frames: frameTimes.length, fps: (i + 1) / Math.max(1e-6, now() - tr) });
         }
@@ -418,3 +441,4 @@ export function humanReport(r: RenderReport): string {
   if (r.error) L.push(`Error: ${r.error.code} — ${r.error.message}`);
   return L.join('\n') + '\n';
 }
+

@@ -33,6 +33,7 @@ export * from './notes.js';
 export * from './clipboard.js';
 export * from './kits.js';
 export * from './sets.js';
+export * from './layout.js';
 export * from './captions.js';
 export * from './audio.js';
 export * from './sync.js';

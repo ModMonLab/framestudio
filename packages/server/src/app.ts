@@ -1210,39 +1210,80 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   app.delete<{ Params: { id: string } }>('/api/jobs/:id', async (req) => ({ cancelled: jobs.render.cancel(req.params.id) || jobs.voice.cancel(req.params.id) }));
 
   /* ---------------------------------------------------------------- render (FR-RND) */
-  app.post<{ Params: { pid: string }; Body: { scenes?: string[]; scene?: string; preset?: string; out?: string; range?: { from: number; to: number }; width?: number; height?: number; captions?: boolean; subtitles?: ('srt' | 'vtt')[]; stems?: boolean } }>('/api/projects/:pid/renders', async (req, reply) => {
+  type RenderBody = {
+    scenes?: string[]; scene?: string; preset?: string; out?: string; range?: { from: number; to: number }; width?: number; height?: number; captions?: boolean; subtitles?: ('srt' | 'vtt')[]; stems?: boolean;
+    /** Custom settings (FR-RND-04): frame rate, aspect key for framing, quality, loudness target (null = off), motion blur (FR-RND-09). */
+    fps?: 24 | 25 | 30; aspect?: string; quality?: { crf?: number; videoBitrate?: string; audioBitrate?: string }; loudness?: number | null; motionBlur?: { samples: number; shutter: number };
+  };
+  // Settings of each render job, so a failed or cancelled export can be retried with the same settings (FR-RND-07).
+  const renderRequests = new Map<string, { pid: string; body: RenderBody; agent: boolean }>();
+  const startRender = (p: HubProject, b: RenderBody, agent: boolean) => {
+    // Snapshot now: edits made while the job runs do not affect it (FR-RND-05).
+    let state: ProjectState = p.open.state;
+    const revision = p.open.session.revision;
+    const scenes = b.scenes ?? [b.scene ?? state.episodes[state.project.episodes[0] ?? '']?.scenes[0] ?? ''];
+    for (const s of scenes) if (!state.scenes[s]) throw new FrameError('NOT_FOUND', `Scene ${s} not found`);
+    if (b.fps !== undefined && ![24, 25, 30].includes(b.fps)) throw new FrameError('USAGE', 'fps must be 24, 25 or 30');
+    if (b.fps && b.fps !== state.project.frameRate) state = { ...state, project: { ...state.project, frameRate: b.fps } };
+    if (b.motionBlur && (!Number.isInteger(b.motionBlur.samples) || b.motionBlur.samples < 1 || b.motionBlur.samples > 16)) throw new FrameError('USAGE', 'Motion blur samples must be 1–16');
+    if (b.width !== undefined && (b.width < 16 || b.width > 7680 || b.height === undefined || b.height < 16 || b.height > 4320)) throw new FrameError('USAGE', 'Custom size must be 16–7680 × 16–4320');
+    const lib = library(p);
+    const presetRef = b.preset ?? state.project.output.preset;
+    const base = (lib.manifest(presetRef)?.data as { output?: OutputPreset } | undefined)?.output;
+    if (!base) throw new FrameError('NOT_FOUND', `Output preset ${presetRef} not found`);
+    const preset: OutputPreset = { ...base, ...(b.subtitles ? { subtitles: b.subtitles } : {}), ...(b.stems ? { stems: true } : {}) };
+    if (b.loudness === null) delete preset.loudness;
+    else if (b.loudness !== undefined) preset.loudness = b.loudness;
+    const ext = preset.container === 'png' ? '' : preset.container === 'none' ? '.srt' : `.${preset.container}`;
+    const name = scenes.length === 1 ? state.scenes[scenes[0]!]!.name : state.project.name;
+    if (b.out && agent && path.relative(p.root, path.resolve(p.root, b.out)).startsWith('..')) throw new FrameError('PERMISSION_REQUIRED', 'Agents can only render inside the project folder');
+    const width = b.width ?? base.width ?? state.project.output.width;
+    const height = b.height ?? base.height ?? state.project.output.height;
+    const out = b.out ? path.resolve(p.root, b.out) : path.join(p.root, state.project.renderDir ?? 'renders', `${name.replace(/[^A-Za-z0-9_-]+/g, '-')}-${width}x${height}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}${ext}`);
+    const aspect = b.aspect ?? base.aspect;
+    const job = jobs.render.submit('render', `Export · ${name} · ${width}×${height}`, async (ctx) => {
+      const report = await renderExport({
+        state, revision, scenes, ...(b.range ? { range: b.range } : {}), preset, presetId: presetRef, width, height,
+        ...(aspect ? { aspect } : {}), ...(b.quality ? { quality: b.quality } : {}), ...(b.motionBlur ? { motionBlur: b.motionBlur } : {}),
+        burnInCaptions: b.captions ?? (state.project.captions.enabled && state.project.captions.burnIn),
+        out, assets: { manifest: (r) => lib.manifest(r) }, assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), styles, renderer: await getRenderer(),
+        resolveAudio: (src) => (src.kind === 'media' ? p.open.store.findMedia(src.hash) ?? bundledMediaFile(o.contentDir, src.hash) : undefined),
+        signal: ctx.signal,
+        onProgress: (pr) => ctx.progress(pr.phase === 'Rendering' && pr.frames ? (pr.frame ?? 0) / pr.frames * 0.9 : pr.phase === 'Completed' ? 1 : ctx.signal.aborted ? 0 : 0.95, pr.phase === 'Rendering' ? `Rendering frame ${pr.frame} of ${pr.frames} · ${(pr.fps ?? 0).toFixed(0)} fps` : pr.phase),
+      });
+      if (report.status !== 'completed') throw new FrameError((report.error?.code ?? 'RENDER_FAILED') as ErrorCode, report.error?.message ?? 'Export failed', { report });
+      return report;
+    }, p.id);
+    renderRequests.set(job.id, { pid: p.id, body: b, agent });
+    return job;
+  };
+  app.post<{ Params: { pid: string }; Body: RenderBody }>('/api/projects/:pid/renders', async (req, reply) => {
+    try {
+      return reply.code(202).send(publicJob(startRender(hub.get(req.params.pid), req.body ?? {}, !!req.headers['x-frame-agent'])));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Batch (FR-RND-10): several exports queued at once (aspect ratios, episodes); they run one after another.
+  app.post<{ Params: { pid: string }; Body: { items: RenderBody[] } }>('/api/projects/:pid/renders/batch', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
-      const b = req.body ?? {};
-      // Snapshot now: edits made while the job runs do not affect it (FR-RND-05).
-      const state: ProjectState = p.open.state;
-      const revision = p.open.session.revision;
-      const scenes = b.scenes ?? [b.scene ?? state.episodes[state.project.episodes[0] ?? '']?.scenes[0] ?? ''];
-      for (const s of scenes) if (!state.scenes[s]) throw new FrameError('NOT_FOUND', `Scene ${s} not found`);
-      const lib = library(p);
-      const presetRef = b.preset ?? state.project.output.preset;
-      const base = (lib.manifest(presetRef)?.data as { output?: OutputPreset } | undefined)?.output;
-      if (!base) throw new FrameError('NOT_FOUND', `Output preset ${presetRef} not found`);
-      const preset: OutputPreset = { ...base, ...(b.subtitles ? { subtitles: b.subtitles } : {}), ...(b.stems ? { stems: true } : {}) };
-      const ext = preset.container === 'png' ? '' : preset.container === 'none' ? '.srt' : `.${preset.container}`;
-      const name = scenes.length === 1 ? state.scenes[scenes[0]!]!.name : state.project.name;
-      if (b.out && req.headers['x-frame-agent'] && path.relative(p.root, path.resolve(p.root, b.out)).startsWith('..')) throw new FrameError('PERMISSION_REQUIRED', 'Agents can only render inside the project folder');
-      const out = b.out ? path.resolve(p.root, b.out) : path.join(p.root, state.project.renderDir ?? 'renders', `${name.replace(/[^A-Za-z0-9_-]+/g, '-')}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}${ext}`);
-      const job = jobs.render.submit('render', `Export · ${name}`, async (ctx) => {
-        const report = await renderExport({
-          state, revision, scenes, ...(b.range ? { range: b.range } : {}), preset, presetId: presetRef,
-          width: b.width ?? base.width ?? state.project.output.width, height: b.height ?? base.height ?? state.project.output.height,
-          ...(base.aspect ? { aspect: base.aspect } : {}),
-          burnInCaptions: b.captions ?? (state.project.captions.enabled && state.project.captions.burnIn),
-          out, assets: { manifest: (r) => lib.manifest(r) }, assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), styles, renderer: await getRenderer(),
-          resolveAudio: (src) => (src.kind === 'media' ? p.open.store.findMedia(src.hash) ?? bundledMediaFile(o.contentDir, src.hash) : undefined),
-          signal: ctx.signal,
-          onProgress: (pr) => ctx.progress(pr.phase === 'Rendering' && pr.frames ? (pr.frame ?? 0) / pr.frames * 0.9 : pr.phase === 'Completed' ? 1 : ctx.signal.aborted ? 0 : 0.95, pr.phase === 'Rendering' ? `Rendering frame ${pr.frame} of ${pr.frames} · ${(pr.fps ?? 0).toFixed(0)} fps` : pr.phase),
-        });
-        if (report.status !== 'completed') throw new FrameError((report.error?.code ?? 'RENDER_FAILED') as ErrorCode, report.error?.message ?? 'Export failed', { report });
-        return report;
-      }, p.id);
-      return reply.code(202).send(publicJob(job));
+      const items = req.body?.items ?? [];
+      if (!items.length || items.length > 24) throw new FrameError('USAGE', 'Send 1–24 exports');
+      const started = items.map((b) => startRender(p, b, !!req.headers['x-frame-agent']));
+      return reply.code(202).send({ jobs: started.map(publicJob) });
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+  // Retry a failed or cancelled export with the same settings on the current project (FR-RND-07).
+  app.post<{ Params: { id: string } }>('/api/jobs/:id/retry', async (req, reply) => {
+    try {
+      const j = jobs.render.get(req.params.id);
+      const r = renderRequests.get(req.params.id);
+      if (!j || !r) throw new FrameError('NOT_FOUND', `Export job ${req.params.id} not found`);
+      if (j.state !== 'failed' && j.state !== 'cancelled') throw new FrameError('CONFLICT', 'Only failed or cancelled exports can be retried');
+      return reply.code(202).send(publicJob(startRender(hub.get(r.pid), r.body, r.agent)));
     } catch (e) {
       return sendError(reply, e);
     }

@@ -1010,3 +1010,38 @@ test('a ready-made set, kit palette and time of day; a costume change and an acc
   await expect.poll(async () => (await state()).scenes[sid].clips.some((c: { params: { look?: string } }) => typeof c.params.look === 'string')).toBe(true);
   await new AxeBuilder({ page }).include('aside[aria-label="Properties"]').analyze().then((r) => expect(r.violations.flatMap((v) => v.nodes.map((n) => `${v.id}: ${n.html.slice(0, 120)}`))).toEqual([]));
 });
+
+test('the camera frame is dragged on the whole stage; aspect ratios preview with safe areas (FR-CAM-01, FR-CAM-06)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  await page.getByRole('button', { name: 'Show the camera frame on the whole stage' }).click();
+  const frame = page.getByRole('img', { name: /^Camera frame/ });
+  await expect(frame).toBeVisible();
+  const camName = (await frame.getAttribute('aria-label'))!.replace(/^Camera frame (.*) \(.*$/, '$1');
+  const cam0 = st.scenes[sid].cameras.find((c: { name: string }) => c.name === camName);
+  const b = (await frame.boundingBox())!;
+  // Drag the left border 40 px to the right: the camera moves right.
+  await page.mouse.move(b.x + 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + 22, b.y + b.height / 2, { steps: 4 });
+  await page.mouse.move(b.x + 42, b.y + b.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state()).scenes[sid].cameras.find((c: { id: string }) => c.id === cam0.id).center.x).toBeGreaterThan(cam0.center.x + 20);
+  // Corner resize makes the frame wider.
+  const b2 = (await frame.boundingBox())!;
+  await page.mouse.move(b2.x + b2.width - 1, b2.y + b2.height - 1);
+  await page.mouse.down();
+  await page.mouse.move(b2.x + b2.width + 30, b2.y + b2.height + 10, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state()).scenes[sid].cameras.find((c: { id: string }) => c.id === cam0.id).width).toBeGreaterThan(cam0.width);
+  await page.getByRole('button', { name: 'Back to the camera view' }).click();
+  // Another ratio previews with its safe areas.
+  await page.getByRole('radio', { name: '9:16' }).click();
+  await page.getByRole('button', { name: 'Show safe areas' }).click();
+  await expect(page.locator('.st-safe-ui')).toBeVisible();
+  const c = (await page.getByTestId('stage-canvas').boundingBox())!;
+  expect(c.height).toBeGreaterThan(c.width);
+});

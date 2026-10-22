@@ -57,6 +57,26 @@ describe('audio scheduling (FR-SND-01..03, SRS §6.6)', () => {
     expect(plan.events.filter((e) => e.bus === 'dialogue')).toEqual([]);
   });
 
+  it('room tone fills the gaps between lines from the scene ambience, quietly and without ducking (FR-SND-06)', () => {
+    const { session, scene, line } = sceneWithLine();
+    const st = session.state.scenes[scene]!;
+    const maya = st.clips.find((c) => c.id === line)!.line!.speaker;
+    const l2 = session.apply({ commands: [{ name: 'line.add', params: { scene, speaker: maya, text: 'Second line', start: secondsToTicks(4), durationS: 1 } }] }).commands[0]!.params.id as string;
+    const take = session.apply({ commands: [{ name: 'take.add', params: { take: { line: l2, lineRevision: 1, source: 'generated', fixture: true, status: 'ready', durationS: 1, media: MEDIA, engine: 'fixture' } } }] }).commands[0]!.params.id as string;
+    session.apply({ commands: [{ name: 'line.chooseTake', params: { scene, id: l2, take } }] });
+    let plan = scheduleSceneAudio(session.state, session.state.scenes[scene]!);
+    expect(plan.events.some((e) => e.id.startsWith('roomtone'))).toBe(false);
+    session.apply({ commands: [{ name: 'scene.setAudio', params: { id: scene, roomTone: true } }] });
+    plan = scheduleSceneAudio(session.state, session.state.scenes[scene]!);
+    expect(plan.warnings.some((w) => w.includes('no ambience'))).toBe(true);
+    const amb = session.state.scenes[scene]!.tracks.find((t) => t.kind === 'ambience')!.id;
+    session.apply({ commands: [{ name: 'clip.add', params: { scene, track: amb, start: 0, end: secondsToTicks(6), media: MEDIA.hash, params: { gainDb: -6 } } }] });
+    plan = scheduleSceneAudio(session.state, session.state.scenes[scene]!);
+    const tone = plan.events.filter((e) => e.id.startsWith('roomtone'));
+    expect(tone).toHaveLength(1);
+    expect(tone[0]).toMatchObject({ start: 3, duration: 1, gainDb: -24, ducks: false, bus: 'ambience' });
+  });
+
   it('constant-power pan', () => {
     const [l, r] = panGains(0);
     expect(l).toBeCloseTo(1);

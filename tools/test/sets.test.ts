@@ -85,3 +85,27 @@ describe('sets, kit palettes and time of day (FR-ENV-01, FR-ENV-02)', () => {
     }
   });
 });
+
+describe('depth vs parallax (FR-STG-02)', () => {
+  it('draw order follows the depth plane and order; parallax only changes how far an object moves with the camera', () => {
+    const { session, scene } = project();
+    const add = (name: string, plane: string, parallax: number) => session.apply({ commands: [{ name: 'instance.add', params: { scene, kind: 'prop', asset: 'prop.potted-plant@1', name, transform: { x: 960, y: 900 }, depthPlane: plane, parallax } }] }).commands[0]!.params.id as string;
+    const front = add('Front but slow', 'front', 0.3);
+    const back = add('Back but fast', 'back', 1.6);
+    const cam = session.state.scenes[scene]!.defaultCamera;
+    const ev = (x: number) => {
+      session.apply({ commands: [{ name: 'camera.update', params: { scene, id: cam, set: { center: { x, y: 540 } } } }] });
+      return evaluateFrame(session.state, scene, 0, { assets: { manifest: (r) => lib.manifest(r) }, styles, width: 960, height: 540 });
+    };
+    const a = ev(960);
+    const order = Object.keys(a.boxes);
+    expect(order.indexOf(back)).toBeLessThan(order.indexOf(front));
+    const b = ev(1160);
+    const moved = (id: string) => Math.abs(b.boxes[id]!.x - a.boxes[id]!.x);
+    expect(moved(back)).toBeGreaterThan(moved(front) * 3);
+    // Swapping parallax does not change the drawing order.
+    session.apply({ commands: [{ name: 'instance.update', params: { scene, id: front, set: { parallax: 1.6 } } }, { name: 'instance.update', params: { scene, id: back, set: { parallax: 0.3 } } }] });
+    const c = Object.keys(ev(960).boxes);
+    expect(c.indexOf(back)).toBeLessThan(c.indexOf(front));
+  });
+});

@@ -36,6 +36,11 @@ export interface EvalOptions {
    * it instead of from black. Supplied by episode playback and export.
    */
   before?: () => Item[];
+  /**
+   * Stage overview (FR-CAM-01 manual framing): draw the whole stage instead of through the shot camera, so the
+   * camera's frame can be shown and dragged. `EvaluatedFrame.camera` still names the shot camera.
+   */
+  overview?: boolean;
 }
 
 export interface CaptionLine {
@@ -591,7 +596,8 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
   const fxData = (c: Clip) => o.assets.manifest(c.asset!)?.data as { effect?: EffectData; atmosphere?: AtmoData } | undefined;
   const freeze = fxClips.find((c) => fxData(c)?.effect?.type === 'freeze');
   const t = freeze ? freeze.start : tIn;
-  const cs = cameraAt(scene, t, o.assets, o.aspect);
+  const shotCam = cameraAt(scene, t, o.assets, o.aspect);
+  const cs: CameraState = o.overview ? { cam: shotCam.cam, center: [scene.stage.width / 2, scene.stage.height / 2], width: scene.stage.width * 1.2, rotation: 0, shake: [0, 0] } : shotCam;
   const designAspect = state.project.output.width / state.project.output.height;
   const fps = state.project.frameRate;
   const boxes: EvaluatedFrame['boxes'] = {};
@@ -816,7 +822,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
   const view = viewMatrix(scene, cs, o.width, o.height, designAspect, 1);
   return {
     frame: { width: o.width, height: o.height, background: o.background ?? '#000000', items },
-    camera: { id: cs.cam.id, name: cs.cam.name, center: cs.center, width: cs.width, rotation: cs.rotation },
+    camera: { id: shotCam.cam.id, name: shotCam.cam.name, center: shotCam.center, width: shotCam.width, rotation: shotCam.rotation },
     captions,
     view,
     issues,
