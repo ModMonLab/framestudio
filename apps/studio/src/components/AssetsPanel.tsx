@@ -10,6 +10,7 @@ export const DRAG_TYPE = 'application/x-frame-asset';
 
 export interface Hit {
   ref: string;
+  preview?: boolean;
   kind: string;
   name: string;
   category: string;
@@ -89,6 +90,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
               key={h.ref}
               name={h.name}
               meta={h.group && h.group !== cat ? h.group : h.ref.split('@')[0]}
+              thumbnail={h.preview ? <img src={`/api/library/thumbnail?ref=${encodeURIComponent(h.ref)}&family=${project.project.styleFamily}&w=60&project=${encodeURIComponent(pid)}`} width={30} height={30} alt="" loading="lazy" /> : undefined}
               disabledReason={reason(h)}
               selected={picked === h.ref}
               onClick={() => setPicked(h.ref)}

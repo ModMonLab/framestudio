@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { describeCommands, evaluateFrame, validateProject, type ProjectState } from '@frame/core';
+import { describeCommands, evaluateFrame, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import { decodeAudioFile, renderExport, rmsEnvelope, type OutputPreset } from '@frame/io';
@@ -298,7 +298,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const lib = library(p);
       const limit = Math.min(500, Number(req.query.limit ?? 100));
       const hits = lib.search(req.query.q ?? '', { ...(req.query.kind ? { kind: req.query.kind } : {}) }).slice(0, limit);
-      return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source, ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views })) };
+      return { results: hits.map(({ manifest: m, source, incompatible }) => ({ ref: `${m.id}@${m.version}`, source, preview: previewable(m.kind), ...(incompatible ? { incompatible } : {}), id: m.id, version: m.version, kind: m.kind, name: m.name, category: m.category, group: m.group, tags: m.tags, families: m.families, views: m.views })) };
     } catch (e) {
       return sendError(reply, e);
     }
@@ -314,6 +314,44 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
   app.get('/api/styles', async () => styles);
+
+  // Thumbnails (FR-AST-07): the item on the library's preview character, rendered with the export renderer and cached.
+  const libraryDefaults = (() => {
+    try {
+      return (JSON.parse(fs.readFileSync(path.join(o.contentDir, 'library.json'), 'utf8')) as { defaults?: { previewCharacter?: string } }).defaults ?? {};
+    } catch {
+      return {};
+    }
+  })();
+  const thumbs = new Map<string, Buffer>();
+  app.get<{ Querystring: { ref: string; family?: string; w?: string; h?: string; project?: string } }>('/api/library/thumbnail', async (req, reply) => {
+    try {
+      const p = req.query.project ? hub.get(req.query.project) : undefined;
+      const lib = library(p);
+      const ref = req.query.ref;
+      const m = lib.manifest(ref);
+      if (!m) throw new FrameError('NOT_FOUND', `Asset ${ref} not found`);
+      const family = req.query.family === 'illustrated' ? 'illustrated' : 'flat';
+      const w = Math.max(16, Math.min(512, Number(req.query.w ?? 96)));
+      const h = Math.max(16, Math.min(512, Number(req.query.h ?? w)));
+      const key = `${ref}|${family}|${w}x${h}`;
+      let png = thumbs.get(key);
+      if (!png) {
+        const pc = libraryDefaults.previewCharacter;
+        const pcm = pc ? lib.manifest(pc) : undefined;
+        const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm } : undefined);
+        if (!setup) throw new FrameError('NOT_FOUND', `${ref} has no visual preview`);
+        const renderer = await getRenderer();
+        const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));
+        png = Buffer.from(renderer.png(ev.frame));
+        if (thumbs.size > 2000) thumbs.clear();
+        thumbs.set(key, png);
+      }
+      return reply.header('content-type', 'image/png').header('cache-control', 'public, max-age=86400').send(png);
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
 
   /* ---------------------------------------------------------------- jobs (FR-ARC-05) */
   const allJobs = (project?: string) => [...jobs.render.list(project), ...jobs.voice.list(project)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -519,6 +557,25 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       (await renderer)?.dispose();
     },
   };
+}
+
+/** Bounding box of pixels with alpha > 0 (thumbnail framing). */
+export function visibleBox(rgba: Uint8Array, w: number, h: number): { x: number; y: number; w: number; h: number } | undefined {
+  let x0 = w;
+  let y0 = h;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (rgba[(y * w + x) * 4 + 3]! > 8) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  return x1 < 0 ? undefined : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
 
 function currentCharacter(p: HubProject, scene: string, instance: string) {

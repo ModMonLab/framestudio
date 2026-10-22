@@ -100,6 +100,20 @@ describe('Frame Server (FR-ARC-01..05)', () => {
     expect((await api('GET', '/api/library/manifest?ref=nope.nope@1')).status).toBe(404);
   });
 
+  it('renders cached library thumbnails in both families (FR-AST-07)', async () => {
+    for (const family of ['flat', 'illustrated']) {
+      const lib = await api('GET', '/api/library?kind=exp&limit=1');
+      const res = await fetch(`${base}/api/library/thumbnail?ref=${encodeURIComponent(lib.json.results[0].ref)}&family=${family}&w=64`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toBe('image/png');
+      const png = new Uint8Array(await res.arrayBuffer());
+      expect([...png.slice(1, 4)].map((c) => String.fromCharCode(c)).join('')).toBe('PNG');
+      expect(png.length).toBeGreaterThan(500);
+    }
+    const out = await api('GET', '/api/library?kind=out&limit=1');
+    expect((await fetch(`${base}/api/library/thumbnail?ref=${encodeURIComponent(out.json.results[0].ref)}`)).status).toBe(404);
+  });
+
   it('runs an export job with progress events and a report (FR-ARC-05, FR-RND-07)', async () => {
     const pid = (await api('POST', '/api/projects/open', { path: project() })).json.id;
     const st = (await api('GET', `/api/projects/${pid}/state`)).json;

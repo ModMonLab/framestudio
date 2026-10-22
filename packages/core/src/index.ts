@@ -32,3 +32,4 @@ export function describeCommands() {
     examples: c.examples ?? [],
   }));
 }
+export * from './preview.js';

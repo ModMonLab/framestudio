@@ -54,11 +54,11 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-PER-07 | Not started | — | Clipboard |
 | FR-AST-01 | Not started | — | Library sources |
 | FR-AST-02 | Not started | — | Manifests |
-| FR-AST-03 | Not started | — | Browser |
+| FR-AST-03 | In progress | Studio Assets panel: search, categories with live counts, thumbnails, apply/drag | Browser — Full-page library, filters by family/view/source pending |
 | FR-AST-04 | Not started | — | Compatibility |
 | FR-AST-05 | Not started | — | Versions |
 | FR-AST-06 | Not started | — | Favourites and collections |
-| FR-AST-07 | Not started | — | Thumbnails |
+| FR-AST-07 | In progress | core/preview.ts; server /api/library/thumbnail (cached) + server.test.ts; Studio library rows | Thumbnails — Item on the library preview character, both families; mouth shapes, eye/brow states and controls have no preview yet; persistent cache pending |
 | FR-AST-08 | In progress | packages/rig/src/check.ts; packages/rig/test/check.test.ts; coverage validator column | Rig check and asset validator — Static contract check done; composition against reference characters and the action compatibility matrix pending |
 | FR-IMP-01 | Not started | — | Imports validate type, size and content before acceptance and report p |
 | FR-IMP-02 | Not started | — | Imported assets record provenance (file name, date, user statement of |

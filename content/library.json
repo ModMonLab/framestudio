@@ -2,9 +2,19 @@
   "schemaVersion": 1,
   "name": "Frame bundled library",
   "defaults": {
-    "output": { "preset": "out.landscape-hd@1", "width": 1920, "height": 1080, "aspectRatios": ["16:9", "9:16", "1:1"] },
+    "output": {
+      "preset": "out.landscape-hd@1",
+      "width": 1920,
+      "height": 1080,
+      "aspectRatios": [
+        "16:9",
+        "9:16",
+        "1:1"
+      ]
+    },
     "frameRate": 24,
     "styleFamily": "flat",
-    "captionStyle": "txt.podcast-captions@1"
+    "captionStyle": "txt.podcast-captions@1",
+    "previewCharacter": "chr.maya-bennett@1"
   }
 }
