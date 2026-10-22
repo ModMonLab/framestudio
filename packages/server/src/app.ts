@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
-import { assetUsages, checkCharacter, compareStates, compatibility, type CompatTarget, rigArtwork, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
+import { assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
 import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
 import {
@@ -386,6 +386,21 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
+  /* ---------------------------------------------------------------- part editor (FR-PED-02/05) */
+  app.post<{ Params: { pid: string }; Body: PartSaveRequest & { dryRun?: boolean } }>('/api/projects/:pid/parts', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const lib = library(p);
+      const { manifest, issues, isNew } = partManifest(req.body, { manifest: (r) => lib.manifest(r) as AssetManifest | undefined, versions: (id) => lib.versions(id).map((m) => m.version) }, { newId: () => `user.${randomUUID()}`, author: sourceOf(req) === 'user' ? 'Studio user' : sourceOf(req), date: new Date().toISOString().slice(0, 10) });
+      const ref = `${manifest.id}@${manifest.version}`;
+      const draft = manifest.tags.includes('draft');
+      const r = p.open.session.apply({ commands: [{ name: 'asset.addLocal', params: { manifest } }] as never, source: sourceOf(req), label: `${draft ? 'Save draft' : 'Save part'} ${manifest.name}${isNew ? '' : ` version ${manifest.version}`}` }, { dryRun: req.body.dryRun === true });
+      return { ref, isNew, draft, issues, revision: r.revision, dryRun: r.dryRun };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   /* ---------------------------------------------------------------- user library and preferences (FR-AST-01/06) */
   const userLib = () => {
     if (!o.userDir) throw new FrameError('UNSUPPORTED', 'No user library folder is configured for this server', undefined, 'Start the server with `frame server start` (uses ~/.frame/library or FRAME_USER_DIR).');

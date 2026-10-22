@@ -16,6 +16,7 @@ const VIEW_NAME: Record<View, string> = { front: 'front', three: 'three-quarter'
 
 /** `true` when compatible, otherwise the reason. */
 export function compatibility(m: AssetManifest, t: CompatTarget): true | string {
+  if (m.tags.includes('draft')) return 'Draft part: it must pass the rig check before use (part editor)';
   if (m.families.length && !m.families.includes(t.family)) return `No ${t.family} artwork`;
   const c = t.character;
   if (!c) return true;
