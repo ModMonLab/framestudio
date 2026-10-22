@@ -12,7 +12,7 @@ export type Ticks = Static<typeof Ticks>;
 
 export const SignedTicks = Type.Integer({ description: 'Signed time offset in ticks.' });
 
-/** Catalog-style dotted IDs (`hair.box-braids`) or user assets (`user.<uuid>`) (FR-DAT-01). */
+/** Catalog-style dotted IDs (`kind.slug`) or user assets (`user.<uuid>`) (FR-DAT-01). */
 export const AssetIdPattern = '^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$';
 export const AssetId = Type.String({ pattern: AssetIdPattern, description: 'Asset ID.' });
 

@@ -36,7 +36,7 @@ defineCommand({
   name: 'clip.add',
   summary: 'Add a clip (action, expression, gaze, shot, camera move, effect, sound, text) to a track.',
   params: Type.Object({ scene: Id, id: OptId, track: Id, start: TicksT, end: TicksT, ...ClipFields }, { additionalProperties: false }),
-  examples: [{ scene: 'scn_00000001', track: 'trk_00000003', start: 0, end: 48000, asset: 'act.nod@1' }],
+  examples: [{ scene: 'scn_00000001', track: 'trk_00000003', start: 0, end: 48000, asset: 'act.example@1' }],
   prepare: (p, _s, ctx) => ({ ...p, id: p.id ?? ctx.newId('clp') }),
   label: (p) => `Add ${p.asset ? p.asset.split('@')[0]!.split('.')[1]!.replace(/-/g, ' ') : 'clip'}`,
   touches: (p) => [clipKey(p.scene, p.id!)],

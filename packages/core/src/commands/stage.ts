@@ -18,7 +18,7 @@ defineCommand({
     character: Type.Optional(CharacterState), propState: Type.Optional(Type.String()), params: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
     trackIds: Type.Optional(Type.Array(Type.String())),
   }, { additionalProperties: false }),
-  examples: [{ scene: 'scn_00000001', kind: 'prop', asset: 'prop.mug@1', name: 'Mug', transform: { x: 800, y: 900 } }],
+  examples: [{ scene: 'scn_00000001', kind: 'prop', asset: 'prop.example@1', name: 'Prop', transform: { x: 800, y: 900 } }],
   prepare: (p, _s, ctx) => ({
     ...p,
     id: p.id ?? ctx.newId('ins'),
