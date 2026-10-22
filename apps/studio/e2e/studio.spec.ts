@@ -229,6 +229,33 @@ test('atmosphere, effects and a shot transition added from the Assets panel prev
   await previewMatchesServer(page, 0);
 });
 
+test('a speech bubble added for the selected character uses the line they speak and previews like the export (FR-TXT-03)', async ({ page }) => {
+  await openProject(page, sample(true));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  await page.getByRole('treeitem', { name: /Leo Park/ }).first().click();
+  // Seek to 6 s (Leo speaks from 5 s).
+  await page.locator('body').click({ position: { x: 5, y: 895 } });
+  for (let i = 0; i < 6; i++) await page.keyboard.press('Shift+ArrowRight');
+  await page.getByRole('button', { name: 'Assets', exact: true }).click();
+  await page.getByRole('searchbox', { name: /^Search/ }).or(page.getByRole('textbox', { name: /^Search/ })).first().fill('Speech bubble round');
+  await page.getByRole('button', { name: /^Speech bubble round/ }).first().click();
+  await page.getByRole('button', { name: 'Add at playhead' }).click();
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  await expect.poll(async () => {
+    const st = await state();
+    const sid = st.episodes[st.project.episodes[0]].scenes[0];
+    return st.scenes[sid].clips.filter((c: { asset?: string }) => c.asset === 'txt.speech-bubble-round@1').length;
+  }).toBe(1);
+  const st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const bubble = st.scenes[sid].clips.find((c: { asset?: string }) => c.asset === 'txt.speech-bubble-round@1');
+  const line = st.scenes[sid].clips.find((c: { id: string }) => c.id === bubble.params.line);
+  expect(line.line.text).toContain('forgot to start');
+  expect(bubble.start).toBe(line.start);
+  await page.waitForTimeout(800);
+  await previewMatchesServer(page, 6 * 48000);
+});
+
 test('agent changes are tagged and a person reverts the agent session from Activity (FR-AGT-04/05, AC-13)', async ({ page }) => {
   await openProject(page, sample(false));
   const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);

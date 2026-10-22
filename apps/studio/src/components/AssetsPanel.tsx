@@ -157,7 +157,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
           }} options={[...prefs.collections.map((c) => ({ value: c.id, label: `${c.items.includes(idOf(pickedHit.ref)) ? '✓ ' : ''}${c.name}` })), { value: '__new', label: 'New collection…' }]} /></span>}
           {PART_KINDS.has(pickedHit.kind) && <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/part/${encodeURIComponent(pickedHit.ref)}`)}>Open in part editor</Button>}
           {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Save to my library</Button>}
-          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' ? 'Use for captions' : pickedHit.kind === 'rcp' ? 'Apply…' : 'Add to scene'}</Button>
+          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' && pickedHit.tags.includes('caption') ? 'Use for captions' : pickedHit.kind === 'txt' ? 'Add at playhead' : pickedHit.kind === 'rcp' ? 'Apply…' : 'Add to scene'}</Button>
         </div>
       )}
     </Panel>
@@ -255,9 +255,27 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
       await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + 96000), asset: h.ref } }], h.name);
       return undefined;
     }
-    case 'txt':
+    case 'txt': {
+      // Bubbles, titles, graphics and world text are clips on the text track; caption styles set the captions.
+      const m = (await api.manifest(h.ref, s.pid)) as { data: { bubble?: unknown; graphic?: unknown; world?: unknown } };
+      if (m.data.bubble || m.data.graphic || m.data.world) {
+        const track = scene.tracks.find((t) => t.owner === 'scene' && t.kind === 'text');
+        if (!track) return undefined;
+        const who = s.selection.find((x) => x.kind === 'instance')?.id;
+        // A bubble on a character defaults to the line they speak at the playhead.
+        const line = m.data.bubble && who ? scene.clips.find((c) => c.line?.speaker === who && c.start <= at + 48000 && c.end > at) : undefined;
+        const text = line ? '' : window.prompt(`${h.name}: text`, m.data.graphic ? 'Title' : '') ?? '';
+        if (!line && !text.trim()) return undefined;
+        const start = line?.start ?? at;
+        const end = line?.end ?? Math.min(scene.duration, at + 4 * 48000);
+        const params: Record<string, unknown> = { ...(line ? { line: line.id } : { text: text.trim() }), ...(who && !m.data.world ? { attach: who } : {}) };
+        if (m.data.world) Object.assign(params, { x: pos?.x ?? project.project.output.width / 2, y: pos?.y ?? project.project.output.height * 0.35, width: 320 });
+        await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start, end, asset: h.ref, params } }], `Add ${h.name}`);
+        return undefined;
+      }
       await studio.exec([{ name: 'project.setSettings', params: { captions: { ...project.project.captions, style: h.ref } } }], `Caption style ${h.name}`);
       return `Captions now use ${h.name}.`;
+    }
   }
   return undefined;
 }

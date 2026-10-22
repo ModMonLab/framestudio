@@ -17,7 +17,7 @@ import { BOTTOMS, DRESSES, OUTERS, SHOES, TOPS } from './catalog-specs.js';
 import { ACTIONS, EXPRESSIONS } from './performance-specs.js';
 import { CAST, castData } from './cast-specs.js';
 import { PROPS, propPart, kitPartsData } from './parts/props.js';
-import { CAPTION_STYLES } from './text-specs.js';
+import { BUBBLES, CAPTION_STYLES, GRAPHICS, WORLD_TEXT } from './text-specs.js';
 import { OUTPUT_PRESETS } from './output-specs.js';
 import { renderSound, SR } from './sounds.js';
 import { FRAMINGS, MOVES } from './camera-specs.js';
@@ -200,7 +200,12 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'atmo': return ATMOSPHERE[s] ? { data: { atmosphere: ATMOSPHERE[s] }, tags: ['atmosphere'], parameters: [{ key: 'intensity', type: 'number', default: 1, range: [0, 2], label: 'Intensity' }, { key: 'color', type: 'color', default: ATMOSPHERE[s]!.color ?? '#FFFFFF', label: 'Colour' }] } : undefined;
     case 'fx': return EFFECTS[s] ? { data: { effect: EFFECTS[s] }, tags: ['effect'], parameters: [{ key: 'intensity', type: 'number', default: 1, range: [0, 2], label: 'Intensity' }] } : undefined;
     case 'tr': return TRANSITIONS[s] ? { data: { transition: TRANSITIONS[s] }, tags: ['transition'] } : undefined;
-    case 'txt': return CAPTION_STYLES[s] ? { data: { caption: CAPTION_STYLES[s] }, families: ['flat', 'illustrated'], tags: ['caption'] } : undefined;
+    case 'txt':
+      if (CAPTION_STYLES[s]) return { data: { caption: CAPTION_STYLES[s] }, families: ['flat', 'illustrated'], tags: ['caption'] };
+      if (BUBBLES[s]) return { data: { bubble: BUBBLES[s] }, tags: ['bubble'], parameters: [{ key: 'text', type: 'string', default: '', label: 'Text' }] };
+      if (GRAPHICS[s]) return { data: { graphic: GRAPHICS[s] }, tags: ['graphic'], parameters: [{ key: 'text', type: 'string', default: '', label: 'Text' }, { key: 'subtitle', type: 'string', default: '', label: 'Second line' }] };
+      if (WORLD_TEXT[s]) return { data: { world: WORLD_TEXT[s] }, tags: ['world text'], parameters: [{ key: 'text', type: 'string', default: '', label: 'Text' }] };
+      return undefined;
     case 'out': return OUTPUT_PRESETS[s] ? { data: { output: OUTPUT_PRESETS[s] }, tags: ['export'] } : undefined;
     default: return undefined;
   }

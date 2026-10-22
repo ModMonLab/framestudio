@@ -24,6 +24,7 @@ export * from './perform/seating.js';
 export * from './perform/interact.js';
 export * from './perform/cues.js';
 export * from './perform/fx.js';
+export * from './perform/text.js';
 export * from './camera-framing.js';
 export * from './recipes.js';
 export * from './captions.js';

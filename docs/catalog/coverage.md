@@ -2,7 +2,7 @@
 
 Generated 2026-10-22 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
 
-**Green: 0 / 1254 (0 %)** · manifests present: 623 / 1254 (49.7 %)
+**Green: 0 / 1254 (0 %)** · manifests present: 653 / 1254 (52.1 %)
 
 An item is green when it has a manifest, both families and all four views (or documented exemptions) where they apply, passes the validators (schema and, for character-attached items, the rig check), has previews in both families, is approved in visual review (CAT-06) and carries a redistributable, commercial-use licence with provenance.
 
@@ -56,7 +56,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | N2 Musical cues and stings | `cue` | 12 | 0 | 0 |
 | N3 Ambience | `amb` | 20 | 0 | 0 |
 | N4 Sound effects | `sfx` | 60 | 20 | 0 |
-| O1 Text, graphics and finishing | `txt` | 36 | 6 | 0 |
+| O1 Text, graphics and finishing | `txt` | 36 | 36 | 0 |
 | P1 Production templates | `tpl` | 16 | 0 | 0 |
 | Q1 Starter voices | `voice` | 16 | 0 | 0 |
 | Q2 Delivery presets | `delivery` | 12 | 0 | 0 |
@@ -1234,36 +1234,36 @@ An item is green when it has a manifest, both families and all four views (or do
 | `txt.boxed-captions` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `txt.social-pop-captions` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `txt.film-subtitles` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `txt.speech-bubble-round` | — | — | — | — | — | — (no manifest) |
-| `txt.speech-bubble-square` | — | — | — | — | — | — (no manifest) |
-| `txt.shout-bubble` | — | — | — | — | — | — (no manifest) |
-| `txt.whisper-bubble` | — | — | — | — | — | — (no manifest) |
-| `txt.thought-bubble` | — | — | — | — | — | — (no manifest) |
-| `txt.narration-box` | — | — | — | — | — | — (no manifest) |
-| `txt.episode-title-card` | — | — | — | — | — | — (no manifest) |
-| `txt.cold-open-title` | — | — | — | — | — | — (no manifest) |
-| `txt.chapter-title` | — | — | — | — | — | — (no manifest) |
-| `txt.quote-card` | — | — | — | — | — | — (no manifest) |
-| `txt.name-lower-third` | — | — | — | — | — | — (no manifest) |
-| `txt.name-and-role-lower-third` | — | — | — | — | — | — (no manifest) |
-| `txt.location-lower-third` | — | — | — | — | — | — (no manifest) |
-| `txt.breaking-news-bar` | — | — | — | — | — | — (no manifest) |
-| `txt.social-handle-tag` | — | — | — | — | — | — (no manifest) |
-| `txt.opening-card` | — | — | — | — | — | — (no manifest) |
-| `txt.closing-card` | — | — | — | — | — | — (no manifest) |
-| `txt.subscribe-end-card` | — | — | — | — | — | — (no manifest) |
-| `txt.credits-roll` | — | — | — | — | — | — (no manifest) |
-| `txt.credits-card` | — | — | — | — | — | — (no manifest) |
-| `txt.logo-bug` | — | — | — | — | — | — (no manifest) |
-| `txt.watermark` | — | — | — | — | — | — (no manifest) |
-| `txt.progress-bar` | — | — | — | — | — | — (no manifest) |
-| `txt.countdown` | — | — | — | — | — | — (no manifest) |
-| `txt.chart-callout` | — | — | — | — | — | — (no manifest) |
-| `txt.arrow-callout` | — | — | — | — | — | — (no manifest) |
-| `txt.highlight-circle` | — | — | — | — | — | — (no manifest) |
-| `txt.sign-text` | — | — | — | — | — | — (no manifest) |
-| `txt.screen-text` | — | — | — | — | — | — (no manifest) |
-| `txt.chalkboard-text` | — | — | — | — | — | — (no manifest) |
+| `txt.speech-bubble-round` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.speech-bubble-square` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.shout-bubble` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.whisper-bubble` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.thought-bubble` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.narration-box` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.episode-title-card` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.cold-open-title` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.chapter-title` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.quote-card` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.name-lower-third` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.name-and-role-lower-third` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.location-lower-third` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.breaking-news-bar` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.social-handle-tag` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.opening-card` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.closing-card` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.subscribe-end-card` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.credits-roll` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.credits-card` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.logo-bug` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.watermark` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.progress-bar` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.countdown` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.chart-callout` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.arrow-callout` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.highlight-circle` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.sign-text` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.screen-text` | missing (—) | n/a | ok | invalid | pending | ok |
+| `txt.chalkboard-text` | missing (—) | n/a | ok | invalid | pending | ok |
 | `tpl.two-person-podcast` | — | — | — | — | — | — (no manifest) |
 | `tpl.solo-podcast` | — | — | — | — | — | — (no manifest) |
 | `tpl.panel-discussion` | — | — | — | — | — | — (no manifest) |

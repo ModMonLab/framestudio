@@ -14,6 +14,7 @@ import { clipWeight, mirrorKeys, postureAt, sample, type ActionData, type Expres
 import { resolveCharacter, type AssetResolver } from './character.js';
 import { motionAt, type Motion } from './locomotion.js';
 import { holderAt, propStateAt, type Interaction } from './interact.js';
+import { bubbleItems, graphicItems, worldTextItems, type BubbleStyle, type GraphicStyle, type WorldTextStyle } from './text.js';
 import { atmosphereItems, effectItems, gradeMatrix, SILHOUETTE_MATRIX, transitionItems, type AtmoData, type EffectData, type TransitionData } from './fx.js';
 import { captionItems, DEFAULT_CAPTION_STYLE, stripPauseMarkers, type CaptionStyle } from '../captions.js';
 
@@ -721,10 +722,32 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
       items.push(...effectItems(e, x, y, r, o.width, o.height, (tIn - c.start) / Math.max(1, c.end - c.start), s, k, seed));
     }
   }
+  // World text (signs, screens) is part of the picture, on the stage (FR-TXT-05).
+  const textTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'text' && !tr.mute).map((tr) => tr.id));
+  const textClips = scene.clips.filter((c) => c.enabled && textTracks.has(c.track) && c.asset && tIn >= c.start && tIn < c.end).sort((a, b) => a.start - b.start);
+  const textData = (c: Clip) => o.assets.manifest(c.asset!)?.data as { bubble?: BubbleStyle; graphic?: GraphicStyle; world?: WorldTextStyle } | undefined;
+  for (const c of textClips) {
+    const d = textData(c);
+    if (d?.world) items.push(...worldTextItems(d.world, { text: String(c.params.text ?? ''), x: Number(c.params.x ?? scene.stage.width / 2), y: Number(c.params.y ?? scene.stage.height * 0.4), width: Number(c.params.width ?? 300) }, viewNow));
+  }
   if (grade) {
-    // Colour grades (J1) apply to the picture and effects, not to captions.
+    // Colour grades (J1) apply to the picture and effects, not to titles, bubbles or captions.
     const graded = items.splice(0, items.length);
     items.push({ k: 'group', items: graded, colorMatrix: grade });
+  }
+  // Screen text: bubbles that track characters, titles, lower thirds, cards and graphics (FR-TXT-03/04).
+  for (const c of textClips) {
+    const d = textData(c);
+    if (!d || d.world) continue;
+    const layout = { w: o.width, h: o.height, u: (tIn - c.start) / Math.max(1, c.end - c.start), s: sec(tIn - c.start), dur: sec(c.end - c.start), boxes, view: viewNow };
+    const lineText = typeof c.params.line === 'string' ? scene.clips.find((x) => x.id === c.params.line)?.line?.text : undefined;
+    const text = String(c.params.text ?? (lineText ? stripMarkers(lineText) : ''));
+    if (d.bubble) {
+      const who = typeof c.params.attach === 'string' ? c.params.attach : undefined;
+      items.push(...bubbleItems(d.bubble, text, who ? boxes[who] : undefined, layout));
+    } else if (d.graphic) {
+      items.push(...graphicItems(d.graphic, { text, ...(typeof c.params.subtitle === 'string' ? { subtitle: c.params.subtitle } : {}), ...(Array.isArray(c.params.lines) ? { lines: c.params.lines.map(String) } : {}), ...(typeof c.params.attach === 'string' ? { attach: c.params.attach } : {}) }, layout));
+    }
   }
 
   // Captions (FR-TXT-01): active lines, stacked for concurrent speakers.
