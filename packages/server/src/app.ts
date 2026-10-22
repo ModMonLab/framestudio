@@ -42,7 +42,7 @@ interface RigBuildBody {
 
 export const SERVER_VERSION = '0.1.0';
 /** Bump when thumbnail framing or rendering changes so cached thumbnails are rebuilt. */
-const THUMB_VERSION = 1;
+const THUMB_VERSION = 2; // 2: kit parts keep their declared order
 
 export interface ServerOptions {
   contentDir: string;

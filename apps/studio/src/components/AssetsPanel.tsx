@@ -38,7 +38,7 @@ const FILTERS: Record<string, { title: string; kinds?: string[]; empty: string }
 const PART_KINDS = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'feet', 'top', 'outer', 'bottom', 'dress', 'shoe', 'acc', 'skin-detail', 'makeup']);
 
 /** Kinds that can be placed or applied from this panel. */
-const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img', 'rcp', 'cam', 'sfx', 'atmo', 'fx', 'tr']);
+const PLACEABLE = new Set(['chr', 'prop', 'exp', 'act', 'txt', 'kit', 'img', 'rcp', 'cam', 'sfx', 'atmo', 'fx', 'tr', 'music', 'amb', 'cue']);
 
 export function AssetsPanel({ filter }: { filter: string }) {
   const { studio } = useCtx();
@@ -157,7 +157,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
           }} options={[...prefs.collections.map((c) => ({ value: c.id, label: `${c.items.includes(idOf(pickedHit.ref)) ? '✓ ' : ''}${c.name}` })), { value: '__new', label: 'New collection…' }]} /></span>}
           {PART_KINDS.has(pickedHit.kind) && <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/part/${encodeURIComponent(pickedHit.ref)}`)}>Open in part editor</Button>}
           {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Save to my library</Button>}
-          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' && pickedHit.tags.includes('caption') ? 'Use for captions' : pickedHit.kind === 'txt' ? 'Add at playhead' : pickedHit.kind === 'rcp' ? 'Apply…' : 'Add to scene'}</Button>
+          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'music' || pickedHit.kind === 'amb' || pickedHit.kind === 'cue' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' && pickedHit.tags.includes('caption') ? 'Use for captions' : pickedHit.kind === 'txt' ? 'Add at playhead' : pickedHit.kind === 'rcp' ? 'Apply…' : 'Add to scene'}</Button>
         </div>
       )}
     </Panel>
@@ -195,9 +195,11 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
       await studio.exec([{ name: 'instance.add', params: { scene: scene.id, kind: 'prop', asset: h.ref, name: h.name, transform: { x: pos?.x ?? cx, y: pos?.y ?? project.project.output.height * 0.8 } } }], `Add ${h.name}`);
       return undefined;
     case 'kit': {
-      const m = (await api.manifest(h.ref, s.pid)) as { data: { kit: { parts: Record<string, { plane?: string; at?: [number, number] }> } } };
-      const parts = Object.entries(m.data.kit.parts);
-      await studio.exec(parts.map(([part, p]) => ({ name: 'instance.add', params: { scene: scene.id, kind: 'set-piece', asset: h.ref, name: part[0]!.toUpperCase() + part.slice(1), transform: { x: p.at?.[0] ?? cx, y: p.at?.[1] ?? project.project.output.height }, depthPlane: p.plane ?? 'back', params: { part } } })), `Add ${h.name}`);
+      const m = (await api.manifest(h.ref, s.pid)) as { data: { kit: { parts: Record<string, { plane?: string; at?: [number, number]; order?: number; name?: string }> } } };
+      // Behind what is already on each plane, in the kit's own order.
+      const parts = Object.entries(m.data.kit.parts).sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0));
+      const lowest = (plane: string) => Math.min(0, ...scene.instances.filter((i) => i.depthPlane === plane).map((i) => i.order));
+      await studio.exec(parts.map(([part, p]) => ({ name: 'instance.add', params: { scene: scene.id, kind: 'set-piece', asset: h.ref, name: p.name ?? part[0]!.toUpperCase() + part.slice(1), transform: { x: p.at?.[0] ?? cx, y: p.at?.[1] ?? project.project.output.height }, depthPlane: p.plane ?? 'back', order: lowest(p.plane ?? 'back') - 100 + (p.order ?? 0), params: { part } } })), `Add ${h.name}`);
       return undefined;
     }
     case 'exp':
@@ -229,12 +231,16 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
       await studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: shot.id, set: { params: { transition: h.ref, transitionS: shot.params.transitionS ?? 0.5 } } } }], `${h.name} into shot`);
       return `${h.name} added to the shot starting at ${(shot.start / 48000).toFixed(1)} s.`;
     }
-    case 'sfx': {
-      // Library sounds go on the Sound FX track at the playhead (FR-SND-01).
-      const m = (await api.manifest(h.ref, s.pid)) as { data: { sound?: { media?: { durationS?: number } } } };
-      const track = scene.tracks.find((t) => t.owner === 'scene' && t.kind === 'sfx');
+    case 'sfx':
+    case 'cue':
+    case 'music':
+    case 'amb': {
+      // Library sounds go on their track at the playhead (FR-SND-01); music and ambience loop to the scene end.
+      const m = (await api.manifest(h.ref, s.pid)) as { data: { sound?: { media?: { durationS?: number }; loop?: boolean } } };
+      const kind = h.kind === 'music' ? 'music' : h.kind === 'amb' ? 'ambience' : 'sfx';
+      const track = scene.tracks.find((t) => t.owner === 'scene' && t.kind === kind);
       if (!track) return undefined;
-      const dur = Math.round((m.data.sound?.media?.durationS ?? 1) * 48000);
+      const dur = m.data.sound?.loop ? scene.duration - at : Math.round((m.data.sound?.media?.durationS ?? 1) * 48000);
       await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + dur), asset: h.ref } }], `Add ${h.name}`);
       return undefined;
     }

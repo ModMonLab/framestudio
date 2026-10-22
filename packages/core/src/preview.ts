@@ -49,8 +49,9 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
     return { state: s.state, scene, t: 0, framing: 'full', subject: id };
   }
   if (m.kind === 'kit') {
-    const parts = (m.data as { kit?: { parts: Record<string, { plane?: string; at?: [number, number] }> } }).kit?.parts ?? {};
-    apply(Object.entries(parts).map(([part, p]) => ({ name: 'instance.add', params: { scene, kind: 'set-piece', asset: ref, name: part, transform: { x: p.at?.[0] ?? 960, y: p.at?.[1] ?? 1080 }, depthPlane: p.plane ?? 'back', params: { part } } })));
+    const parts = (m.data as { kit?: { parts: Record<string, { plane?: string; at?: [number, number]; order?: number }> } }).kit?.parts ?? {};
+    // Parts keep the kit's declared order within their plane (manifest keys are sorted, not drawn in order).
+    apply(Object.entries(parts).map(([part, p]) => ({ name: 'instance.add', params: { scene, kind: 'set-piece', asset: ref, name: part, transform: { x: p.at?.[0] ?? 960, y: p.at?.[1] ?? 1080 }, depthPlane: p.plane ?? 'back', ...(p.order !== undefined ? { order: p.order } : {}), params: { part } } })));
     return { state: s.state, scene, t: 0, framing: 'scene' };
   }
   if (m.kind === 'chr') {

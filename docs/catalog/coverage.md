@@ -2,7 +2,7 @@
 
 Generated 2026-10-22 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
 
-**Green: 0 / 1254 (0 %)** · manifests present: 653 / 1254 (52.1 %)
+**Green: 0 / 1254 (0 %)** · manifests present: 698 / 1254 (55.7 %)
 
 An item is green when it has a manifest, both families and all four views (or documented exemptions) where they apply, passes the validators (schema and, for character-attached items, the rig check), has previews in both families, is approved in visual review (CAT-06) and carries a redistributable, commercial-use licence with provenance.
 
@@ -45,16 +45,16 @@ An item is green when it has a manifest, both families and all four views (or do
 | F1 Performance clips | `act` | 118 | 33 | 0 |
 | G1 Performance recipes | `rcp` | 24 | 18 | 0 |
 | H1 Props | `prop` | 142 | 10 | 0 |
-| I1 Location kits | `kit` | 16 | 1 | 0 |
+| I1 Location kits | `kit` | 16 | 2 | 0 |
 | I2 Ready-made sets | `set` | 32 | 0 | 0 |
 | I3 Environment layers | `layer` | 10 | 0 | 0 |
 | J1 Scene atmosphere | `atmo` | 54 | 42 | 0 |
 | K1 Motion and visual effects | `fx` | 38 | 24 | 0 |
 | K2 Transitions | `tr` | 18 | 17 | 0 |
 | M1 Camera language | `cam` | 49 | 40 | 0 |
-| N1 Music | `music` | 20 | 0 | 0 |
-| N2 Musical cues and stings | `cue` | 12 | 0 | 0 |
-| N3 Ambience | `amb` | 20 | 0 | 0 |
+| N1 Music | `music` | 20 | 12 | 0 |
+| N2 Musical cues and stings | `cue` | 12 | 12 | 0 |
+| N3 Ambience | `amb` | 20 | 20 | 0 |
 | N4 Sound effects | `sfx` | 60 | 20 | 0 |
 | O1 Text, graphics and finishing | `txt` | 36 | 36 | 0 |
 | P1 Production templates | `tpl` | 16 | 0 | 0 |
@@ -904,7 +904,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | `kit.kitchen` | — | — | — | — | — | — (no manifest) |
 | `kit.office` | — | — | — | — | — | — (no manifest) |
 | `kit.classroom` | — | — | — | — | — | — (no manifest) |
-| `kit.coffee-shop` | — | — | — | — | — | — (no manifest) |
+| `kit.coffee-shop` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.newsroom` | — | — | — | — | — | — (no manifest) |
 | `kit.city-street` | — | — | — | — | — | — (no manifest) |
 | `kit.park` | — | — | — | — | — | — (no manifest) |
@@ -1116,58 +1116,58 @@ An item is green when it has a manifest, both families and all four views (or do
 | `cam.reaction-ping-pong` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.establishing-pan` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.walk-and-talk-follow` | n/a | n/a | ok | n/a | pending | ok |
-| `music.warm-intro` | — | — | — | — | — | — (no manifest) |
-| `music.morning-coffee` | — | — | — | — | — | — (no manifest) |
-| `music.upbeat-explainer` | — | — | — | — | — | — (no manifest) |
-| `music.curious-minds` | — | — | — | — | — | — (no manifest) |
-| `music.late-night-talk` | — | — | — | — | — | — (no manifest) |
+| `music.warm-intro` | n/a | n/a | ok | n/a | pending | ok |
+| `music.morning-coffee` | n/a | n/a | ok | n/a | pending | ok |
+| `music.upbeat-explainer` | n/a | n/a | ok | n/a | pending | ok |
+| `music.curious-minds` | n/a | n/a | ok | n/a | pending | ok |
+| `music.late-night-talk` | n/a | n/a | ok | n/a | pending | ok |
 | `music.newsroom-theme` | — | — | — | — | — | — (no manifest) |
 | `music.breaking-news-sting` | — | — | — | — | — | — (no manifest) |
-| `music.quirky-comedy` | — | — | — | — | — | — (no manifest) |
-| `music.sneaky-moment` | — | — | — | — | — | — (no manifest) |
-| `music.sad-piano` | — | — | — | — | — | — (no manifest) |
+| `music.quirky-comedy` | n/a | n/a | ok | n/a | pending | ok |
+| `music.sneaky-moment` | n/a | n/a | ok | n/a | pending | ok |
+| `music.sad-piano` | n/a | n/a | ok | n/a | pending | ok |
 | `music.hopeful-strings` | — | — | — | — | — | — (no manifest) |
-| `music.tension-pulse` | — | — | — | — | — | — (no manifest) |
+| `music.tension-pulse` | n/a | n/a | ok | n/a | pending | ok |
 | `music.mystery-noir` | — | — | — | — | — | — (no manifest) |
 | `music.action-chase` | — | — | — | — | — | — (no manifest) |
 | `music.victory-fanfare` | — | — | — | — | — | — (no manifest) |
 | `music.fantasy-adventure` | — | — | — | — | — | — (no manifest) |
-| `music.calm-ambient` | — | — | — | — | — | — (no manifest) |
-| `music.retro-game` | — | — | — | — | — | — (no manifest) |
+| `music.calm-ambient` | n/a | n/a | ok | n/a | pending | ok |
+| `music.retro-game` | n/a | n/a | ok | n/a | pending | ok |
 | `music.party-groove` | — | — | — | — | — | — (no manifest) |
-| `music.credits-roll` | — | — | — | — | — | — (no manifest) |
-| `cue.comedy-sting` | — | — | — | — | — | — (no manifest) |
-| `cue.rimshot` | — | — | — | — | — | — (no manifest) |
-| `cue.sad-trombone` | — | — | — | — | — | — (no manifest) |
-| `cue.dramatic-hit` | — | — | — | — | — | — (no manifest) |
-| `cue.suspense-riser` | — | — | — | — | — | — (no manifest) |
-| `cue.whoosh-transition` | — | — | — | — | — | — (no manifest) |
-| `cue.ta-da` | — | — | — | — | — | — (no manifest) |
-| `cue.record-scratch` | — | — | — | — | — | — (no manifest) |
-| `cue.harp-gliss` | — | — | — | — | — | — (no manifest) |
-| `cue.magic-chime` | — | — | — | — | — | — (no manifest) |
-| `cue.gong` | — | — | — | — | — | — (no manifest) |
-| `cue.heartbeat` | — | — | — | — | — | — (no manifest) |
-| `amb.studio-room-tone` | — | — | — | — | — | — (no manifest) |
-| `amb.living-room-hum` | — | — | — | — | — | — (no manifest) |
-| `amb.kitchen-ambience` | — | — | — | — | — | — (no manifest) |
-| `amb.office-murmur` | — | — | — | — | — | — (no manifest) |
-| `amb.classroom-chatter` | — | — | — | — | — | — (no manifest) |
-| `amb.coffee-shop` | — | — | — | — | — | — (no manifest) |
-| `amb.newsroom-bustle` | — | — | — | — | — | — (no manifest) |
-| `amb.city-street` | — | — | — | — | — | — (no manifest) |
-| `amb.park-birds` | — | — | — | — | — | — (no manifest) |
-| `amb.night-crickets` | — | — | — | — | — | — (no manifest) |
-| `amb.bedroom-quiet` | — | — | — | — | — | — (no manifest) |
-| `amb.hospital-ward` | — | — | — | — | — | — (no manifest) |
-| `amb.auditorium-crowd` | — | — | — | — | — | — (no manifest) |
-| `amb.library-hush` | — | — | — | — | — | — (no manifest) |
-| `amb.gym-ambience` | — | — | — | — | — | — (no manifest) |
-| `amb.train-carriage` | — | — | — | — | — | — (no manifest) |
-| `amb.enchanted-forest` | — | — | — | — | — | — (no manifest) |
-| `amb.rain-on-window` | — | — | — | — | — | — (no manifest) |
-| `amb.thunderstorm` | — | — | — | — | — | — (no manifest) |
-| `amb.wind` | — | — | — | — | — | — (no manifest) |
+| `music.credits-roll` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.comedy-sting` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.rimshot` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.sad-trombone` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.dramatic-hit` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.suspense-riser` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.whoosh-transition` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.ta-da` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.record-scratch` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.harp-gliss` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.magic-chime` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.gong` | n/a | n/a | ok | n/a | pending | ok |
+| `cue.heartbeat` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.studio-room-tone` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.living-room-hum` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.kitchen-ambience` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.office-murmur` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.classroom-chatter` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.coffee-shop` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.newsroom-bustle` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.city-street` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.park-birds` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.night-crickets` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.bedroom-quiet` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.hospital-ward` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.auditorium-crowd` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.library-hush` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.gym-ambience` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.train-carriage` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.enchanted-forest` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.rain-on-window` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.thunderstorm` | n/a | n/a | ok | n/a | pending | ok |
+| `amb.wind` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.footsteps-wood` | n/a | n/a | ok | n/a | pending | ok |
 | `sfx.footsteps-concrete` | — | — | — | — | — | — (no manifest) |
 | `sfx.footsteps-grass` | — | — | — | — | — | — (no manifest) |

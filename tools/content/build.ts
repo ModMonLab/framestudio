@@ -16,10 +16,11 @@ import { bottomPart, shoePart, topPart } from './parts/wardrobe.js';
 import { BOTTOMS, DRESSES, OUTERS, SHOES, TOPS } from './catalog-specs.js';
 import { ACTIONS, EXPRESSIONS } from './performance-specs.js';
 import { CAST, castData } from './cast-specs.js';
-import { PROPS, propPart, kitPartsData } from './parts/props.js';
+import { COFFEE_KIT_PARTS, PROPS, propPart, kitPartsData } from './parts/props.js';
 import { BUBBLES, CAPTION_STYLES, GRAPHICS, WORLD_TEXT } from './text-specs.js';
 import { OUTPUT_PRESETS } from './output-specs.js';
 import { renderSound, SR } from './sounds.js';
+import { MUSIC, normalise, renderAmbience, renderCue, renderMusic, wav16 } from './music.js';
 import { FRAMINGS, MOVES } from './camera-specs.js';
 import { RECIPES, SHOT_RECIPES } from './recipe-specs.js';
 import { ATMOSPHERE, EFFECTS, TRANSITIONS } from './fx-specs.js';
@@ -46,6 +47,22 @@ interface Built {
   tags?: string[];
   dependencies?: string[];
   provenance?: AssetManifest['provenance'];
+}
+
+/** Writes synthesised audio as content-addressed media and returns its sound asset data. */
+function mediaSound(x: Float32Array, loop: boolean, tag: string, target: { lufs?: number; peakDb: number }): Built {
+  const wav = wav16(x);
+  const hash = `sha256-${createHash('sha256').update(wav).digest('hex')}`;
+  const file = path.join(repo, 'content/media', `${hash}.wav`);
+  if (!fs.existsSync(file)) {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, wav);
+  }
+  return {
+    data: { sound: { media: { hash, mime: 'audio/wav', ext: 'wav', bytes: wav.length, durationS: Math.round((x.length / SR) * 1000) / 1000, sampleRate: SR, channels: 1 }, loop, ...(target.lufs !== undefined ? { lufs: target.lufs } : { peakDbfs: target.peakDb }) } },
+    tags: ['sound', tag],
+    provenance: { method: 'authored', author: 'Frame content pipeline (procedural synthesis in tools/content/music.ts)', date: DATE, notes: 'Synthesised (additive, FM and plucked-string voices; filtered noise); no recordings or third-party samples. Placeholder awaiting listening review (CAT-06/CAT-08).' },
+  };
 }
 
 function partBuilt(p: PartData, extra: Partial<Built> = {}): Built {
@@ -173,7 +190,19 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
       const p = PROPS[s];
       return p ? { data: propPart(p), families: ['flat', 'illustrated'], views: ['front'], viewExemptions: { three: 'Props are drawn from the camera.', side: 'Props are drawn from the camera.', back: 'Props are drawn from the camera.' }, anchors: { ...(p.anchors ?? {}), bounds: p.bounds }, capabilities: p.capabilities ?? [], ...(p.states ? { parameters: [{ key: 'state', type: 'enum' as const, default: p.states[0], options: p.states, label: 'State' }] } : {}) } : undefined;
     }
-    case 'kit': return s === 'podcast-studio' ? { data: { kit: { parts: kitPartsData(), marks: [{ name: 'Seat A', x: 640, y: 960, facing: 'right' }, { name: 'Seat B', x: 1280, y: 960, facing: 'left' }, { name: 'Seat C', x: 420, y: 980, facing: 'right' }, { name: 'Seat D', x: 1500, y: 980, facing: 'left' }], ambience: 'amb.studio-room-tone@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.desk-microphone@1', 'prop.on-air-sign@1', 'prop.floor-lamp@1', 'prop.potted-plant@1', 'prop.mug@1'] } }, families: ['flat', 'illustrated'], views: ['front'] } : undefined;
+    case 'kit':
+      if (s === 'coffee-shop') return { data: { kit: { parts: kitPartsData(COFFEE_KIT_PARTS), marks: [{ name: 'Counter', x: 560, y: 1000, facing: 'right' }, { name: 'Table left', x: 1050, y: 1000, facing: 'right' }, { name: 'Table right', x: 1500, y: 1000, facing: 'left' }, { name: 'Door', x: 1800, y: 1000, facing: 'left' }], ambience: 'amb.coffee-shop@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.mug@1', 'prop.phone@1', 'prop.potted-plant@1', 'prop.door@1'] } }, families: ['flat', 'illustrated'], views: ['front'] };
+      return s === 'podcast-studio' ? { data: { kit: { parts: kitPartsData(), marks: [{ name: 'Seat A', x: 640, y: 960, facing: 'right' }, { name: 'Seat B', x: 1280, y: 960, facing: 'left' }, { name: 'Seat C', x: 420, y: 980, facing: 'right' }, { name: 'Seat D', x: 1500, y: 980, facing: 'left' }], ambience: 'amb.studio-room-tone@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.desk-microphone@1', 'prop.on-air-sign@1', 'prop.floor-lamp@1', 'prop.potted-plant@1', 'prop.mug@1'] } }, families: ['flat', 'illustrated'], views: ['front'] } : undefined;
+    case 'music':
+    case 'cue':
+    case 'amb': {
+      // Synthesised music beds, cues and ambience loops (tools/content/music.ts), loudness-normalised per CAT-08.
+      const seed = hashSeed(item.id);
+      const raw = list.prefix === 'music' ? (MUSIC[s] ? renderMusic(MUSIC[s]!, seed) : undefined) : list.prefix === 'cue' ? renderCue(s, seed) : renderAmbience(s, seed);
+      if (!raw) return undefined;
+      const target = list.prefix === 'music' ? { lufs: -16, peakDb: -1 } : list.prefix === 'amb' ? { lufs: -30, peakDb: -6 } : { peakDb: -3 };
+      return mediaSound(normalise(raw, target), list.prefix !== 'cue', list.prefix === 'music' ? 'music' : list.prefix === 'amb' ? 'ambience' : 'cue', target);
+    }
     case 'sfx': {
       // Synthesised foley (tools/content/sounds.ts); media is content-addressed under content/media.
       const snd = (() => { try { return renderSound(s, hashSeed(item.id)); } catch { return undefined; } })();
