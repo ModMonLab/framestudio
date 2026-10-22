@@ -7,7 +7,7 @@ export type ThemeName = 'dark' | 'light';
 
 export const colorTokenNames = [
   'app', 'panel', 'subtle', 'field', 'hover', 'border', 'divider', 'canvas', 'text', 'text2', 'text3',
-  'accent', 'accentHover', 'onAccent', 'selected', 'focus', 'success', 'warning', 'danger', 'info', 'overlay',
+  'accent', 'accentHover', 'accentFill', 'accentFillHover', 'accentText', 'onAccent', 'selected', 'focus', 'success', 'warning', 'danger', 'info', 'overlay',
 ] as const;
 export type ColorToken = (typeof colorTokenNames)[number];
 
@@ -20,14 +20,14 @@ export const color: Record<ThemeName, Record<ColorToken, string>> = {
   dark: {
     app: '#1E1E20', panel: '#252528', subtle: '#2C2C30', field: '#1B1B1D', hover: '#323236',
     border: '#38383D', divider: '#2F2F33', canvas: '#161618', text: '#ECECEE', text2: '#B4B4B9',
-    text3: '#9A9AA0', accent: '#4F7CFF', accentHover: '#6A90FF', onAccent: '#FFFFFF',
+    text3: '#9A9AA0', accent: '#4F7CFF', accentHover: '#6A90FF', accentFill: '#3F69EE', accentFillHover: '#365FDB', accentText: '#8EAAFF', onAccent: '#FFFFFF',
     selected: 'rgba(79,124,255,0.22)', focus: '#6A90FF', success: '#3CB371', warning: '#E5A33B',
     danger: '#F06A6A', info: '#5AA9E6', overlay: 'rgba(0,0,0,0.55)',
   },
   light: {
     app: '#F1F1F3', panel: '#FFFFFF', subtle: '#F6F6F8', field: '#FFFFFF', hover: '#EEEEF2',
     border: '#DCDCE2', divider: '#EBEBEE', canvas: '#E4E4E9', text: '#1C1C1F', text2: '#4F4F56',
-    text3: '#6B6B72', accent: '#3A66F0', accentHover: '#2A52CC', onAccent: '#FFFFFF',
+    text3: '#6B6B72', accent: '#3A66F0', accentHover: '#2A52CC', accentFill: '#3A66F0', accentFillHover: '#2A52CC', accentText: '#2A52CC', onAccent: '#FFFFFF',
     selected: 'rgba(58,102,240,0.12)', focus: '#3A66F0', success: '#1E8E4E', warning: '#A86400',
     danger: '#C62F2F', info: '#1F6FB2', overlay: 'rgba(20,20,30,0.35)',
   },

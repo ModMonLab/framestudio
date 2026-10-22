@@ -11,3 +11,5 @@ __pycache__/
 *.pyc
 services/voice-worker/.cache/
 .frame-cache/
+apps/*/test-results/
+apps/*/playwright-report/

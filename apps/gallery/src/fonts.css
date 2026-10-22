@@ -1,0 +1,8 @@
+/* Bundled OFL fonts so screenshots are identical on every machine (no system font fallback). */
+@font-face { font-family: 'Inter'; font-weight: 400; src: url('/fonts/Inter-Regular.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'Inter'; font-weight: 500; src: url('/fonts/Inter-Medium.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'Inter'; font-weight: 600; src: url('/fonts/Inter-SemiBold.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'Inter'; font-weight: 700; src: url('/fonts/Inter-Bold.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 400; src: url('/fonts/JetBrainsMono-Regular.ttf') format('truetype'); font-display: block; }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 500; src: url('/fonts/JetBrainsMono-Medium.ttf') format('truetype'); font-display: block; }
+html, body, #root { margin: 0; height: 100%; }

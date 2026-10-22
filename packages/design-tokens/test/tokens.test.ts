@@ -24,6 +24,15 @@ describe('design tokens (Design System §2)', () => {
         expect(contrastRatio(text, fill), cat).toBeGreaterThanOrEqual(4.5);
       }
     });
+    it(`${theme}: on-accent text ≥ 4.5:1 on accent fills (primary buttons; decision 0007)`, () => {
+      expect(contrastRatio(c.onAccent, c.accentFill)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(c.onAccent, c.accentFillHover)).toBeGreaterThanOrEqual(4.5);
+    });
+    it(`${theme}: accent text ≥ 4.5:1 on panel, subtle and the selected tint`, () => {
+      for (const s of [c.panel, c.subtle, c.field]) expect(contrastRatio(c.accentText, s)).toBeGreaterThanOrEqual(4.5);
+      const tint = theme === 'dark' ? '#2C3756' : '#E7EDFD';
+      expect(contrastRatio(c.accentText, tint)).toBeGreaterThanOrEqual(4.5);
+    });
     it(`${theme}: focus ring non-text contrast ≥ 3:1 against panel`, () => {
       expect(contrastRatio(c.focus, c.panel)).toBeGreaterThanOrEqual(3);
     });
