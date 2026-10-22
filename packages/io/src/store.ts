@@ -156,6 +156,7 @@ export class ProjectStore {
       throw new FrameError('NOT_FOUND', `No Frame project at ${this.root}`, undefined, 'Choose a folder containing project.json.');
     }
     const problems: Problem[] = [];
+    const missing = new Map<Problem, string>();
     const migrated: string[] = [];
     this.paths.clear();
     this.known.clear();
@@ -166,7 +167,9 @@ export class ProjectStore {
       try {
         raw = fs.readFileSync(file, 'utf8');
       } catch {
-        problems.push({ severity: 'error', code: 'MISSING_FILE', message: `${rel} is missing`, blocksExport: true });
+        const pr: Problem = { severity: 'error', code: 'MISSING_FILE', message: `${rel} is missing`, blocksExport: true };
+        problems.push(pr);
+        missing.set(pr, rel);
         return undefined;
       }
       let doc: Record<string, unknown>;
@@ -249,6 +252,9 @@ export class ProjectStore {
     if (recovered > 0) {
       problems.push({ severity: 'info', code: 'RECOVERED', message: `Recovered ${recovered} change(s) that were not yet saved when Frame stopped`, blocksExport: false });
       this.save(state, revision, ['*']);
+      // A crash between writing an episode and its scene leaves a dangling reference that the journal repairs;
+      // only report files that are still missing after recovery.
+      for (const [pr, rel] of missing) if (fs.existsSync(this.abs(rel))) problems.splice(problems.indexOf(pr), 1);
     }
     return { state, revision, problems, migrated, recovered };
   }

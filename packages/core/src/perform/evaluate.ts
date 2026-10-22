@@ -12,6 +12,7 @@ import { lineTakeState } from '../validate.js';
 import { applyOverrides, mouthTrackFromAlignment, shapeAt } from './lipsync.js';
 import { clipWeight, mirrorKeys, sample, type ActionData, type ExpressionData, type Key } from './data.js';
 import { resolveCharacter, type AssetResolver } from './character.js';
+import { captionItems, DEFAULT_CAPTION_STYLE, stripPauseMarkers, type CaptionStyle } from '../captions.js';
 
 
 export interface EvalOptions {
@@ -34,6 +35,8 @@ export interface CaptionLine {
   words?: { text: string; start: number; end: number }[];
   /** Seconds since the line started. */
   local: number;
+  /** Line length in seconds. */
+  duration: number;
 }
 
 export interface EvaluatedFrame {
@@ -484,7 +487,13 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
     if (!c.enabled || !c.line || c.line.caption?.hidden || c.line.muted || t < c.start || t >= c.end) continue;
     const take = c.line.take ? (state.takes[c.line.take] as Take | undefined) : undefined;
     const speaker = scene.instances.find((i) => i.id === c.line!.speaker)?.name ?? '';
-    captions.push({ speaker, text: c.line.caption?.text ?? stripMarkers(c.line.text), words: take?.alignment?.words, local: sec(t - c.start + (c.sourceIn ?? 0)) });
+    captions.push({ speaker, text: c.line.caption?.text ?? stripMarkers(c.line.text), words: take?.alignment?.words, local: sec(t - c.start + (c.sourceIn ?? 0)), duration: sec(c.end - c.start) });
+  }
+  const cap = state.project.captions;
+  if (o.captions && cap.enabled && captions.length) {
+    const styleData = cap.style ? (o.assets.manifest(cap.style)?.data as { caption?: CaptionStyle } | undefined)?.caption : undefined;
+    if (cap.style && !styleData) issues.push(`Caption style ${cap.style} not found; using the default style`);
+    items.push(...captionItems(captions, styleData ?? DEFAULT_CAPTION_STYLE, o.width, o.height, cap.speakerLabels));
   }
   const view = viewMatrix(scene, cs, o.width, o.height, designAspect, 1);
   return {
@@ -497,9 +506,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, t: number, o
   };
 }
 
-export function stripMarkers(text: string): string {
-  return text.replace(/\[pause\s+\d+(?:\.\d+)?s\]/gi, ' ').replace(/\s+/g, ' ').trim();
-}
+export const stripMarkers = stripPauseMarkers;
 
 function screenBox(m: Mat, x: number, y: number, w: number, h: number) {
   const pts = [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([a, b]) => [m[0] * a! + m[2] * b! + m[4], m[1] * a! + m[3] * b! + m[5]]);

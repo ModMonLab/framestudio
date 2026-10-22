@@ -17,6 +17,8 @@ import { BOTTOMS, DRESSES, OUTERS, SHOES, TOPS } from './catalog-specs.js';
 import { ACTIONS, EXPRESSIONS } from './performance-specs.js';
 import { CAST, castData } from './cast-specs.js';
 import { PROPS, propPart, kitPartsData } from './parts/props.js';
+import { CAPTION_STYLES } from './text-specs.js';
+import { OUTPUT_PRESETS } from './output-specs.js';
 
 const repo = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
 const outDir = path.join(repo, 'content/assets');
@@ -164,6 +166,8 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
       return p ? { data: propPart(p), families: ['flat', 'illustrated'], views: ['front'], viewExemptions: { three: 'Props are drawn from the camera.', side: 'Props are drawn from the camera.', back: 'Props are drawn from the camera.' }, anchors: { ...(p.anchors ?? {}), bounds: p.bounds }, capabilities: p.capabilities ?? [], ...(p.states ? { parameters: [{ key: 'state', type: 'enum' as const, default: p.states[0], options: p.states, label: 'State' }] } : {}) } : undefined;
     }
     case 'kit': return s === 'podcast-studio' ? { data: { kit: { parts: kitPartsData(), marks: [{ name: 'Seat A', x: 640, y: 960, facing: 'right' }, { name: 'Seat B', x: 1280, y: 960, facing: 'left' }, { name: 'Seat C', x: 420, y: 980, facing: 'right' }, { name: 'Seat D', x: 1500, y: 980, facing: 'left' }], ambience: 'amb.studio-room-tone@1', props: ['prop.round-table@1', 'prop.studio-chair@1', 'prop.desk-microphone@1', 'prop.on-air-sign@1', 'prop.floor-lamp@1', 'prop.potted-plant@1', 'prop.mug@1'] } }, families: ['flat', 'illustrated'], views: ['front'] } : undefined;
+    case 'txt': return CAPTION_STYLES[s] ? { data: { caption: CAPTION_STYLES[s] }, families: ['flat', 'illustrated'], tags: ['caption'] } : undefined;
+    case 'out': return OUTPUT_PRESETS[s] ? { data: { output: OUTPUT_PRESETS[s] }, tags: ['export'] } : undefined;
     default: return undefined;
   }
 }

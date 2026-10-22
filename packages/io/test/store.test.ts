@@ -62,6 +62,19 @@ describe('project store (FR-DAT-06..09, FR-PER-01)', () => {
     expect(re.session.revision).toBe(p.session.revision);
   });
 
+  it('a crash between writing an episode and its new scene recovers without stale problems (NFR-08)', () => {
+    const p = newProject();
+    p.flush();
+    const ep = p.state.project.episodes[0]!;
+    p.session.apply({ commands: [{ name: 'scene.add', params: { episode: ep, name: 'Added' } }] });
+    // Simulate the kill window: the journal holds the commit and episode.json was written, the scene file was not.
+    const rel = `episodes/${ep}/episode.json`;
+    fs.writeFileSync(path.join(p.store.root, rel), stableStringify(p.state.episodes[ep]));
+    const re = OpenProject.open(p.store.root);
+    expect(re.state).toEqual(p.state);
+    expect(re.load!.problems.filter((x) => x.severity === 'error')).toEqual([]);
+  });
+
   it('ignores a torn final journal line', () => {
     const p = newProject();
     const scene = scenesOf(p)[0]!;

@@ -17,6 +17,8 @@ export * from './perform/lipsync.js';
 export * from './perform/data.js';
 export * from './perform/character.js';
 export * from './perform/evaluate.js';
+export * from './captions.js';
+export * from './audio.js';
 
 /** Machine-readable command reference (`frame describe`, MCP resources; FR-CLI-03, FR-AGT-03). */
 export function describeCommands() {

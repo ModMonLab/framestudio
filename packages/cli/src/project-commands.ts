@@ -82,7 +82,7 @@ command({
     const name = (ctx.args.name as string | undefined) ?? path.basename(dir).replace(/\.frame$/, '');
     if (ctx.opts.dryRun) return { dryRun: true, path: dir, name, styleFamily: family, frameRate: fps };
     if (fs.existsSync(dir) && fs.readdirSync(dir).length > 0) throw new FrameError('CONFLICT', `${dir} is not empty`);
-    const p = OpenProject.create(dir, { name, styleFamily: family, frameRate: fps as 24, output: defaults.output, appVersion: APP_VERSION, newId: randomId });
+    const p = OpenProject.create(dir, { name, styleFamily: family, frameRate: fps as 24, output: defaults.output, appVersion: APP_VERSION, newId: randomId, ...(defaults.captionStyle ? { captionStyle: defaults.captionStyle } : {}) });
     p.close();
     return { path: dir, id: p.state.project.id, name, styleFamily: family, frameRate: fps, revision: p.session.revision };
   },

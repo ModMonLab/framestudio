@@ -5,5 +5,5 @@
   "type": "module",
   "bin": { "frame": "./src/bin.ts" },
   "exports": { ".": "./src/index.ts" },
-  "dependencies": { "@frame/schema": "workspace:*", "@frame/core": "workspace:*", "@frame/io": "workspace:*", "@frame/assets": "workspace:*" }
+  "dependencies": { "@frame/schema": "workspace:*", "@frame/core": "workspace:*", "@frame/io": "workspace:*", "@frame/assets": "workspace:*", "@frame/render": "workspace:*" }
 }

@@ -17,12 +17,18 @@ importers:
       '@frame/assets':
         specifier: workspace:*
         version: link:packages/assets
+      '@frame/cli':
+        specifier: workspace:*
+        version: link:packages/cli
       '@frame/core':
         specifier: workspace:*
         version: link:packages/core
       '@frame/design-tokens':
         specifier: workspace:*
         version: link:packages/design-tokens
+      '@frame/io':
+        specifier: workspace:*
+        version: link:packages/io
       '@frame/render':
         specifier: workspace:*
         version: link:packages/render
@@ -32,6 +38,9 @@ importers:
       '@frame/schema':
         specifier: workspace:*
         version: link:packages/schema
+      '@frame/voice-client':
+        specifier: workspace:*
+        version: link:packages/voice-client
       '@playwright/test':
         specifier: 1.56.1
         version: 1.56.1
@@ -123,6 +132,9 @@ importers:
       '@frame/io':
         specifier: workspace:*
         version: link:../io
+      '@frame/render':
+        specifier: workspace:*
+        version: link:../render
       '@frame/schema':
         specifier: workspace:*
         version: link:../schema
@@ -149,6 +161,12 @@ importers:
       '@frame/core':
         specifier: workspace:*
         version: link:../core
+      '@frame/render':
+        specifier: workspace:*
+        version: link:../render
+      '@frame/rig':
+        specifier: workspace:*
+        version: link:../rig
       '@frame/schema':
         specifier: workspace:*
         version: link:../schema

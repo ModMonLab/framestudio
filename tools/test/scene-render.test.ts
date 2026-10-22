@@ -32,6 +32,17 @@ describe('scene evaluation and rendering (FR-RND-01/02, M1 slice)', () => {
     });
   }
 
+  it('burns in captions from a caption style asset (FR-TXT-01/02)', () => {
+    for (const style of ['txt.boxed-captions@1', 'txt.bold-karaoke-captions@1']) {
+      const { session, scene } = buildSampleScene('flat');
+      session.apply({ commands: [{ name: 'project.setSettings', params: { captions: { enabled: true, burnIn: true, speakerLabels: true, style } } }] });
+      const ev = evaluateFrame(session.state, scene, secondsToTicks(2.2), { assets, styles, width: 960, height: 540, captions: true });
+      expect(ev.issues.filter((i) => i.startsWith('Caption'))).toEqual([]);
+      const res = checkGolden(r, path.join(repo, 'tools/test/golden'), `captions-${style.split('.')[1]!.split('@')[0]}`, ev.frame);
+      expect(res.status, JSON.stringify(res)).not.toBe('mismatch');
+    }
+  });
+
   it('is deterministic: the same revision and time give identical pixels (NFR-03)', () => {
     const a = buildSampleScene('flat');
     const b = buildSampleScene('flat');

@@ -70,3 +70,23 @@ export function buildSampleScene(family: 'flat' | 'illustrated' = 'flat'): { ses
   ]);
   return { session, scene, maya, leo };
 }
+
+/**
+ * Fixture "speech" for tests (API-04): a buzzy tone whose envelope follows the alignment's words. It is a test signal,
+ * never presented as real speech (P7, NFR-18).
+ */
+export function fixtureSpeechPcm(durationS: number, alignment: Alignment, rate = 24000, pitch = 140): Float32Array {
+  const n = Math.round(durationS * rate);
+  const out = new Float32Array(n);
+  for (const w of alignment.words) {
+    const a = Math.round(w.start * rate);
+    const b = Math.min(n, Math.round(w.end * rate));
+    for (let i = a; i < b; i++) {
+      const u = (i - a) / Math.max(1, b - a);
+      const env = Math.sin(Math.PI * u) ** 0.5;
+      const t = i / rate;
+      out[i] = 0.3 * env * (Math.sin(2 * Math.PI * pitch * t) + 0.4 * Math.sin(2 * Math.PI * pitch * 2 * t) + 0.2 * Math.sin(2 * Math.PI * pitch * 3 * t)) / 1.6;
+    }
+  }
+  return out;
+}

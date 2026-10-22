@@ -17,6 +17,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Export tests encode with ffmpeg (decision 0013).
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - if: runner.os == 'macOS'
+        run: brew install ffmpeg
+      - if: runner.os == 'Windows'
+        run: choco install ffmpeg -y --no-progress
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test

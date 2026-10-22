@@ -85,6 +85,10 @@ export interface TextItem extends Common {
   shadow?: { color: string; blur: number; dx: number; dy: number };
   spans?: TextSpan[];
   letterSpacing?: number;
+  /** 'bottom': y is the bottom of the text box (captions stack upward from the safe area). */
+  valign?: 'top' | 'bottom';
+  /** Background box behind each laid-out line (boxed captions). */
+  box?: { color: string; radius: number; padX: number; padY: number };
 }
 
 export interface ImageItem extends Common {

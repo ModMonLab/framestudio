@@ -37,6 +37,8 @@ export interface NewProjectOptions {
   appVersion: string;
   now: string;
   seed?: number;
+  /** Default caption style asset (library defaults). */
+  captionStyle?: string;
 }
 
 export function makeCamera(newId: IdSource, name: string, stageW: number, stageH: number): Camera {
@@ -86,7 +88,7 @@ export function createProjectState(newId: IdSource, opts: NewProjectOptions): Pr
     styleFamily: opts.styleFamily,
     frameRate: opts.frameRate,
     output: opts.output,
-    captions: { enabled: true, speakerLabels: false, burnIn: true },
+    captions: { enabled: true, speakerLabels: false, burnIn: true, ...(opts.captionStyle ? { style: opts.captionStyle } : {}) },
     episodes: [ep.id],
     cast: [],
     permissions: { agent: { deleteProjects: false, deleteVoices: false, cloneVoices: false, exposeWorker: false } },

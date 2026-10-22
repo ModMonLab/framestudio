@@ -251,6 +251,18 @@ export class Rasterizer {
     const w = it.maxWidth ?? para.getMaxIntrinsicWidth();
     if (it.maxWidth === undefined) para.layout(Math.ceil(w) + 1);
     const x = it.align === 'center' ? it.x - (it.maxWidth ?? w) / 2 : it.align === 'right' ? it.x - (it.maxWidth ?? w) : it.x;
+    const y = it.valign === 'bottom' ? it.y - para.getHeight() : it.y;
+    if (it.box) {
+      const p = new ck.Paint();
+      p.setAntiAlias(true);
+      p.setColor(withAlpha(parseColor(ck, it.box.color), op));
+      for (const m of para.getLineMetrics()) {
+        if (m.width <= 0) continue;
+        const r = ck.XYWHRect(x + m.left - it.box.padX, y + m.baseline - m.ascent - it.box.padY, m.width + it.box.padX * 2, m.ascent + m.descent + it.box.padY * 2);
+        canvas.drawRRect(ck.RRectXY(r, it.box.radius, it.box.radius), p);
+      }
+      p.delete();
+    }
     if (it.outline && it.outline.width > 0) {
       // Outline by drawing a stroked copy first.
       const style = new ck.ParagraphStyle({ textStyle: {}, textAlign: it.align === 'center' ? ck.TextAlign.Center : it.align === 'right' ? ck.TextAlign.Right : ck.TextAlign.Left });
@@ -263,18 +275,27 @@ export class Rasterizer {
       const bg = new ck.Paint();
       bg.setColor(ck.Color(0, 0, 0, 0));
       const b = ck.ParagraphBuilder.MakeFromFontProvider(style, this.fonts);
-      b.pushPaintStyle(new ck.TextStyle({ fontFamilies: [it.family, 'Inter'], fontSize: it.size, fontStyle: { weight: { value: it.weight ?? 400 } as never }, heightMultiplier: it.lineHeight ?? 1.25, letterSpacing: it.letterSpacing ?? 0 }), fg, bg);
-      if (it.spans?.length) for (const s of it.spans) b.addText(s.text);
-      else b.addText(it.text);
+      const ts = (size: number, weight: number) => new ck.TextStyle({ fontFamilies: [it.family, 'Inter'], fontSize: size, fontStyle: { weight: { value: weight } as never, slant: it.italic ? ck.FontSlant.Italic : ck.FontSlant.Upright }, heightMultiplier: it.lineHeight ?? 1.25, letterSpacing: it.letterSpacing ?? 0 });
+      // Same per-span size and weight as the fill paragraph so the outline lines up exactly.
+      if (it.spans?.length) {
+        for (const s of it.spans) {
+          b.pushPaintStyle(ts(it.size * (s.scale ?? 1), s.weight ?? it.weight ?? 400), fg, bg);
+          b.addText(s.text);
+          b.pop();
+        }
+      } else {
+        b.pushPaintStyle(ts(it.size, it.weight ?? 400), fg, bg);
+        b.addText(it.text);
+      }
       const outline = b.build();
       outline.layout(it.maxWidth ?? Math.ceil(w) + 1);
-      canvas.drawParagraph(outline, x, it.y);
+      canvas.drawParagraph(outline, x, y);
       outline.delete();
       b.delete();
       fg.delete();
       bg.delete();
     }
-    canvas.drawParagraph(para, x, it.y);
+    canvas.drawParagraph(para, x, y);
     para.delete();
   }
 
