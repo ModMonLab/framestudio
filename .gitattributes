@@ -1,0 +1,9 @@
+# Generated files are compared byte-for-byte in tests; keep LF on every platform.
+* text=auto eol=lf
+*.png binary
+*.otf binary
+*.ttf binary
+*.woff2 binary
+*.wav binary
+*.mp4 binary
+*.zip binary
