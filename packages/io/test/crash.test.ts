@@ -45,7 +45,8 @@ describe('reliability: kill during random edits (NFR-08, AC-16)', () => {
     const dir = p.store.root;
     let total = 0;
     let kills = 0;
-    for (let round = 0; round < 20 && total < 1000; round++) {
+    // Rounds continue until at least 1000 edits ran (slow disks, e.g. Windows runners, need more rounds).
+    for (let round = 0; round < 80 && total < 1000; round++) {
       const seen = await runAndKill(dir, 1000 + round, 600, 600 + ((round * 337) % 900));
       const reopened = OpenProject.open(dir);
       const rev = reopened.session.revision;

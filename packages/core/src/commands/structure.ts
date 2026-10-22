@@ -311,6 +311,25 @@ defineCommand({
 });
 
 defineCommand({
+  name: 'scene.setAudio',
+  summary: 'Scene mix settings: ducking depth (dB), attack and release (s), room tone (FR-SND-03/06).',
+  params: Type.Object({
+    id: Id,
+    duckingDb: Type.Optional(Type.Number({ minimum: -40, maximum: 0 })),
+    duckAttack: Type.Optional(Type.Number({ minimum: 0, maximum: 5 })),
+    duckRelease: Type.Optional(Type.Number({ minimum: 0, maximum: 10 })),
+    roomTone: Type.Optional(Type.Boolean()),
+  }, { additionalProperties: false }),
+  label: () => 'Change scene mix',
+  touches: (p) => [`scenes/${p.id}/audio`],
+  apply: (d, p) => {
+    const scene = sceneOf(d, p.id);
+    const { id: _id, ...rest } = p;
+    Object.assign(scene.audio, rest);
+  },
+});
+
+defineCommand({
   name: 'scene.setLoop',
   summary: 'Set or clear the loop region (FR-TML-04).',
   params: Type.Object({ id: Id, start: Type.Optional(Type.Integer({ minimum: 0 })), end: Type.Optional(Type.Integer({ minimum: 0 })) }, { additionalProperties: false }),

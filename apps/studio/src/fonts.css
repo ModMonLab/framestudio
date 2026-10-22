@@ -1,0 +1,8 @@
+/* Bundled OFL fonts (served by the Frame Server from content/fonts); no system font fallback in the chrome. */
+@font-face { font-family: 'Inter'; font-weight: 400; src: url('/content/fonts/Inter-Regular.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'Inter'; font-weight: 500; src: url('/content/fonts/Inter-Medium.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'Inter'; font-weight: 600; src: url('/content/fonts/Inter-SemiBold.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'Inter'; font-weight: 700; src: url('/content/fonts/Inter-Bold.otf') format('opentype'); font-display: block; }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 400; src: url('/content/fonts/JetBrainsMono-Regular.ttf') format('truetype'); font-display: block; }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 500; src: url('/content/fonts/JetBrainsMono-Medium.ttf') format('truetype'); font-display: block; }
+html, body, #root { margin: 0; height: 100%; overflow: hidden; }

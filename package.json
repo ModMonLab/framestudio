@@ -16,7 +16,10 @@
     "catalog:doc": "tsx tools/catalog/generate-doc.ts",
     "tokens:gen": "tsx packages/design-tokens/src/generate.ts",
     "test:visual": "pnpm --filter @frame/gallery exec playwright test",
-    "content:build": "tsx tools/content/build.ts"
+    "content:build": "tsx tools/content/build.ts",
+    "studio:build": "pnpm --filter @frame/studio build",
+    "test:e2e": "pnpm --filter @frame/studio exec playwright test",
+    "sample": "tsx tools/demo/make-sample.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",

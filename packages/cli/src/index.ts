@@ -27,9 +27,6 @@ export async function runCli(argv: string[], io: CliIO): Promise<number> {
       io.stdout((json ? JSON.stringify({ ok: true, result: { help: helpFor(cmd) } }) : helpFor(cmd)) + '\n');
       return 0;
     }
-    if (parsed.opts.server) {
-      throw new FrameError('UNSUPPORTED', 'Server mode is not available in this build yet', undefined, 'Omit --server to run in local mode on the project folder.');
-    }
     const args = bindArgs(cmd, rest, parsed.flags);
     const log = (s: string) => {
       if (!parsed.opts.quiet) io.stderr(s + '\n');

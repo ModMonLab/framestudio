@@ -7,7 +7,13 @@ export default defineConfig({
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.005, animations: 'disabled' } },
   webServer: { command: 'npx vite --port 5181 --strictPort', port: 5181, reuseExistingServer: true, cwd: '.' },
   // Reduced motion gives spinners and indeterminate bars their designed static state on every runner.
-  use: { baseURL: 'http://localhost:5181', deviceScaleFactor: 1, reducedMotion: 'reduce' },
+  use: {
+    baseURL: 'http://localhost:5181',
+    deviceScaleFactor: 1,
+    reducedMotion: 'reduce',
+    // Host-independent text rasterisation: no hinting, grayscale antialiasing, sRGB.
+    launchOptions: { args: ['--font-render-hinting=none', '--disable-lcd-text', '--disable-font-subpixel-positioning', '--force-color-profile=srgb'] },
+  },
   projects: [
     { name: 'ref', use: { viewport: { width: 1440, height: 900 } } },
     { name: 'min', use: { viewport: { width: 1280, height: 720 } } },

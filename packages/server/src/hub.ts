@@ -8,9 +8,16 @@ import { OpenProject, ProjectStore, type SaveState } from '@frame/io';
 import { FrameError } from '@frame/schema';
 
 export type HubEvent =
-  | { type: 'change'; project: string; revision: number; label: string; source: string; delta: Record<string, unknown>; full: boolean }
+  | { type: 'change'; project: string; revision: number; label: string; source: string; delta: Record<string, unknown>; full: boolean; undo: UndoInfo }
   | { type: 'save'; project: string; save: SaveState }
   | { type: 'external'; project: string; files: string[]; reloaded: boolean };
+
+export interface UndoInfo {
+  canUndo: boolean;
+  canRedo: boolean;
+  undoLabel: string | null;
+  redoLabel: string | null;
+}
 
 export interface HubProject {
   id: string;
@@ -69,7 +76,8 @@ export class ProjectHub {
       const delta = entityDelta(r.state, r.changed, full ? keys : []);
       keys = allEntityKeys(r.state);
       const last = open.session.log.at(-1);
-      this.emit({ type: 'change', project: id, revision: r.revision, label: r.label, source: last?.source ?? 'user', delta, full });
+      const ss = open.session;
+      this.emit({ type: 'change', project: id, revision: r.revision, label: r.label, source: last?.source ?? 'user', delta, full, undo: { canUndo: ss.canUndo(), canRedo: ss.canRedo(), undoLabel: ss.undoLabel() ?? null, redoLabel: ss.redoLabel() ?? null } });
     });
     open.onSaveState((s) => this.emit({ type: 'save', project: id, save: s }));
     return hp;

@@ -85,3 +85,14 @@ jobs:
       - run: pnpm vitest run tools/test/slice.test.ts
         env:
           FRAME_TEST_WORKER_URL: http://127.0.0.1:8765
+      # The same flow driven through the Studio UI against a real Frame Server (preview pixels = export renderer).
+      - run: pnpm --filter @frame/studio exec playwright install --with-deps chromium
+      - run: pnpm --filter @frame/studio exec playwright test
+        env:
+          FRAME_TEST_WORKER_URL: http://127.0.0.1:8765
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-e2e
+          path: apps/studio/test-results/
+          retention-days: 7

@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { FrameError, jsonSchema, schemas, type Command, type CommandBatch } from '@frame/schema';
-import { describeCommands, formatTimecode, lineTakeState, validateProject, ticksToSeconds, randomId } from '@frame/core';
+import { FrameError, jsonSchema, schemas, type Command, type CommandBatch, type Problem } from '@frame/schema';
+import { describeCommands, formatTimecode, lineTakeState, validateProject, ticksToSeconds, randomId, type ProjectState } from '@frame/core';
+import { remote, remoteProject } from './remote.js';
+import { remoteState } from './remote.js';
 import { OpenProject, isProjectFolder } from '@frame/io';
 import { command, commands, type CommandContext } from './framework.js';
 import { APP_VERSION, libraryDefaults } from './env.js';
@@ -32,23 +34,47 @@ export function openProject(ctx: CommandContext): OpenProject {
   return p;
 }
 
-/** Applies engine commands through the same session API as the Studio (FR-ARC-01, FR-CLI-06). */
-export function mutate(ctx: CommandContext, cmds: Command[], label?: string) {
+/** Applies engine commands through the same session API as the Studio, locally or on the server (FR-ARC-01, FR-CLI-01/06). */
+export async function mutate(ctx: CommandContext, cmds: Command[], label?: string) {
+  const r = remote(ctx);
+  if (r) {
+    const pid = await remoteProject(r, findProjectDir(ctx));
+    const res = await r.req<{ dryRun: boolean; revision: number; label: string; commands: Command[]; reports: unknown[] }>('POST', `/api/projects/${pid}/commands`, { commands: cmds, ...(label ? { label } : {}), ...(ctx.opts.baseRevision !== undefined ? { baseRevision: ctx.opts.baseRevision } : {}), ...(ctx.opts.dryRun ? { dryRun: true } : {}) });
+    const { problems } = await r.req<{ problems: Problem[] }>('GET', `/api/projects/${pid}/validate`);
+    return { dryRun: res.dryRun, revision: res.revision, label: res.label, commands: res.commands, reports: res.reports, problems: problems.filter((x) => x.severity !== 'info'), state: (await remoteState(r, pid)).state };
+  }
   const p = openProject(ctx);
   const batch: CommandBatch = { commands: cmds, source: (ctx.io.env.FRAME_AGENT_SESSION ? `agent:${ctx.io.env.FRAME_AGENT_SESSION}` : 'cli'), ...(label ? { label } : {}) };
   if (ctx.opts.baseRevision !== undefined) batch.baseRevision = ctx.opts.baseRevision;
-  const r = p.session.apply(batch, { dryRun: ctx.opts.dryRun });
-  const problems = validateProject(r.state, { mediaExists: (h) => p.store.verifyMedia(h) });
+  const res = p.session.apply(batch, { dryRun: ctx.opts.dryRun });
+  const problems = validateProject(res.state, { mediaExists: (h) => p.store.verifyMedia(h) });
   if (!ctx.opts.dryRun) p.close();
   return {
-    dryRun: r.dryRun,
-    revision: r.revision,
-    label: r.label,
-    commands: r.commands,
-    reports: r.reports,
+    dryRun: res.dryRun,
+    revision: res.revision,
+    label: res.label,
+    commands: res.commands,
+    reports: res.reports,
     problems: problems.filter((x) => x.severity !== 'info'),
-    state: r.state,
+    state: res.state,
   };
+}
+
+/** Project state for read-only commands, from the folder or the server. */
+export async function readProject(ctx: CommandContext): Promise<{ state: ProjectState; revision: number; root: string }> {
+  const r = remote(ctx);
+  const root = findProjectDir(ctx);
+  if (r) {
+    const s = await remoteState(r, await remoteProject(r, root));
+    return { state: s.state, revision: s.revision, root };
+  }
+  const p = openProject(ctx);
+  return { state: p.state, revision: p.session.revision, root: p.store.root };
+}
+
+/** Commands that work on files the server owns run only in local mode. */
+export function localOnly(ctx: CommandContext, what: string) {
+  if (ctx.opts.server) throw new FrameError('USAGE', `${what} runs in local mode only`, undefined, 'Omit --server (stop the server first if it has the project open).');
 }
 
 function stripState<T extends { state?: unknown }>(r: T): Omit<T, 'state'> {
@@ -93,17 +119,17 @@ command({
   path: ['info'],
   summary: 'Show project summary: settings, episodes, scenes, cast and revision.',
   args: [],
-  run: (ctx) => {
-    const p = openProject(ctx);
+  run: async (ctx) => {
+    const p = await readProject(ctx);
     const s = p.state;
     return {
-      path: p.store.root,
+      path: p.root,
       id: s.project.id,
       name: s.project.name,
       styleFamily: s.project.styleFamily,
       frameRate: s.project.frameRate,
       output: s.project.output,
-      revision: p.session.revision,
+      revision: p.revision,
       cast: s.project.cast,
       episodes: s.project.episodes.map((e) => ({
         id: e,
@@ -122,11 +148,21 @@ command({
   path: ['validate'],
   summary: 'Validate schemas, references, media hashes, timing and conflicts. Exit code 2 if anything blocks export.',
   args: [],
-  run: (ctx) => {
-    const p = openProject(ctx);
-    const problems = [...(p.load?.problems ?? []), ...validateProject(p.state, { mediaExists: (h) => p.store.verifyMedia(h) })];
+  run: async (ctx) => {
+    const r = remote(ctx);
+    let problems: Problem[];
+    let revision: number;
+    if (r) {
+      const v = await r.req<{ revision: number; problems: Problem[] }>('GET', `/api/projects/${await remoteProject(r, findProjectDir(ctx))}/validate`);
+      problems = v.problems;
+      revision = v.revision;
+    } else {
+      const p = openProject(ctx);
+      problems = [...(p.load?.problems ?? []), ...validateProject(p.state, { mediaExists: (h) => p.store.verifyMedia(h) })];
+      revision = p.session.revision;
+    }
     const blocking = problems.filter((x) => x.blocksExport);
-    const result = { valid: blocking.length === 0, revision: p.session.revision, problems };
+    const result = { valid: blocking.length === 0, revision, problems };
     if (blocking.length) throw new FrameError('VALIDATION_FAILED', `${blocking.length} problem(s) block export`, result);
     return result;
   },
@@ -139,8 +175,8 @@ command({
   path: ['settings', 'get'],
   summary: 'Print project settings (or one key).',
   args: [{ name: 'key', description: 'Setting key', positional: true }],
-  run: (ctx) => {
-    const pr = openProject(ctx).state.project as Record<string, unknown>;
+  run: async (ctx) => {
+    const pr = (await readProject(ctx)).state.project as Record<string, unknown>;
     const all = Object.fromEntries(settingKeys.map((k) => [k, pr[k]]));
     if (ctx.args.key) {
       if (!settingKeys.includes(ctx.args.key as never)) throw new FrameError('NOT_FOUND', `Unknown setting ${ctx.args.key}`, { keys: settingKeys });
@@ -157,7 +193,7 @@ command({
   mutating: true,
   args: [{ name: 'pairs', description: 'key=value …', positional: true, variadic: true, required: true }],
   examples: ['frame settings set name="Season two" styleFamily=illustrated', 'frame settings set frameRate=30 --dry-run'],
-  run: (ctx) => {
+  run: async (ctx) => {
     const set: Record<string, unknown> = {};
     const cmds: Command[] = [];
     for (const pair of ctx.args.pairs as string[]) {
@@ -176,7 +212,7 @@ command({
       else set[k] = v;
     }
     if (Object.keys(set).length) cmds.unshift({ name: 'project.setSettings', params: set });
-    return stripState(mutate(ctx, cmds));
+    return stripState(await mutate(ctx, cmds));
   },
   human: mutHuman,
 });
@@ -198,7 +234,7 @@ command({
     const batch = Array.isArray(doc) ? { commands: doc as Command[] } : (doc as { commands: Command[]; label?: string; baseRevision?: number });
     if (!Array.isArray(batch.commands) || batch.commands.length === 0) throw new FrameError('USAGE', 'Expected a non-empty list of commands');
     if (batch.baseRevision !== undefined && ctx.opts.baseRevision === undefined) ctx.opts.baseRevision = batch.baseRevision;
-    return stripState(mutate(ctx, batch.commands, batch.label));
+    return stripState(await mutate(ctx, batch.commands, batch.label));
   },
   human: mutHuman,
 });
@@ -207,7 +243,13 @@ command({
   path: ['history'],
   summary: 'List committed changes (revision, time, source, label).',
   args: [{ name: 'limit', description: 'Show only the last N entries', type: 'number' }],
-  run: (ctx) => {
+  run: async (ctx) => {
+    const r = remote(ctx);
+    if (r) {
+      const pid = await remoteProject(r, findProjectDir(ctx));
+      const h = (await r.req<{ history: { revision: number }[] }>('GET', `/api/projects/${pid}/history`)).history;
+      return { revision: (await remoteState(r, pid)).revision, entries: ctx.args.limit ? h.slice(-Number(ctx.args.limit)) : h };
+    }
     const p = openProject(ctx);
     const h = p.store.readHistory();
     return { revision: p.session.revision, entries: ctx.args.limit ? h.slice(-Number(ctx.args.limit)) : h };
@@ -221,7 +263,10 @@ command({
   path: ['versions', 'list'],
   summary: 'List saved project versions.',
   args: [],
-  run: (ctx) => ({ versions: openProject(ctx).store.listVersions() }),
+  run: (ctx) => {
+    localOnly(ctx, 'Listing versions');
+    return { versions: openProject(ctx).store.listVersions() };
+  },
   human: (r) => r.versions.map((v: any) => `${v.id}  ${v.createdAt}  rev ${v.revision}  ${v.name}`).join('\n') || 'No versions saved.',
 });
 
@@ -231,6 +276,7 @@ command({
   mutating: true,
   args: [{ name: 'name', description: 'Version name', positional: true, required: true }],
   run: (ctx) => {
+    localOnly(ctx, 'Saving a version');
     const p = openProject(ctx);
     if (ctx.opts.dryRun) return { dryRun: true, name: ctx.args.name };
     return p.store.saveVersion(p.state, p.session.revision, String(ctx.args.name), randomId('snap'));
@@ -244,6 +290,7 @@ command({
   mutating: true,
   args: [{ name: 'id', description: 'Version id', positional: true, required: true }],
   run: (ctx) => {
+    localOnly(ctx, 'Restoring a version');
     const p = openProject(ctx);
     const snap = p.store.loadVersion(String(ctx.args.id));
     if (ctx.opts.dryRun) return { dryRun: true, id: ctx.args.id, scenes: Object.keys(snap.scenes).length };
@@ -288,6 +335,7 @@ command({
   summary: 'Print every line in scene order with speaker, text, delivery and take status.',
   args: [{ name: 'format', description: 'text (default) or fountain' }],
   run: (ctx) => {
+    localOnly(ctx, 'Running a script');
     const p = openProject(ctx);
     const s = p.state;
     const scenes = s.project.episodes.flatMap((e) => (s.episodes[e]?.scenes ?? []).map((id) => s.scenes[id]!).filter(Boolean));

@@ -1,0 +1,26 @@
+{
+  "name": "@frame/studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@frame/core": "workspace:*",
+    "@frame/design-tokens": "workspace:*",
+    "@frame/render": "workspace:*",
+    "@frame/rig": "workspace:*",
+    "@frame/schema": "workspace:*",
+    "@frame/ui": "workspace:*",
+    "canvaskit-wasm": "0.40.0",
+    "lucide-react": "0.546.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "5.1.0",
+    "vite": "7.1.12"
+  }
+}

@@ -45,7 +45,7 @@ function sendError(reply: FastifyReply, e: unknown) {
   return reply.code(STATUS[err.code] ?? 500).send({ error: { ...err.toJSON(), exitCode: exitCodeFor[err.code] } });
 }
 
-const MIME: Record<string, string> = { wav: 'audio/wav', flac: 'audio/flac', mp3: 'audio/mpeg', ogg: 'audio/ogg', m4a: 'audio/mp4', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml', mp4: 'video/mp4' };
+const MIME: Record<string, string> = { wav: 'audio/wav', flac: 'audio/flac', mp3: 'audio/mpeg', ogg: 'audio/ogg', m4a: 'audio/mp4', png: 'image/png', webm: 'video/webm', mov: 'video/quicktime', gif: 'image/gif', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml', mp4: 'video/mp4' };
 
 export interface FrameServer {
   app: FastifyInstance;
@@ -206,6 +206,62 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const ev = evaluateFrame(st, sc.id, t, { assets: { manifest: (r) => lib.manifest(r) }, styles, width, height, captions: req.query.captions === 'true', ...(family ? { family } : {}), ...(req.query.aspect ? { aspect: req.query.aspect } : {}) });
       const png = (await getRenderer()).png(ev.frame);
       return reply.header('content-type', 'image/png').header('x-frame-revision', String(p.open.session.revision)).send(Buffer.from(png));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  // Every manifest a scene's evaluation touches (recorded while evaluating key times), so browser previews render
+  // synchronously with the same data as the server and CLI.
+  app.get<{ Params: { pid: string }; Querystring: { scene: string } }>('/api/projects/:pid/scene-assets', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const st = p.open.state;
+      const sc = st.scenes[req.query.scene];
+      if (!sc) throw new FrameError('NOT_FOUND', `Scene ${req.query.scene} not found`);
+      const lib = library(p);
+      const used = new Map<string, unknown>();
+      const assets = { manifest: (r: string) => {
+        const m = lib.manifest(r);
+        if (m) used.set(r, m);
+        return m;
+      } };
+      const times = new Set<number>([0]);
+      for (const c of sc.clips) {
+        times.add(c.start);
+        times.add(Math.floor((c.start + c.end) / 2));
+        if (c.asset) assets.manifest(c.asset);
+      }
+      for (const i of sc.instances) if (i.asset) assets.manifest(i.asset);
+      if (st.project.captions.style) assets.manifest(st.project.captions.style);
+      for (const family of ['flat', 'illustrated'] as const) {
+        for (const t of times) if (t < sc.duration) evaluateFrame(st, sc.id, t, { assets, styles, width: 64, height: 36, captions: true, family });
+      }
+      return { revision: p.open.session.revision, manifests: Object.fromEntries(used) };
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
+  // Files inside a project folder (render outputs for the in-app player, FR-RND-07); byte ranges for seeking.
+  app.get<{ Params: { pid: string }; Querystring: { path: string } }>('/api/projects/:pid/files', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const f = path.resolve(p.root, req.query.path ?? '');
+      const rel = path.relative(p.root, f);
+      if (!req.query.path || rel.startsWith('..') || path.isAbsolute(rel)) throw new FrameError('PERMISSION_REQUIRED', 'Only files inside the project folder can be served');
+      if (!fs.existsSync(f) || !fs.statSync(f).isFile()) throw new FrameError('NOT_FOUND', `${rel} not found`);
+      const size = fs.statSync(f).size;
+      const type = MIME[path.extname(f).slice(1).toLowerCase()] ?? (f.endsWith('.srt') || f.endsWith('.vtt') || f.endsWith('.txt') ? 'text/plain; charset=utf-8' : f.endsWith('.json') ? 'application/json' : 'application/octet-stream');
+      const m = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range ?? ''));
+      reply.header('content-type', type).header('accept-ranges', 'bytes');
+      if (m && (m[1] || m[2])) {
+        const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+        const end = m[1] && m[2] ? Math.min(size - 1, Number(m[2])) : size - 1;
+        if (start > end || start >= size) return reply.code(416).header('content-range', `bytes */${size}`).send();
+        return reply.code(206).header('content-range', `bytes ${start}-${end}/${size}`).header('content-length', String(end - start + 1)).send(fs.createReadStream(f, { start, end }));
+      }
+      return reply.header('content-length', String(size)).send(fs.createReadStream(f));
     } catch (e) {
       return sendError(reply, e);
     }

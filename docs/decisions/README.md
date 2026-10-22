@@ -18,3 +18,4 @@ Each file records one decision: context, choice, alternatives, consequences, and
 | [0012](0012-voice-worker-stack.md) | Voice Worker stack: FastAPI, Qwen3-TTS, WhisperX + g2p-en, fixture engine | Accepted |
 | [0013](0013-export-audio-ffmpeg.md) | Export: pure audio plan, offline mix, BS.1770 loudness, ffmpeg encoding, caption styles as content | Accepted |
 | [0014](0014-frame-server.md) | Frame Server: Fastify + WebSocket entity deltas, job queues, voice workflows | Accepted |
+| [0015](0015-studio-architecture.md) | Studio: server mirror via deltas, shared CPU renderer in the browser, hash routes, M1 builder scope | Accepted |

@@ -8,7 +8,8 @@ import { FrameError, type AssetManifest } from '@frame/schema';
 import { renderExport, writeFileAtomic, type OutputPreset, type RenderProgress } from '@frame/io';
 import { command, type CommandContext } from './framework.js';
 import { contentDir } from './env.js';
-import { openProject } from './project-commands.js';
+import { findProjectDir, openProject } from './project-commands.js';
+import { remote, remoteProject, remoteState, waitJob } from './remote.js';
 
 function library() {
   const content = contentDir();
@@ -79,6 +80,24 @@ command({
   ],
   examples: ['frame render frame --scene "Cold open" --at 2.5 --out shot.png --width 960 --height 540'],
   run: async (ctx) => {
+    const r = remote(ctx);
+    if (r) {
+      // Server mode: the server renders with the same renderer (FR-CLI-01).
+      const pid = await remoteProject(r, findProjectDir(ctx));
+      const { state, revision } = await remoteState(r, pid);
+      const scene = ctx.args.scene ? sceneArg(state, ctx.args.scene) : firstScene(state);
+      const t = parseTime(String(ctx.args.at), state.project.frameRate);
+      const width = (ctx.args.width as number | undefined) ?? state.project.output.width;
+      const height = (ctx.args.height as number | undefined) ?? state.project.output.height;
+      const out = path.resolve(ctx.io.cwd, String(ctx.args.out));
+      if (ctx.opts.dryRun) return { dryRun: true, scene, at: t, out, width, height };
+      const q = new URLSearchParams({ scene, t: String(t), width: String(width), height: String(height), captions: String(ctx.args.captions === true), ...(ctx.args.family ? { family: String(ctx.args.family) } : {}), ...(ctx.args.aspect ? { aspect: String(ctx.args.aspect) } : {}) });
+      const res = await fetch(`${r.url}/api/projects/${pid}/frame?${q}`, { headers: ctx.opts.token ? { authorization: `Bearer ${ctx.opts.token}` } : {} });
+      if (!res.ok) throw new FrameError('RENDER_FAILED', `The server could not render the frame (${res.status})`);
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      writeFileAtomic(out, new Uint8Array(await res.arrayBuffer()));
+      return { out, scene, at: t, width, height, camera: 'server', issues: [], revision };
+    }
     const p = openProject(ctx);
     const state = p.state;
     const scene = ctx.args.scene ? sceneArg(state, ctx.args.scene) : firstScene(state);
@@ -92,14 +111,14 @@ command({
     const out = path.resolve(ctx.io.cwd, String(ctx.args.out));
     if (ctx.opts.dryRun) return { dryRun: true, scene, at: t, out, width, height };
     const { content, styles, assets } = library();
-    const r = await createNodeRenderer({ fontsDir: path.join(content, 'fonts') });
+    const renderer = await createNodeRenderer({ fontsDir: path.join(content, 'fonts') });
     try {
       const ev = evaluateFrame(state, scene, t, { assets, styles, width, height, ...(ctx.args.aspect ? { aspect: String(ctx.args.aspect) } : {}), captions: ctx.args.captions === true, ...(family ? { family } : {}) });
       fs.mkdirSync(path.dirname(out), { recursive: true });
-      writeFileAtomic(out, r.png(ev.frame));
+      writeFileAtomic(out, renderer.png(ev.frame));
       return { out, scene, at: t, width, height, camera: ev.camera.name, issues: ev.issues, revision: p.session.revision };
     } finally {
-      r.dispose();
+      renderer.dispose();
     }
   },
   human: (r) => (r.dryRun ? `Dry run: would write ${r.out}` : `Wrote ${r.out} (${r.width}×${r.height}, camera ${r.camera})${r.issues.length ? `\n${r.issues.map((i: string) => `warning: ${i}`).join('\n')}` : ''}`),
@@ -128,10 +147,15 @@ command({
   ],
   examples: ['frame render video --scene "Cold open" --out cold-open.mp4', 'frame render video --episode <episode-id> --preset <id from `frame render presets`> --stems'],
   run: async (ctx) => {
-    const p = openProject(ctx);
-    // Snapshot the revision at start; later edits do not affect this export (FR-RND-05).
-    const state = p.state;
-    const revision = p.session.revision;
+    const r = remote(ctx);
+    // Server mode reads the server's state; local mode opens the folder. Either way the export uses the revision at
+    // start (FR-RND-05).
+    const p = r ? undefined : openProject(ctx);
+    const pid = r ? await remoteProject(r, findProjectDir(ctx)) : undefined;
+    const snap = r ? await remoteState(r, pid!) : undefined;
+    const state = p ? p.state : snap!.state;
+    const revision = p ? p.session.revision : snap!.revision;
+    const root = p ? p.store.root : findProjectDir(ctx);
     let scenes: string[];
     if (ctx.args.episode) {
       const ep = state.episodes[String(ctx.args.episode)];
@@ -153,12 +177,17 @@ command({
     const ext = preset.container === 'png' ? '' : preset.container === 'none' ? '.srt' : `.${preset.container}`;
     const label = scenes.length === 1 ? state.scenes[scenes[0]!]!.name : state.episodes[String(ctx.args.episode)]!.name;
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const renderDir = path.resolve(p.store.root, state.project.renderDir ?? 'renders');
+    const renderDir = path.resolve(root, state.project.renderDir ?? 'renders');
     const out = ctx.args.out ? path.resolve(ctx.io.cwd, String(ctx.args.out)) : path.join(renderDir, `${label.replace(/[^A-Za-z0-9_-]+/g, '-')}-${stamp}${ext}`);
     const family = ctx.args.family as 'flat' | 'illustrated' | undefined;
     if (family && family !== 'flat' && family !== 'illustrated') throw new FrameError('USAGE', '--family must be flat or illustrated');
     const plan = { scenes, preset: presetId, out, width, height, range, revision };
     if (ctx.opts.dryRun) return { dryRun: true, ...plan };
+    if (r) {
+      // Server mode: the export runs as a server job (same pipeline), progress is relayed here.
+      const job = await r.req<{ id: string }>('POST', `/api/projects/${pid}/renders`, { scenes, preset: presetId, out, width, height, ...(range ? { range } : {}), captions: ctx.args['no-captions'] !== true, ...(preset.subtitles ? { subtitles: preset.subtitles } : {}), ...(preset.stems ? { stems: true } : {}) });
+      return await waitJob(r, job.id, ctx.log);
+    }
     const { content, lib, styles, assets } = library();
     const renderer = await createNodeRenderer({ fontsDir: path.join(content, 'fonts') });
     const ac = new AbortController();
@@ -171,8 +200,8 @@ command({
         burnInCaptions: ctx.args['no-captions'] !== true && state.project.captions.enabled && state.project.captions.burnIn,
         ...(family ? { family } : {}),
         ...(ctx.args.crf !== undefined ? { quality: { crf: ctx.args.crf as number } } : {}),
-        out, assets, assetExists: (ref) => lib.has(ref), mediaExists: (h) => p.store.verifyMedia(h), styles, renderer,
-        resolveAudio: (src) => (src.kind === 'media' ? p.store.findMedia(src.hash) : undefined),
+        out, assets, assetExists: (ref) => lib.has(ref), mediaExists: (h) => p!.store.verifyMedia(h), styles, renderer,
+        resolveAudio: (src) => (src.kind === 'media' ? p!.store.findMedia(src.hash) : undefined),
         force: ctx.args.force === true,
         onProgress: progressLine(ctx),
         signal: ac.signal,

@@ -282,16 +282,18 @@ export async function renderExport(o: RenderOptions): Promise<RenderReport> {
       let stderr = '';
       child.stderr.on('data', (d: Buffer) => (stderr += d.toString()).length > 8000 && (stderr = stderr.slice(-8000)));
       const done = new Promise<number>((res) => child.on('close', (code) => res(code ?? -1)));
+      // One shared "ffmpeg exited" promise: back-pressure waits race it instead of adding a listener per frame.
+      const exited = done.then(() => {
+        throw new FrameError('RENDER_FAILED', `ffmpeg stopped: ${stderr.trim().slice(-500)}`);
+      });
+      exited.catch(() => undefined);
       const onAbort = () => child.kill('SIGKILL');
       o.signal?.addEventListener('abort', onAbort);
       try {
         for (let i = 0; i < frameTimes.length; i++) {
           if (o.signal?.aborted) break;
           const rgba = o.renderer.rgba(frameAt(i));
-          if (!child.stdin.write(rgba)) await new Promise<void>((res, rej) => {
-            child.stdin.once('drain', res);
-            child.once('close', () => rej(new FrameError('RENDER_FAILED', `ffmpeg stopped: ${stderr.trim().slice(-500)}`)));
-          });
+          if (!child.stdin.write(rgba)) await Promise.race([new Promise<void>((res) => child.stdin.once('drain', res)), exited]);
           progress({ phase: 'Rendering', frame: i + 1, frames: frameTimes.length, fps: (i + 1) / Math.max(1e-6, now() - tr) });
         }
         child.stdin.end();
