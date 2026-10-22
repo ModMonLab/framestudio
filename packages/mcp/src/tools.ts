@@ -205,6 +205,60 @@ export const TOOLS: ToolDef[] = [
     run: async (a, ctx) => ctx.api.json('POST', `/api/projects/${pid(a, ctx)}/commands`, { commands: a.commands, ...(a.label ? { label: a.label } : {}), ...(a.dry_run ? { dryRun: true } : {}), ...(a.base_revision !== undefined ? { baseRevision: a.base_revision } : {}) }),
   },
   {
+    name: 'apply_recipe',
+    title: 'Apply recipe',
+    description: 'Apply a performance or shot recipe (search_assets kind "rcp" or "cam") to a scene: roles map to instance ids; line-anchored recipes take a line clip id, others a start time. Adds ordinary grouped clips (one undo step); warnings name steps whose assets are missing.',
+    inputSchema: Type.Object({
+      scene: Type.String(),
+      ref: Type.String({ description: 'Recipe ref' }),
+      roles: Type.Record(Type.String(), Type.String(), { description: 'Role key → instance id' }),
+      at: Type.Optional(Type.Number({ minimum: 0, description: 'Start in seconds (time-anchored recipes)' })),
+      line: Type.Optional(Type.String({ description: 'Line clip id (line-anchored recipes)' })),
+      dry_run: Type.Optional(Type.Boolean()),
+      project: Project,
+    }),
+    readOnly: false,
+    run: async (a, ctx) => ctx.api.json('POST', `/api/projects/${pid(a, ctx)}/scenes/${a.scene}/recipes/apply`, { ref: a.ref, roles: a.roles, ...(a.at !== undefined ? { at: Math.round(Number(a.at) * TICKS) } : {}), ...(a.line ? { line: a.line } : {}), ...(a.dry_run ? { dryRun: true } : {}) }),
+  },
+  {
+    name: 'auto_coverage',
+    title: 'Automatic coverage',
+    description: 'Generate editable shots from a scene\'s dialogue: an establishing wide, speaker close-ups, reactions; replaces earlier automatic shots and keeps hand-placed ones.',
+    inputSchema: Type.Object({ scene: Type.String(), project: Project }),
+    readOnly: false,
+    run: async (a, ctx) => ctx.api.json('POST', `/api/projects/${pid(a, ctx)}/scenes/${a.scene}/coverage`, {}),
+  },
+  {
+    name: 'apply_template',
+    title: 'Apply template',
+    description: 'Add the scene(s) of a production template (search_assets kind "tpl") to an episode with any characters in its cast roles (role key → character ref); the suggested script is in the scene notes.',
+    inputSchema: Type.Object({ ref: Type.String(), cast: Type.Optional(Type.Record(Type.String(), Type.String())), episode: Type.Optional(Type.String()), name: Type.Optional(Type.String()), project: Project }),
+    readOnly: false,
+    run: async (a, ctx) => ctx.api.json('POST', `/api/projects/${pid(a, ctx)}/templates/apply`, { ref: a.ref, ...(a.cast ? { cast: a.cast } : {}), ...(a.episode ? { episode: a.episode } : {}), ...(a.name ? { name: a.name } : {}) }),
+  },
+  {
+    name: 'add_sound',
+    title: 'Add sound',
+    description: 'Put a library sound on a scene\'s sound tracks: music (kind "music") and ambience ("amb") loop from the start time to the scene end unless a duration is given; sound effects ("sfx") and cues ("cue") play once. Music ducks under dialogue automatically.',
+    inputSchema: Type.Object({ scene: Type.String(), ref: Type.String(), at: Type.Optional(Type.Number({ minimum: 0, description: 'Start in seconds (default 0)' })), duration: Type.Optional(Type.Number({ exclusiveMinimum: 0, description: 'Seconds' })), gain_db: Type.Optional(Type.Number({ minimum: -60, maximum: 12 })), project: Project }),
+    readOnly: false,
+    run: async (a, ctx) => {
+      const id = pid(a, ctx);
+      const r = await ctx.api.json<StateRes>('GET', `/api/projects/${id}/state`);
+      const sc = r.state.scenes[a.scene as string];
+      if (!sc) throw new FrameError('NOT_FOUND', `Scene ${a.scene} not found`, { scenes: Object.keys(r.state.scenes) });
+      const m = await ctx.api.json<{ kind: string; data?: { sound?: { loop?: boolean; media?: { durationS?: number } } } }>('GET', `/api/library/manifest?ref=${encodeURIComponent(String(a.ref))}&project=${encodeURIComponent(id)}`);
+      const kind = m.kind === 'music' ? 'music' : m.kind === 'amb' ? 'ambience' : m.kind === 'sfx' || m.kind === 'cue' ? 'sfx' : undefined;
+      if (!kind) throw new FrameError('USAGE', `${a.ref} is not a sound (music, amb, sfx or cue)`);
+      const track = (sc.tracks as { id: string; owner: string; kind: string }[]).find((t) => t.owner === 'scene' && t.kind === kind)!;
+      const start = Math.round(Number(a.at ?? 0) * TICKS);
+      const loops = m.data?.sound?.loop ?? (kind !== 'sfx');
+      const len = a.duration !== undefined ? Math.round(Number(a.duration) * TICKS) : loops ? sc.duration - start : Math.round((m.data?.sound?.media?.durationS ?? 1) * TICKS);
+      const end = Math.min(sc.duration, start + Math.max(1, len));
+      return ctx.api.json('POST', `/api/projects/${id}/commands`, { label: `Add ${a.ref}`, commands: [{ name: 'clip.add', params: { scene: a.scene, track: track.id, start, end, asset: a.ref, ...(a.gain_db !== undefined ? { params: { gainDb: a.gain_db } } : {}) } }] });
+    },
+  },
+  {
     name: 'validate',
     title: 'Validate',
     description: 'Problems in the project (missing assets or media, lines without takes, export blockers) with fixes.',
