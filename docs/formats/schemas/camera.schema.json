@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/camera.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "id": {
+      "pattern": "^cam_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix cam_.",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "center": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ]
+    },
+    "width": {
+      "exclusiveMinimum": 0,
+      "description": "Framing width in stage units at stage scale.",
+      "type": "number"
+    },
+    "rotation": {
+      "type": "number"
+    },
+    "lens": {
+      "anyOf": [
+        {
+          "const": "24mm",
+          "type": "string"
+        },
+        {
+          "const": "35mm",
+          "type": "string"
+        },
+        {
+          "const": "50mm",
+          "type": "string"
+        },
+        {
+          "const": "85mm",
+          "type": "string"
+        }
+      ]
+    },
+    "preset": {
+      "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+      "description": "Asset reference id@version.",
+      "type": "string"
+    },
+    "subjects": {
+      "type": "array",
+      "items": {
+        "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+        "description": "Project-local ID with prefix ins_.",
+        "type": "string"
+      }
+    },
+    "ratioRule": {
+      "anyOf": [
+        {
+          "const": "center",
+          "type": "string"
+        },
+        {
+          "const": "headroom",
+          "type": "string"
+        }
+      ]
+    },
+    "ratioOverrides": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "center": {
+              "additionalProperties": false,
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "x",
+                "y"
+              ]
+            },
+            "width": {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            }
+          },
+          "required": [
+            "center",
+            "width"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "center",
+    "width",
+    "rotation",
+    "lens",
+    "subjects",
+    "ratioRule",
+    "ratioOverrides"
+  ]
+}

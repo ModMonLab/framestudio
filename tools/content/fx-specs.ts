@@ -54,6 +54,18 @@ export const ATMOSPHERE: Record<string, AtmoData> = {
   pastel: { type: 'grade', matrix: (() => desat(0.35).map((v, i) => (i % 5 === 4 && i < 15 ? 0.08 : i % 5 < 3 && i < 15 ? v * 0.85 : v)))() },
   'high-contrast': { type: 'grade', matrix: [1.35, 0, 0, 0, -0.17, 0, 1.35, 0, 0, -0.17, 0, 0, 1.35, 0, -0.17, 0, 0, 0, 1, 0] },
   desaturated: { type: 'grade', matrix: desat(0.6) },
+  'heat-haze': { type: 'haze', color: '#FFFFFF' },
+  traffic: { type: 'traffic', density: 6, speed: 0.12, layer: 'back' },
+  'crowd-silhouettes': { type: 'crowd', density: 16, color: '#3A3646', layer: 'back' },
+  'swaying-trees': { type: 'trees', density: 5, color: '#4E7A46', layer: 'back' },
+  'water-ripples': { type: 'ripples', density: 40, color: '#E6F2FA' },
+  'city-lights': { type: 'city-lights', density: 70, color: '#FFF4D0', layer: 'back' },
+  'screens-and-monitors': { type: 'screens', density: 5, layer: 'back' },
+  'ceiling-fan': { type: 'fan', speed: 6, color: '#E8E4DC' },
+  'blurred-plants': { type: 'plants', color: '#3E7344' },
+  'curtain-edge': { type: 'curtain', color: '#8C3A3A' },
+  'window-frame': { type: 'window-frame', color: '#2A2420' },
+  'crowd-heads': { type: 'heads', color: '#16141A' },
   'retro-vhs': { type: 'grade', matrix: [1.1, 0.05, 0, 0, 0.02, 0, 0.95, 0.05, 0, 0, 0.05, 0, 0.85, 0, 0.04, 0, 0, 0, 1, 0] },
 };
 
@@ -82,6 +94,23 @@ export const EFFECTS: Record<string, EffectData> = {
   'dramatic-silhouette': { type: 'silhouette' },
   tint: { type: 'tint', color: '#4F7CFF' },
   'freeze-frame': { type: 'freeze' },
+  // Animation principles (attach to a character): they deform or retime it for the clip's span.
+  anticipation: { type: 'principle', principle: 'anticipation' },
+  'squash-and-stretch': { type: 'principle', principle: 'squash' },
+  'overshoot-and-settle': { type: 'principle', principle: 'overshoot' },
+  bounce: { type: 'principle', principle: 'bounce' },
+  'ease-presets': { type: 'principle', principle: 'ease' },
+  wobble: { type: 'principle', principle: 'wobble' },
+  jiggle: { type: 'principle', principle: 'jiggle' },
+  'follow-through': { type: 'principle', principle: 'follow-through' },
+  'smear-frame': { type: 'smear' },
+  // A short freeze on impact (keep the clip to a few frames).
+  'hit-pause': { type: 'freeze' },
+  'swoosh-trail': { type: 'swoosh', color: '#FFFFFF' },
+  'motion-blur-streak': { type: 'streak', color: '#FFFFFF' },
+  afterimage: { type: 'afterimage' },
+  // Cool shadows and warm highlights.
+  'split-tone': { type: 'grade', matrix: [1.1, 0, 0, 0, -0.03, 0, 1.02, 0, 0, -0.01, 0, 0, 0.84, 0, 0.09, 0, 0, 0, 1, 0] },
 };
 
 export const TRANSITIONS: Record<string, TransitionData> = {
@@ -102,4 +131,5 @@ export const TRANSITIONS: Record<string, TransitionData> = {
   glitch: { type: 'glitch' },
   'whip-blur': { type: 'zoom' },
   'shape-reveal': { type: 'shape', shape: 'star' },
+  'page-turn': { type: 'page' },
 };

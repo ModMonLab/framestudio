@@ -1,7 +1,7 @@
 /** Jobs popover (FR-ARC-05, FR-RND-07): progress, cancel, retry hint, and completed exports in an in-app player. */
 import { useState } from 'react';
 import { ListChecks } from 'lucide-react';
-import { Button, Dialog, EmptyState, IconButton, JobRow, Popover, useAnchor } from '@frame/ui';
+import { Button, Dialog, EmptyState, IconButton, JobRow, Popover, useAnchor, t as tt } from '@frame/ui';
 import { api, type JobInfo } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -22,8 +22,8 @@ export function JobsButton() {
   return (
     <>
       <IconButton ref={anchor} label={active ? `Jobs: ${active} running` : 'Jobs'} icon={<span className="st-jobs-icon"><ListChecks size={16} />{active > 0 && <span className="st-count">{active}</span>}</span>} onClick={() => setOpen(!open)} pressed={open} />
-      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} label="Jobs" placement="bottom-end" width={360}>
-        {list.length === 0 ? <EmptyState title="No jobs">Exports and voice work appear here.</EmptyState> : list.map((j) => {
+      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} label={tt('Jobs')} placement="bottom-end" width={360}>
+        {list.length === 0 ? <EmptyState title={tt('No jobs')}>{tt('Exports and voice work appear here.')}</EmptyState> : list.map((j) => {
           const running = j.state === 'queued' || j.state === 'running';
           const remaining = running && j.progress > 0.02 && j.startedAt ? (secs(j.startedAt)! * (1 - j.progress)) / j.progress : undefined;
           return (
@@ -36,7 +36,8 @@ export function JobsButton() {
               elapsedS={secs(j.startedAt, j.finishedAt)}
               remainingS={remaining}
               {...(running ? { onCancel: () => void api.cancelJob(j.id) } : {})}
-              action={j.state === 'succeeded' && j.kind === 'render' && j.result?.output ? <Button variant="ghost" onClick={() => { setPlayError(false); setPlayer(j); }}>Play</Button> : undefined}
+              action={j.state === 'succeeded' && j.kind === 'render' && j.result?.output ? <Button variant="ghost" onClick={() => { setPlayError(false); setPlayer(j); }}>{tt('Play')}</Button>
+                : (j.state === 'failed' || j.state === 'cancelled') && j.kind === 'render' ? <Button variant="ghost" onClick={() => void api.retryJob(j.id).catch(() => undefined)}>{tt('Retry')}</Button> : undefined}
             />
           );
         })}
@@ -45,12 +46,12 @@ export function JobsButton() {
         {player?.result?.output && (
           <>
             {playError ? (
-              <p role="alert" className="fr-hint">This browser cannot play {String(player.result.settings?.video ?? 'this').toUpperCase()} video. Open the file in a video player, or export with the Web WebM preset to play it here.</p>
+              <p role="alert" className="fr-hint">{tt('This browser cannot play')} {String(player.result.settings?.video ?? 'this').toUpperCase()}  {tt('video. Open the file in a video player, or export with the Web WebM preset to play it here.')}</p>
             ) : (
               <video src={fileUrl(player.result.output)} controls style={{ width: '100%', background: '#000' }} onError={() => setPlayError(true)} />
             )}
             <p className="fr-faint fr-mono" style={{ wordBreak: 'break-all' }}>{player.result.output}</p>
-            {player.result.fixtureAudio && <p className="fr-hint">This export contains fixture audio from the test worker — not real speech.</p>}
+            {player.result.fixtureAudio && <p className="fr-hint">{tt('This export contains fixture audio from the test worker — not real speech.')}</p>}
           </>
         )}
       </Dialog>

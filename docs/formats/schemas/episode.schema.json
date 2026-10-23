@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/episode.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "minimum": 1,
+      "description": "File schema version (FR-DAT-05).",
+      "type": "integer"
+    },
+    "id": {
+      "pattern": "^ep_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix ep_.",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "pattern": "^scn_[A-Za-z0-9]{6,32}$",
+        "description": "Project-local ID with prefix scn_.",
+        "type": "string"
+      }
+    },
+    "sceneTransitions": {
+      "description": "Transition into the keyed scene from the previous one (FR-FX-03, FR-TML-09).",
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "transition": {
+              "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+              "description": "Asset reference id@version.",
+              "type": "string"
+            },
+            "duration": {
+              "minimum": 0,
+              "description": "Time in ticks (48 000 per second).",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "transition",
+            "duration"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "notes",
+    "scenes",
+    "sceneTransitions"
+  ]
+}

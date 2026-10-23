@@ -11,7 +11,7 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 300_000,
   expect: { timeout: 30_000 },
-  use: { baseURL: `http://127.0.0.1:${port}`, viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, reducedMotion: 'reduce', launchOptions: { args: ['--font-render-hinting=none', '--disable-lcd-text', '--disable-font-subpixel-positioning', '--force-color-profile=srgb'] } },
+  use: { baseURL: `http://127.0.0.1:${port}`, viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, reducedMotion: 'reduce', launchOptions: { args: ['--font-render-hinting=none', '--disable-lcd-text', '--disable-font-subpixel-positioning', '--force-color-profile=srgb', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } },
   webServer: {
     command: `pnpm exec vite build && node --import tsx ../../packages/cli/src/bin.ts server start --port ${port}`,
     url: `http://127.0.0.1:${port}/api/health`,

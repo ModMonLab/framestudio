@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/package.json",
+  "additionalProperties": false,
+  "description": "Package manifest.json (FR-DAT-10).",
+  "type": "object",
+  "properties": {
+    "format": {
+      "anyOf": [
+        {
+          "const": "frameproj",
+          "type": "string"
+        },
+        {
+          "const": "framechar",
+          "type": "string"
+        },
+        {
+          "const": "frameasset",
+          "type": "string"
+        },
+        {
+          "const": "framevoice",
+          "type": "string"
+        }
+      ]
+    },
+    "formatVersion": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "appVersion": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "contents": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "path": {
+            "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$))[A-Za-z0-9._/@-]+$",
+            "type": "string"
+          },
+          "hash": {
+            "pattern": "^sha256-[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "bytes": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "role": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "hash",
+          "bytes",
+          "role"
+        ]
+      }
+    },
+    "assets": {
+      "description": "The package's root assets (characters, voices, packed assets); empty for projects.",
+      "type": "array",
+      "items": {
+        "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+        "description": "Asset reference id@version.",
+        "type": "string"
+      }
+    },
+    "requires": {
+      "description": "Bundled assets the contents reference but do not carry, pinned by content hash (SRS §3.6).",
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "ref": {
+            "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+            "description": "Asset reference id@version.",
+            "type": "string"
+          },
+          "hash": {
+            "pattern": "^sha256-[0-9a-f]{64}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref",
+          "hash"
+        ]
+      }
+    },
+    "project": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    }
+  },
+  "required": [
+    "format",
+    "formatVersion",
+    "appVersion",
+    "createdAt",
+    "contents",
+    "assets"
+  ]
+}

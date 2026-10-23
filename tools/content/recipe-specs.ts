@@ -169,6 +169,65 @@ export const RECIPES: Record<string, RecipeData> = {
       { track: 'shot', at: 0, dur: 3.5, shot: { framing: 'cam.two-shot@1', subjects: ['a', 'b'] } },
     ],
   },
+  // Interactions (Catalog G1 completion): built from library actions, pose offsets, effects and sounds.
+  handshake: {
+    roles: [C('a', 'First'), C('b', 'Second')], duration: 2.6,
+    steps: [
+      { role: 'a', track: 'acting', at: 0, dur: 0.3, params: { turn: '$b' } },
+      { role: 'b', track: 'acting', at: 0, dur: 0.3, params: { turn: '$a' } },
+      ...(['a', 'b'] as const).map((r) => ({ role: r, track: 'acting' as const, asset: 'act.gesture-toward@1', at: 0.2, dur: 2.2, blendIn: 0.2, blendOut: 0.3, params: { pose: { armR: [0.35, 0.45, 0.55, 0.65, 0.75].map((t, i) => ({ t, v: [0, i % 2 ? 0.07 : i === 0 || i === 4 ? 0 : -0.07, 0] })) } } })),
+      ...(['a', 'b'] as const).map((r) => ({ role: r, track: 'face' as const, asset: 'exp.smile@1', at: 0.3, dur: 2.2, blendIn: 0.2, blendOut: 0.4 })),
+    ],
+  },
+  hug: {
+    roles: [C('a', 'First'), C('b', 'Second')], duration: 3,
+    steps: [
+      { role: 'a', track: 'acting', at: 0, dur: 0.3, params: { turn: '$b' } },
+      { role: 'b', track: 'acting', at: 0, dur: 0.3, params: { turn: '$a' } },
+      ...(['a', 'b'] as const).map((r) => ({ role: r, track: 'acting' as const, asset: 'act.open-palms@1', at: 0.2, dur: 2.6, blendIn: 0.3, blendOut: 0.4, params: { pose: { armR: [{ t: 0.3, v: [-0.25, 0.05, 0.1] }, { t: 0.8, v: [-0.3, 0.05, 0.1] }], armL: [{ t: 0.3, v: [-0.25, 0.05, 0.1] }, { t: 0.8, v: [-0.3, 0.05, 0.1] }] } } })),
+      ...(['a', 'b'] as const).map((r) => ({ role: r, track: 'face' as const, asset: 'exp.content@1', at: 0.4, dur: 2.4, blendIn: 0.3, blendOut: 0.4 })),
+      { track: 'sfx', asset: 'sfx.clothes-rustle@1', at: 0.5, dur: 1 },
+    ],
+  },
+  'high-five': {
+    roles: [C('a', 'First'), C('b', 'Second')], duration: 1.8,
+    steps: [
+      { role: 'a', track: 'acting', at: 0, dur: 0.2, params: { turn: '$b' } },
+      { role: 'b', track: 'acting', at: 0, dur: 0.2, params: { turn: '$a' } },
+      ...(['a', 'b'] as const).map((r) => ({ role: r, track: 'acting' as const, asset: 'act.salute@1', at: 0.1, dur: 1.4, blendIn: 0.15, blendOut: 0.3, params: { pose: { armR: [{ t: 0.3, v: [0.1, 0.05, 0.35] }, { t: 0.8, v: [0.1, 0.05, 0.35] }] } } })),
+      { track: 'effect', asset: 'fx.impact-star@1', at: 0.55, dur: 0.5, params: { attach: '$a' } },
+      { track: 'sfx', asset: 'sfx.punch-impact@1', at: 0.55, dur: 0.4 },
+    ],
+  },
+  'victory-moment': {
+    roles: [C('winner', 'Winner')], duration: 3,
+    steps: [
+      { role: 'winner', track: 'acting', asset: 'act.fist-pump@1', at: 0, dur: 1.1 },
+      { role: 'winner', track: 'acting', asset: 'act.celebrate@1', at: 1.1, dur: 1.6 },
+      { role: 'winner', track: 'face', asset: 'exp.excited@1', at: 0, dur: 3, blendIn: 0.1, blendOut: 0.4 },
+      { track: 'sfx', asset: 'sfx.cheer@1', at: 0.2, dur: 2.5 },
+      { track: 'effect', asset: 'atmo.confetti@1', at: 0.3, dur: 2.7 },
+    ],
+  },
+  entrance: {
+    roles: [C('who', 'Who enters')], duration: 4.5,
+    steps: [
+      { role: 'who', track: 'acting', asset: 'act.enter@1', at: 0, dur: 2.2 },
+      { role: 'who', track: 'gaze', at: 2.3, dur: 1.8, params: { target: 'camera' } },
+      { role: 'who', track: 'acting', asset: 'act.wave-hello@1', at: 2.5, dur: 1.8 },
+      { role: 'who', track: 'face', asset: 'exp.smile@1', at: 2.2, dur: 2.2, blendIn: 0.2, blendOut: 0.3 },
+      { track: 'sfx', asset: 'sfx.footsteps-wood@1', at: 0, dur: 2.2 },
+    ],
+  },
+  'exit-in-a-huff': {
+    roles: [C('who', 'Who leaves')], duration: 3.6,
+    steps: [
+      { role: 'who', track: 'face', asset: 'exp.annoyed@1', at: 0, dur: 3.6, blendIn: 0.1, blendOut: 0.2 },
+      { role: 'who', track: 'acting', asset: 'act.turn-around@1', at: 0, dur: 0.6 },
+      { role: 'who', track: 'acting', asset: 'act.exit@1', at: 0.6, dur: 2.4, params: { speed: 1.3 } },
+      { track: 'sfx', asset: 'sfx.door-slam@1', at: 3.1, dur: 0.5 },
+    ],
+  },
 };
 
 /** Shot recipes (Catalog M1): coordinated shots and moves for subjects (FR-CAM-04). */
@@ -192,6 +251,50 @@ export const SHOT_RECIPES: Record<string, RecipeData> = {
   'establishing-pan': {
     roles: [], duration: 4,
     steps: [{ track: 'shot', at: 0, dur: 4, shot: { framing: 'cam.extreme-wide@1', subjects: [] } }, { track: 'camera-move', asset: 'cam.pan@1', at: 0, dur: 4 }],
+  },
+  // Edits (Catalog M1): cut patterns as editable shots.
+  'hard-cut': {
+    roles: [C('subject', 'Subject')], duration: 4,
+    steps: [{ track: 'shot', at: 0, dur: 2, shot: { framing: 'cam.wide@1', subjects: ['subject'] } }, { track: 'shot', at: 2, dur: 2, shot: { framing: 'cam.close-up@1', subjects: ['subject'] } }],
+  },
+  'match-cut': {
+    roles: [C('a', 'First'), C('b', 'Second')], duration: 4,
+    steps: [{ track: 'shot', at: 0, dur: 2, shot: { framing: 'cam.close-up@1', subjects: ['a'] } }, { track: 'shot', at: 2, dur: 2, shot: { framing: 'cam.close-up@1', subjects: ['b'] } }],
+  },
+  'jump-cut': {
+    roles: [C('subject', 'Subject')], duration: 3.6,
+    steps: [['cam.medium@1', 0], ['cam.medium-close-up@1', 1.2], ['cam.close-up@1', 2.4]].map(([framing, at]) => ({ track: 'shot' as const, at: at as number, dur: 1.2, shot: { framing: framing as string, subjects: ['subject'] } })),
+  },
+  'reaction-cut': {
+    roles: [C('speaker', 'Speaker'), C('listener', 'Listener')], anchor: { role: 'speaker' }, duration: 4,
+    steps: [
+      { track: 'shot', at: { line: 'start' }, end: { frac: 0.7 }, shot: { framing: 'cam.medium@1', subjects: ['speaker'] } },
+      { track: 'shot', at: { frac: 0.7 }, end: { line: 'end', offset: 1.2 }, shot: { framing: 'cam.close-up@1', subjects: ['listener'] } },
+    ],
+  },
+  cutaway: {
+    roles: [C('subject', 'Subject'), { key: 'detail', label: 'Detail', kind: 'prop' }], duration: 5.2,
+    steps: [
+      { track: 'shot', at: 0, dur: 2, shot: { framing: 'cam.medium@1', subjects: ['subject'] } },
+      { track: 'shot', at: 2, dur: 1.2, shot: { framing: 'cam.insert-detail@1', subjects: ['detail'] } },
+      { track: 'shot', at: 3.2, dur: 2, shot: { framing: 'cam.medium@1', subjects: ['subject'] } },
+    ],
+  },
+  'split-screen': {
+    roles: [C('a', 'Left'), C('b', 'Right')], duration: 4,
+    steps: [{ track: 'shot', at: 0, dur: 4, shot: { framing: 'cam.medium@1', subjects: ['a'], second: { framing: 'cam.medium@1', subjects: ['b'] }, layout: 'split' } }],
+  },
+  'picture-in-picture': {
+    roles: [C('main', 'Main'), C('inset', 'Inset')], duration: 4,
+    steps: [{ track: 'shot', at: 0, dur: 4, shot: { framing: 'cam.medium@1', subjects: ['main'], second: { framing: 'cam.close-up@1', subjects: ['inset'] }, layout: 'pip' } }],
+  },
+  'freeze-with-title': {
+    roles: [C('subject', 'Subject')], duration: 3,
+    steps: [
+      { track: 'shot', at: 0, dur: 3, shot: { framing: 'cam.medium-close-up@1', subjects: ['subject'] } },
+      { track: 'effect', asset: 'fx.freeze-frame@1', at: 1, dur: 2 },
+      { track: 'text', asset: 'txt.chapter-title@1', at: 1, dur: 2, params: { text: 'Title' } },
+    ],
   },
   'walk-and-talk-follow': {
     roles: [C('subject', 'Walker')], duration: 6,

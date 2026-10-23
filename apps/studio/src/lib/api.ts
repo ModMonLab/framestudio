@@ -94,6 +94,7 @@ export const api = {
   kitLook: (pid: string, scene: string, kit: string, body: { palette?: string; timeOfDay?: string }) => req<{ revision: number }>('POST', `/api/projects/${pid}/scenes/${scene}/kit-look`, { kit, ...body }),
   applySet: (pid: string, scene: string, ref: string) => req<{ revision: number; pieces: string[] }>('POST', `/api/projects/${pid}/scenes/${scene}/set/apply`, { ref }),
   saveSet: (pid: string, scene: string, name: string) => req<{ ref: string }>('POST', `/api/projects/${pid}/scenes/${scene}/set/save`, { name }),
+  buildThumbnails: (body: { kind?: string; project?: string; family?: 'flat' | 'illustrated'; size?: number }) => req<JobInfo>('POST', '/api/library/thumbnails/build', body),
   projects: () => req<{ projects: { id: string; name: string; root: string; revision: number }[] }>('GET', '/api/projects'),
   open: (path: string, migrate = false) => req<{ id: string; root: string; revision: number; problems: Problem[] }>('POST', '/api/projects/open', { path, migrate }),
   state: (pid: string) => req<Snapshot>('GET', `/api/projects/${pid}/state`),
@@ -111,6 +112,8 @@ export const api = {
   jobs: (pid?: string) => req<{ jobs: JobInfo[] }>('GET', `/api/jobs${pid ? `?project=${pid}` : ''}`),
   cancelJob: (id: string) => req<{ cancelled: boolean }>('DELETE', `/api/jobs/${id}`),
   render: (pid: string, body: Record<string, unknown>) => req<JobInfo>('POST', `/api/projects/${pid}/renders`, body),
+  renderBatch: (pid: string, items: Record<string, unknown>[]) => req<{ jobs: JobInfo[] }>('POST', `/api/projects/${pid}/renders/batch`, { items }),
+  retryJob: (id: string) => req<JobInfo>('POST', `/api/jobs/${id}/retry`),
   worker: (pid?: string) => req<WorkerStatus>('GET', `/api/worker/status${pid ? `?project=${pid}` : ''}`),
   designVoice: (pid: string, body: { description: string; sampleText: string; candidates: number; language?: string; seed?: number }) => req<JobInfo>('POST', `/api/projects/${pid}/voices/design`, body),
   saveVoice: (pid: string, body: Record<string, unknown>) => req<{ ref: string; revision: number }>('POST', `/api/projects/${pid}/voices`, body),
@@ -118,10 +121,12 @@ export const api = {
   voiceVersion: (pid: string, body: { voice: string; accept: unknown[]; updateUsers: boolean }) => req<{ ref: string; revision: number; updated: number }>('POST', `/api/projects/${pid}/voices/version`, body),
   importScript: (pid: string, scene: string, text: string) => req<{ revision: number; lines: number; unknown: string[]; ids: string[] }>('POST', `/api/projects/${pid}/scenes/${scene}/script/import`, { text }),
   generateTakes: (pid: string, body: { scene: string; lines: string[]; takes: number; seed?: number }) => req<JobInfo>('POST', `/api/projects/${pid}/takes/generate`, body),
-  uploadTake: (pid: string, scene: string, line: string, file: File) => {
+  uploadTake: (pid: string, scene: string, line: string, file: File, o: { normalise?: boolean; recorded?: boolean } = {}) => {
     const ext = (file.name.split('.').pop() ?? '').toLowerCase();
-    return file.arrayBuffer().then((b) => req<JobInfo>('POST', `/api/projects/${pid}/takes/upload?scene=${encodeURIComponent(scene)}&line=${encodeURIComponent(line)}&ext=${encodeURIComponent(ext)}`, new Uint8Array(b), { 'content-type': 'application/octet-stream' }));
+    return file.arrayBuffer().then((b) => req<JobInfo>('POST', `/api/projects/${pid}/takes/upload?scene=${encodeURIComponent(scene)}&line=${encodeURIComponent(line)}&ext=${encodeURIComponent(ext)}${o.normalise ? '&normalise=true' : ''}${o.recorded ? '&source=recorded' : ''}`, new Uint8Array(b), { 'content-type': 'application/octet-stream' }));
   },
+  uploadMedia: (pid: string, bytes: Uint8Array, ext: string) => req<{ hash: string; ext: string; mime: string; bytes: number }>('POST', `/api/projects/${pid}/media?ext=${encodeURIComponent(ext)}`, bytes, { 'content-type': 'application/octet-stream' }),
+  cloneVoice: (pid: string, body: { name: string; description?: string; language?: string; media: string; transcript?: string; consent: { statement: 'own-voice' | 'documented-consent'; speakerName: string; notes?: string }; assignTo?: { scene: string; instance: string }[] }) => req<JobInfo>('POST', `/api/projects/${pid}/voices/clone`, body),
   mediaUrl: (pid: string, hash: string) => `/api/projects/${pid}/media/${hash}`,
   libraryDefaults: () => req<{ builderTests?: { expressions: string[]; gestures: string[]; lipSyncText?: string }; previewCharacter?: string }>('GET', '/api/library/defaults'),
   checkCharacter: (pid: string, body: { from: string; spec: unknown }) => req<CharacterCheckResult>('POST', `/api/projects/${pid}/characters/check`, body),

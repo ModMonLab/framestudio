@@ -13,7 +13,7 @@
     "@frame/rig": "workspace:*",
     "@frame/schema": "workspace:*",
     "ag-psd": "31.0.3",
-    "fast-xml-parser": "5.2.5",
-    "fflate": "0.8.2"
+    "fast-xml-parser": "5.11.2",
+    "fflate": "0.8.3"
   }
 }

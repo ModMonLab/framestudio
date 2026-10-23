@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
-import { Dialog } from '@frame/ui';
+import { Dialog, t as tt } from '@frame/ui';
 import { HELP_TOPICS } from '../help/topics.js';
 import { matches } from '../lib/prefs.js';
 
@@ -107,11 +107,11 @@ function Palette({ onClose }: { onClose: () => void }) {
     listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [active]);
   return (
-    <Dialog title="Command palette" open onClose={onClose}>
+    <Dialog title={tt('Command palette')} open onClose={onClose}>
       <div className="st-palette">
         <label className="fr-field">
           <span className="fr-field__icon" aria-hidden><Search size={14} /></span>
-          <input autoFocus role="combobox" aria-expanded="true" aria-controls="st-palette-list" aria-activedescendant={sorted[active] ? `pal-${sorted[active]!.id}` : undefined} aria-label="Search commands, scenes, layers, assets, settings and help" placeholder="Search… (type:scene, type:asset, …)" value={q}
+          <input autoFocus role="combobox" aria-expanded="true" aria-controls="st-palette-list" aria-activedescendant={sorted[active] ? `pal-${sorted[active]!.id}` : undefined} aria-label={tt('Search commands, scenes, layers, assets, settings and help')} placeholder={tt('Search… (type:scene, type:asset, …)')} value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(sorted.length - 1, a + 1)); }
@@ -119,8 +119,8 @@ function Palette({ onClose }: { onClose: () => void }) {
               else if (e.key === 'Enter') { e.preventDefault(); run(sorted[active]); }
             }} />
         </label>
-        <ul id="st-palette-list" role="listbox" aria-label="Results" ref={listRef} className="st-palette-list">
-          {sorted.length === 0 && <li className="fr-faint st-palette-empty" role="presentation">No matches</li>}
+        <ul id="st-palette-list" role="listbox" aria-label={tt('Results')} ref={listRef} className="st-palette-list">
+          {sorted.length === 0 && <li className="fr-faint st-palette-empty" role="presentation">{tt('No matches')}</li>}
           {sorted.map((i, n) => (
             <li key={`${i.group}-${i.id}`} id={`pal-${i.id}`} role="option" aria-selected={n === active} aria-disabled={!!i.disabled || undefined} title={i.disabled} className="st-palette-item" onMouseEnter={() => setActive(n)} onClick={() => run(i)}>
               <span className="st-palette-group">{i.group}</span>

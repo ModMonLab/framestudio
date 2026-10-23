@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/take.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "minimum": 1,
+      "description": "File schema version (FR-DAT-05).",
+      "type": "integer"
+    },
+    "id": {
+      "pattern": "^tak_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix tak_.",
+      "type": "string"
+    },
+    "line": {
+      "pattern": "^clp_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix clp_.",
+      "type": "string"
+    },
+    "lineRevision": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "confirmedRevision": {
+      "minimum": 1,
+      "description": "Recorded/uploaded take explicitly confirmed for a newer revision (FR-DLG-03).",
+      "type": "integer"
+    },
+    "number": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "source": {
+      "anyOf": [
+        {
+          "const": "generated",
+          "type": "string"
+        },
+        {
+          "const": "recorded",
+          "type": "string"
+        },
+        {
+          "const": "uploaded",
+          "type": "string"
+        }
+      ]
+    },
+    "voice": {
+      "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+      "description": "Asset reference id@version.",
+      "type": "string"
+    },
+    "engine": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "fixture": {
+      "description": "Produced by the fixture worker; never real speech (API-04).",
+      "type": "boolean"
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "settings": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "preset": {
+          "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+          "description": "Asset reference id@version.",
+          "type": "string"
+        },
+        "emotion": {
+          "type": "string"
+        },
+        "pace": {
+          "minimum": 0.5,
+          "maximum": 2,
+          "type": "number"
+        },
+        "instruction": {
+          "maxLength": 500,
+          "type": "string"
+        }
+      }
+    },
+    "reference": {
+      "description": "Emotion of the voice reference the take was synthesised from, as reported by the engine (FR-VOI-03).",
+      "type": "string"
+    },
+    "media": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "hash": {
+          "pattern": "^sha256-[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "mime": {
+          "type": "string"
+        },
+        "ext": {
+          "pattern": "^[a-z0-9]{1,8}$",
+          "type": "string"
+        },
+        "bytes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "durationS": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "sampleRate": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "channels": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "width": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "height": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "mime",
+        "ext",
+        "bytes"
+      ]
+    },
+    "durationS": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "alignment": {
+      "additionalProperties": false,
+      "description": "Times in seconds relative to the take start (SRS §3.5).",
+      "type": "object",
+      "properties": {
+        "words": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "start": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "end": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "text",
+              "start",
+              "end"
+            ]
+          }
+        },
+        "phonemes": {
+          "type": "array",
+          "items": {
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+              "p": {
+                "type": "string"
+              },
+              "start": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "end": {
+                "minimum": 0,
+                "type": "number"
+              }
+            },
+            "required": [
+              "p",
+              "start",
+              "end"
+            ]
+          }
+        },
+        "method": {
+          "anyOf": [
+            {
+              "const": "forced",
+              "type": "string"
+            },
+            {
+              "const": "transcribed+forced",
+              "type": "string"
+            },
+            {
+              "const": "amplitude",
+              "type": "string"
+            },
+            {
+              "const": "fixture",
+              "type": "string"
+            }
+          ]
+        },
+        "confidence": {
+          "minimum": 0,
+          "maximum": 1,
+          "type": "number"
+        },
+        "aligner": {
+          "type": "string"
+        },
+        "envelope": {
+          "additionalProperties": false,
+          "description": "RMS envelope for the amplitude lip-sync fallback (FR-LIP-02, method \"amplitude\").",
+          "type": "object",
+          "properties": {
+            "windowS": {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "minimum": 0,
+                "type": "number"
+              }
+            }
+          },
+          "required": [
+            "windowS",
+            "values"
+          ]
+        }
+      },
+      "required": [
+        "words",
+        "phonemes",
+        "method",
+        "confidence"
+      ]
+    },
+    "status": {
+      "anyOf": [
+        {
+          "const": "queued",
+          "type": "string"
+        },
+        {
+          "const": "generating",
+          "type": "string"
+        },
+        {
+          "const": "ready",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "type": "string"
+        }
+      ]
+    },
+    "error": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ]
+    },
+    "job": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "line",
+    "lineRevision",
+    "number",
+    "source",
+    "fixture",
+    "status",
+    "createdAt"
+  ]
+}

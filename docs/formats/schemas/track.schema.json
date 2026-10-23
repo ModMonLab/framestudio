@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/track.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "id": {
+      "pattern": "^trk_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix trk_.",
+      "type": "string"
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "const": "shot",
+          "type": "string"
+        },
+        {
+          "const": "camera-move",
+          "type": "string"
+        },
+        {
+          "const": "dialogue",
+          "type": "string"
+        },
+        {
+          "const": "lipsync",
+          "type": "string"
+        },
+        {
+          "const": "acting",
+          "type": "string"
+        },
+        {
+          "const": "face",
+          "type": "string"
+        },
+        {
+          "const": "gaze",
+          "type": "string"
+        },
+        {
+          "const": "effect",
+          "type": "string"
+        },
+        {
+          "const": "music",
+          "type": "string"
+        },
+        {
+          "const": "ambience",
+          "type": "string"
+        },
+        {
+          "const": "sfx",
+          "type": "string"
+        },
+        {
+          "const": "text",
+          "type": "string"
+        }
+      ]
+    },
+    "owner": {
+      "anyOf": [
+        {
+          "const": "scene",
+          "type": "string"
+        },
+        {
+          "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+          "description": "Project-local ID with prefix ins_.",
+          "type": "string"
+        }
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "mute": {
+      "type": "boolean"
+    },
+    "solo": {
+      "type": "boolean"
+    },
+    "lock": {
+      "type": "boolean"
+    },
+    "hidden": {
+      "type": "boolean"
+    },
+    "gainDb": {
+      "minimum": -60,
+      "maximum": 12,
+      "type": "number"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "owner",
+    "name",
+    "mute",
+    "solo",
+    "lock",
+    "hidden",
+    "gainDb"
+  ]
+}

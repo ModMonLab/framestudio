@@ -10,16 +10,16 @@ import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import { CLIPBOARD_FORMAT, pasteCommands, type ClipboardData, kitLookCommands, type TimeOfDay, setCommands, setFromScene, type SetData, ProjectSession, actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
-import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
+import { createNodeRenderer, createRasterPool, poolSize, type NodeRenderer, type RasterPool } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
-  decodeAudioFile, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
+  decodeAudioFile, encodeWav, normalisePeak, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
   projectAssetSource, unresolvedReferences, computeLocks, importFile, readLayeredArtwork, autoPerformanceForLibrary, bundledMediaFile, recipeCommandsForLibrary, autoCoverageForLibrary, frameCameraCommand, templateCommandsForLibrary, replaceCastCommands, projectFromTemplateCommands, type CoverageFramings, UserLibrary, sha256, writeFileAtomic, PACKAGE_EXTENSIONS, type OutputPreset, type RightsStatement,
   scriptPdf, styleFamilyBlockers, ProjectStore, AppSettingsStore, type AppSettings, RecentProjects, duplicateProject, moveToTrash, revealInFileManager,
 } from '@frame/io';
 import type { PackageFormat } from '@frame/schema';
 import { exitCodeFor, FrameError, type View, type AssetManifest, type CommandBatch, type ErrorCode, type OutputSettings, type StyleFamily } from '@frame/schema';
-import { VoiceClient, designCandidates, designedVoiceManifest, generateTakes, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
+import { VoiceClient, designCandidates, designedVoiceManifest, clonedVoiceManifest, generateTakes, alignTake, rangeCandidates, sourceLabel, toAlignment, voiceWithReferences, type ProjectAccess, type RangeCandidate } from '@frame/voice-client';
 import { JobQueue, type Job } from './jobs.js';
 import { ProjectHub, type HubEvent, type HubProject } from './hub.js';
 
@@ -32,6 +32,8 @@ interface RigBuildBody {
   layers: (RigLayer & { group?: string })[];
   mapping: Record<string, string>;
   libraryParts?: Record<string, string>;
+  /** Characters: joints set in the rigging assistant, per layer id (artwork units). */
+  pivots?: Record<string, { at: [number, number]; end?: [number, number] }>;
   /** Props: height on stage in output pixels. */
   height?: number;
   /** Sets: artwork size. */
@@ -43,7 +45,12 @@ interface RigBuildBody {
 
 export const SERVER_VERSION = '0.1.0';
 /** Bump when thumbnail framing or rendering changes so cached thumbnails are rebuilt. */
-const THUMB_VERSION = 2; // 2: kit parts keep their declared order
+const THUMB_VERSION = 4; // 4: worn props on the character, props in their default state
+
+/** A URL with any `token` query value replaced, for logs. */
+export function redactToken(url: string): string {
+  return url.replace(/([?&]token=)[^&#]*/gi, '$1[redacted]');
+}
 
 export interface ServerOptions {
   contentDir: string;
@@ -59,6 +66,10 @@ export interface ServerOptions {
   watchMs?: number;
   debounceMs?: number;
   logger?: boolean;
+  /** Threads that rasterise export frames (default: the machine's cores less two; 0 renders on the main thread). */
+  renderThreads?: number;
+  /** Where request logs go when `logger` is on (default stdout). */
+  logStream?: NodeJS.WritableStream;
   /** User library folder (FR-AST-01). */
   userDir?: string;
   /** Derived-data cache (thumbnails); defaults to <userDir>/../cache. */
@@ -90,7 +101,11 @@ export interface FrameServer {
 }
 
 export async function createServer(o: ServerOptions): Promise<FrameServer> {
-  const app = Fastify({ logger: o.logger ?? false, bodyLimit: 512 * 1024 * 1024 });
+  // Request logs never carry tokens (NFR-09): the token query parameter is redacted and headers are not logged.
+  const logger = o.logger
+    ? { ...(o.logStream ? { stream: o.logStream } : {}), serializers: { req: (r: { method: string; url: string; hostname?: string }) => ({ method: r.method, url: redactToken(r.url), host: r.hostname }) } }
+    : false;
+  const app = Fastify({ logger, bodyLimit: 512 * 1024 * 1024 });
   // Locks are computed against bundled + user sources at every save (FR-DAT-06).
   const lockLookup = () => {
     const lib = libraryFor({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}) });
@@ -116,7 +131,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       }
     },
   });
-  const jobs = { render: new JobQueue(1), voice: new JobQueue(1) };
+  const jobs = { render: new JobQueue(1), voice: new JobQueue(1), work: new JobQueue(1) };
   const styles = loadStyles(o.contentDir);
   let renderer: Promise<NodeRenderer> | undefined;
   // Imported images resolve from the media store of whichever open project holds them (content-addressed).
@@ -129,6 +144,10 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     return undefined;
   };
   const getRenderer = () => (renderer ??= createNodeRenderer({ fontsDir: path.join(o.contentDir, 'fonts'), images }));
+  // Export threads (NFR-05), started with the first export and shared by later ones.
+  let pool: Promise<RasterPool | undefined> | undefined;
+  const threads = o.renderThreads ?? poolSize();
+  const getPool = () => (pool ??= threads > 0 ? createRasterPool({ fontsDir: path.join(o.contentDir, 'fonts'), size: threads, images }) : Promise.resolve(undefined));
   const library = (p?: HubProject) => libraryFor({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}), projectAssets: Object.fromEntries(Object.entries(p?.open.state.assets ?? {}).map(([ref, m]) => [`assets/local/${ref}.json`, m])) });
 
   /* ---------------------------------------------------------------- security */
@@ -907,7 +926,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const lib = library(p);
       if (b.kind === 'prop' || b.kind === 'set') return buildObject(p, b, sourceOf(req));
       for (const ref of Object.values(b.libraryParts ?? {})) if (ref && !lib.has(ref)) throw new FrameError('NOT_FOUND', `${ref} is not in the library`);
-      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: (b.mapping ?? {}) as Record<string, RigTarget>, libraryParts: b.libraryParts ?? {}, newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
+      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: (b.mapping ?? {}) as Record<string, RigTarget>, libraryParts: b.libraryParts ?? {}, ...(b.pivots ? { pivots: b.pivots } : {}), newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
       const local = new Map([...res.parts, res.character].map((m) => [`${m.id}@${m.version}`, m]));
       const look = (r: string) => local.get(r) ?? (lib.manifest(r) as AssetManifest | undefined);
       const check = checkCharacter(res.character, look, lib.byKind('act').map((x) => x.manifest));
@@ -948,12 +967,23 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       return sendError(reply, e);
     }
   });
-  app.post<{ Params: { pid: string }; Querystring: { onConflict?: string; expect?: string; dryRun?: string }; Body: Buffer }>('/api/projects/:pid/packages/import', async (req, reply) => {
+  app.post<{ Params: { pid: string }; Querystring: { onConflict?: string; expect?: string; dryRun?: string; job?: string }; Body: Buffer }>('/api/projects/:pid/packages/import', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
       if (!Buffer.isBuffer(req.body)) throw new FrameError('USAGE', 'Send the package bytes as application/zip');
       const expect = (req.query.expect ? req.query.expect.split(',') : ['framechar', 'frameasset', 'framevoice']) as PackageFormat[];
-      const r = importAssetsIntoProject(p.open, library(p), new Uint8Array(req.body), { expect, onConflict: req.query.onConflict === 'new-id' ? 'new-id' : 'refuse', dryRun: req.query.dryRun === 'true', source: sourceOf(req) });
+      const bytes = new Uint8Array(req.body);
+      const run = () => importAssetsIntoProject(p.open, library(p), bytes, { expect, onConflict: req.query.onConflict === 'new-id' ? 'new-id' : 'refuse', dryRun: req.query.dryRun === 'true', source: sourceOf(req) });
+      // `?job=true` runs the import as a job (FR-ARC-05) for large packages; the result is the import report.
+      if (req.query.job === 'true') {
+        const job = jobs.work.submit('import', `Import package (${(bytes.byteLength / 1024 / 1024).toFixed(1)} MB)`, async (ctx) => {
+          ctx.progress(0.1, 'Reading the package');
+          const r = run();
+          return { ...r.report, revision: r.revision };
+        }, p.id);
+        return reply.code(202).send(publicJob(job));
+      }
+      const r = run();
       return { ...r.report, revision: r.revision };
     } catch (e) {
       return sendError(reply, e);
@@ -986,6 +1016,22 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   });
   // Asset details (FR-AST-05): versions with their changes, where the asset is used in the project, licence and
   // provenance, and the rig check for parts (FR-AST-08).
+  // The published action compatibility matrix (FR-AST-08, CAT-03): for an action, the items it does not work with; for
+  // an item, the actions. Null when the asset is not in the matrix (e.g. a project's own part).
+  let compatMatrix: { actions: string[]; items: string[]; incompatible: { action: string; item: string; reasons: string[] }[] } | null | undefined;
+  const actionCompatFor = (ref: string, kind: string) => {
+    if (compatMatrix === undefined) {
+      try {
+        compatMatrix = JSON.parse(fs.readFileSync(path.join(o.contentDir, 'action-compat.json'), 'utf8'));
+      } catch {
+        compatMatrix = null;
+      }
+    }
+    const mx = compatMatrix;
+    if (!mx) return null;
+    if (kind === 'act') return mx.actions.includes(ref) ? { checked: mx.items.length, incompatible: mx.incompatible.filter((x) => x.action === ref).map((x) => ({ ref: x.item, reasons: x.reasons })) } : null;
+    return mx.items.includes(ref) ? { checked: mx.actions.length, incompatible: mx.incompatible.filter((x) => x.item === ref).map((x) => ({ ref: x.action, reasons: x.reasons })) } : null;
+  };
   app.get<{ Querystring: { ref: string; project?: string } }>('/api/library/details', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
@@ -1001,6 +1047,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         versions: lib.versions(m.id).map((v) => ({ version: v.version, ref: `${v.id}@${v.version}`, changes: v.changes ?? null, date: v.provenance.date, draft: v.tags.includes('draft') })),
         usages: p ? assetUsages(p.open.state, m.id) : [],
         rigCheck: part ? rigCheck(part) : null,
+        actionCompat: actionCompatFor(req.query.ref, m.kind),
       };
     } catch (e) {
       return sendError(reply, e);
@@ -1160,6 +1207,63 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
+  // Library thumbnail: memory and disk cache keyed by content (FR-AST-07).
+  const thumbnail = async (lib: ReturnType<typeof library>, ref: string, m: AssetManifest, family: StyleFamily, w: number, h: number) => {
+    const pc = libraryDefaults.previewCharacter;
+    const pcm = pc ? lib.manifest(pc) : undefined;
+    const key = sha256(`${THUMB_VERSION}|${manifestHash(m)}|${pcm ? manifestHash(pcm) : ''}|${family}|${w}x${h}`);
+    const file = thumbDir ? path.join(thumbDir, `${key}.png`) : undefined;
+    let png = thumbs.get(key) ?? (file && fs.existsSync(file) ? fs.readFileSync(file) : undefined);
+    if (!png) {
+      const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm, ...((libraryDefaults as { previewHair?: string }).previewHair ? { hair: (libraryDefaults as { previewHair?: string }).previewHair } : {}) } : undefined, (r) => lib.manifest(r));
+      if (!setup) throw new FrameError('NOT_FOUND', `${ref} has no visual preview`);
+      const renderer = await getRenderer();
+      const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));
+      png = Buffer.from(renderer.png(ev.frame));
+      if (file) {
+        try {
+          writeFileAtomic(file, png);
+        } catch {
+          // The cache is derived data; failing to keep it never fails the request.
+        }
+      }
+    }
+    return { key, png };
+  };
+  // Thumbnailing as a job (FR-ARC-05): pre-builds the cache for a kind (or the whole library) with progress and cancel.
+  app.post<{ Body: { kind?: string; family?: StyleFamily; size?: number; project?: string } }>('/api/library/thumbnails/build', async (req, reply) => {
+    try {
+      const b = req.body ?? {};
+      const p = b.project ? hub.get(b.project) : undefined;
+      const lib = library(p);
+      const family: StyleFamily = b.family === 'illustrated' ? 'illustrated' : 'flat';
+      const size = Math.max(16, Math.min(512, b.size ?? 96));
+      const refs = lib.search('', { ...(b.kind ? { kind: b.kind } : {}), limit: 5000 }).filter((x) => previewable(x.manifest.kind)).map((x) => x.ref);
+      const job = jobs.work.submit('thumbnails', `Thumbnails · ${b.kind ?? 'library'} (${refs.length})`, async (ctx) => {
+        let made = 0;
+        const failed: string[] = [];
+        for (const [i, ref] of refs.entries()) {
+          // Yield so the server keeps answering (and can cancel) while thumbnails render.
+          await new Promise((r) => setImmediate(r));
+          if (ctx.signal.aborted) throw new FrameError('CANCELLED', 'Thumbnail build cancelled');
+          const m = lib.manifest(ref);
+          try {
+            if (m) {
+              await thumbnail(lib, ref, m, family, size, size);
+              made++;
+            }
+          } catch {
+            failed.push(ref);
+          }
+          ctx.progress((i + 1) / refs.length, `${i + 1} of ${refs.length}`);
+        }
+        return { made, failed };
+      }, p?.id);
+      return reply.code(202).send(publicJob(job));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
   app.get<{ Querystring: { ref: string; family?: string; w?: string; h?: string; project?: string } }>('/api/library/thumbnail', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
@@ -1170,28 +1274,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const family = req.query.family === 'illustrated' ? 'illustrated' : 'flat';
       const w = Math.max(16, Math.min(512, Number(req.query.w ?? 96)));
       const h = Math.max(16, Math.min(512, Number(req.query.h ?? w)));
-      // Keyed by content, so a changed asset or preview character renders again (FR-AST-07); kept on disk across runs.
-      const pc0 = libraryDefaults.previewCharacter;
-      const pcm0 = pc0 ? lib.manifest(pc0) : undefined;
-      const key = sha256(`${THUMB_VERSION}|${manifestHash(m)}|${pcm0 ? manifestHash(pcm0) : ''}|${family}|${w}x${h}`);
-      const file = thumbDir ? path.join(thumbDir, `${key}.png`) : undefined;
-      let png = thumbs.get(key) ?? (file && fs.existsSync(file) ? fs.readFileSync(file) : undefined);
-      if (!png) {
-        const pc = libraryDefaults.previewCharacter;
-        const pcm = pc ? lib.manifest(pc) : undefined;
-        const setup = previewSetup(ref, m, pc && pcm ? { ref: pc, manifest: pcm } : undefined, (r) => lib.manifest(r));
-        if (!setup) throw new FrameError('NOT_FOUND', `${ref} has no visual preview`);
-        const renderer = await getRenderer();
-        const ev = previewFrame(setup, { assets: { manifest: (r) => setup.state.assets[r] ?? lib.manifest(r) }, styles, width: w, height: h, family, captions: true }, (frame) => visibleBox(renderer.rgba(frame), frame.width, frame.height));
-        png = Buffer.from(renderer.png(ev.frame));
-        if (file) {
-          try {
-            writeFileAtomic(file, png);
-          } catch {
-            // The cache is derived data; failing to keep it never fails the request.
-          }
-        }
-      }
+      const { key, png } = await thumbnail(lib, ref, m, family, w, h);
       if (thumbs.size > 2000) thumbs.clear();
       thumbs.set(key, png);
       return reply.header('content-type', 'image/png').header('cache-control', 'public, max-age=86400').send(png);
@@ -1201,13 +1284,13 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   });
 
   /* ---------------------------------------------------------------- jobs (FR-ARC-05) */
-  const allJobs = (project?: string) => [...jobs.render.list(project), ...jobs.voice.list(project)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const allJobs = (project?: string) => [...jobs.render.list(project), ...jobs.voice.list(project), ...jobs.work.list(project)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   app.get<{ Querystring: { project?: string } }>('/api/jobs', async (req) => ({ jobs: allJobs(req.query.project).map(publicJob) }));
   app.get<{ Params: { id: string } }>('/api/jobs/:id', async (req, reply) => {
-    const j = jobs.render.get(req.params.id) ?? jobs.voice.get(req.params.id);
+    const j = jobs.render.get(req.params.id) ?? jobs.voice.get(req.params.id) ?? jobs.work.get(req.params.id);
     return j ? { ...publicJob(j), logs: j.logs } : sendError(reply, new FrameError('NOT_FOUND', `Job ${req.params.id} not found`));
   });
-  app.delete<{ Params: { id: string } }>('/api/jobs/:id', async (req) => ({ cancelled: jobs.render.cancel(req.params.id) || jobs.voice.cancel(req.params.id) }));
+  app.delete<{ Params: { id: string } }>('/api/jobs/:id', async (req) => ({ cancelled: jobs.render.cancel(req.params.id) || jobs.voice.cancel(req.params.id) || jobs.work.cancel(req.params.id) }));
 
   /* ---------------------------------------------------------------- render (FR-RND) */
   type RenderBody = {
@@ -1246,7 +1329,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         state, revision, scenes, ...(b.range ? { range: b.range } : {}), preset, presetId: presetRef, width, height,
         ...(aspect ? { aspect } : {}), ...(b.quality ? { quality: b.quality } : {}), ...(b.motionBlur ? { motionBlur: b.motionBlur } : {}),
         burnInCaptions: b.captions ?? (state.project.captions.enabled && state.project.captions.burnIn),
-        out, assets: { manifest: (r) => lib.manifest(r) }, assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), styles, renderer: await getRenderer(),
+        out, assets: { manifest: (r) => lib.manifest(r) }, assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), styles, renderer: await getRenderer(), ...await getPool().then((x) => (x ? { pool: x } : {})),
         resolveAudio: (src) => (src.kind === 'media' ? p.open.store.findMedia(src.hash) ?? bundledMediaFile(o.contentDir, src.hash) : undefined),
         signal: ctx.signal,
         onProgress: (pr) => ctx.progress(pr.phase === 'Rendering' && pr.frames ? (pr.frame ?? 0) / pr.frames * 0.9 : pr.phase === 'Completed' ? 1 : ctx.signal.aborted ? 0 : 0.95, pr.phase === 'Rendering' ? `Rendering frame ${pr.frame} of ${pr.frames} · ${(pr.fps ?? 0).toFixed(0)} fps` : pr.phase),
@@ -1339,6 +1422,51 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
+  // Clone a voice from a recording (FR-VOI-04): consent is mandatory and stored in the voice; agents need permission.
+  app.post<{ Params: { pid: string }; Body: { name: string; description?: string; language?: string; media: string; transcript?: string; consent: { statement: 'own-voice' | 'documented-consent'; speakerName: string; confirmedBy?: string; notes?: string }; assignTo?: { scene: string; instance: string }[] } }>('/api/projects/:pid/voices/clone', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const b = req.body;
+      if (req.headers['x-frame-agent'] && !p.open.state.project.permissions.agent.cloneVoices) throw new FrameError('PERMISSION_REQUIRED', 'Agents may not clone voices in this project', undefined, 'A person can allow it in Project settings ▸ Agent permissions.');
+      if (!b?.name?.trim() || !b.media) throw new FrameError('USAGE', 'name and media (the uploaded recording) are required');
+      if (!b.consent || (b.consent.statement !== 'own-voice' && b.consent.statement !== 'documented-consent') || !b.consent.speakerName?.trim()) throw new FrameError('CONSENT_REQUIRED', 'Confirm it is your own voice or that you have the speaker\'s documented consent, and give the speaker\'s name');
+      const file = p.open.store.findMedia(b.media);
+      if (!file) throw new FrameError('NOT_FOUND', 'The recording is not in this project');
+      let pcm;
+      try {
+        pcm = decodeAudioFile(file);
+      } catch (e) {
+        throw new FrameError('VALIDATION_FAILED', `The recording could not be decoded: ${(e as Error).message}`);
+      }
+      const durationS = (pcm.data[0]?.length ?? 0) / pcm.sampleRate;
+      if (durationS < 3) throw new FrameError('VALIDATION_FAILED', `The recording is ${durationS.toFixed(1)} s; cloning needs at least 3 s (10–30 s is best)`);
+      const ext = path.extname(file).slice(1);
+      const media = { hash: b.media, ext, mime: MIME[ext] ?? 'audio/wav', bytes: fs.statSync(file).size, durationS: Math.round(durationS * 1000) / 1000, sampleRate: pcm.sampleRate, channels: pcm.channels };
+      const source = sourceOf(req);
+      const job = jobs.voice.submit('voice.clone', `Clone voice ${b.name.trim()}`, async (ctx) => {
+        let transcript = b.transcript?.trim();
+        if (!transcript) {
+          // Auto-transcription on the worker when no transcript is given.
+          ctx.progress(0.2, 'Transcribing');
+          const client = workerFor(p);
+          const hash = await client.uploadBlob(new Uint8Array(fs.readFileSync(file)), `ref.${ext}`, media.mime);
+          const tj = await client.transcribe({ audioHash: hash, language: b.language ?? 'en' });
+          transcript = (await client.wait(tj, { signal: ctx.signal, onProgress: (j) => ctx.progress(0.2 + j.progress * 0.6, 'Transcribing') })).text.trim();
+          if (!transcript) throw new FrameError('VALIDATION_FAILED', 'No speech was recognised in the recording; type what is said instead');
+        }
+        const date = new Date().toISOString().slice(0, 10);
+        const manifest = clonedVoiceManifest({ id: `user.${randomUUID()}`, name: b.name.trim(), description: b.description ?? '', language: b.language ?? 'en', media, transcript, date, consent: { statement: b.consent.statement, speakerName: b.consent.speakerName.trim(), confirmedBy: b.consent.confirmedBy?.trim() || (source === 'user' ? 'Studio user' : source), date, ...(b.consent.notes ? { notes: b.consent.notes } : {}) } });
+        const ref = `${manifest.id}@1`;
+        const cmds: { name: string; params: Record<string, unknown> }[] = [{ name: 'asset.addLocal', params: { manifest } }];
+        for (const a of b.assignTo ?? []) cmds.push({ name: 'instance.update', params: { scene: a.scene, id: a.instance, set: { character: { ...currentCharacter(p, a.scene, a.instance), voice: ref } } } });
+        p.open.session.apply({ commands: cmds as never, source, label: `Clone voice ${b.name.trim()}` });
+        return { ref, transcript, durationS: media.durationS, ...(durationS < 10 ? { note: 'Recordings of 10–30 s give a closer likeness.' } : {}) };
+      }, p.id);
+      return reply.code(202).send(publicJob(job));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
   app.post<{ Params: { pid: string }; Body: { name: string; description: string; language?: string; sampleText: string; candidate: { media: { hash: string; ext: string; mime: string; bytes: number; durationS?: number }; seed: number | null; durationS: number; fixture: boolean }; assignTo?: { scene: string; instance: string }[]; versionOf?: string; updateUsers?: boolean } }>('/api/projects/:pid/voices', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
@@ -1545,9 +1673,22 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     }
   });
 
+  // Re-align a take against its line's text (FR-LIP-01; `frame align`).
+  app.post<{ Params: { pid: string; id: string }; Body: { language?: string } }>('/api/projects/:pid/takes/:id/align', async (req, reply) => {
+    try {
+      const p = hub.get(req.params.pid);
+      const client = workerFor(p);
+      if (!p.open.state.takes[req.params.id]) throw new FrameError('NOT_FOUND', `Take ${req.params.id} not found`);
+      const job = jobs.voice.submit('takes.align', 'Align take', (ctx) => alignTake(client, access(p, sourceOf(req)), req.params.id, req.body?.language ?? 'en', { signal: ctx.signal, onProgress: (x) => ctx.progress(x.progress, x.message) }), p.id);
+      return reply.code(202).send(publicJob(job));
+    } catch (e) {
+      return sendError(reply, e);
+    }
+  });
+
   // Upload a take for a line (FR-VOI-06): store, decode and measure, lip sync from the amplitude envelope at once
   // (FR-LIP-02), then forced alignment when a worker is reachable (FR-LIP-01).
-  app.post<{ Params: { pid: string }; Querystring: { scene: string; line: string; ext: string; choose?: string }; Body: Buffer }>('/api/projects/:pid/takes/upload', async (req, reply) => {
+  app.post<{ Params: { pid: string }; Querystring: { scene: string; line: string; ext: string; choose?: string; normalise?: string; source?: string }; Body: Buffer }>('/api/projects/:pid/takes/upload', async (req, reply) => {
     try {
       const p = hub.get(req.params.pid);
       const { scene, line, ext } = req.query;
@@ -1567,10 +1708,19 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         }
         const durationS = (pcm.data[0]?.length ?? 0) / pcm.sampleRate;
         if (durationS < 0.1) throw new FrameError('VALIDATION_FAILED', 'The audio is shorter than 0.1 s');
-        const media = { ...media0, durationS: Math.round(durationS * 1000) / 1000, sampleRate: pcm.sampleRate, channels: pcm.channels };
+        // Optional normalisation (FR-VOI-06): peaks to −1 dBFS, stored as a new WAV; the original stays in the store.
+        let base = media0;
+        let normalisedDb: number | undefined;
+        if (req.query.normalise === 'true') {
+          const n = normalisePeak(pcm, -1);
+          pcm = n.audio;
+          normalisedDb = n.gainDb;
+          base = p.open.store.putMedia(encodeWav(n.audio), { ext: 'wav', mime: 'audio/wav' });
+        }
+        const media = { ...base, durationS: Math.round(durationS * 1000) / 1000, sampleRate: pcm.sampleRate, channels: pcm.channels };
         const ln = p.open.state.scenes[scene]!.clips.find((c) => c.id === line)!.line!;
         const alignment = { method: 'amplitude' as const, words: [], phonemes: [], confidence: 0, envelope: { windowS: 0.02, values: rmsEnvelope(pcm, 0.02) } };
-        const r = p.open.session.apply({ source: sourceOf(req), label: 'Upload take', commands: [{ name: 'take.add', params: { take: { line, lineRevision: ln.revision, source: 'uploaded', fixture: false, status: 'ready', media, durationS: media.durationS, alignment } } }] });
+        const r = p.open.session.apply({ source: sourceOf(req), label: 'Upload take', commands: [{ name: 'take.add', params: { take: { line, lineRevision: ln.revision, source: req.query.source === 'recorded' ? 'recorded' : 'uploaded', fixture: false, status: 'ready', media, durationS: media.durationS, alignment } } }] });
         const takeId = (r.commands[0]!.params as { id: string }).id;
         if (req.query.choose !== 'false') p.open.session.apply({ source: sourceOf(req), label: 'Choose uploaded take', commands: [{ name: 'line.chooseTake', params: { scene, id: line, take: takeId } }] });
         ctx.progress(0.5, 'Aligning');
@@ -1578,7 +1728,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         let note: string | undefined;
         try {
           const client = workerFor(p);
-          const hash = await client.uploadBlob(bytes, `take.${ext}`, MIME[ext.toLowerCase()] ?? 'application/octet-stream');
+          const hash = await client.uploadBlob(new Uint8Array(fs.readFileSync(p.open.store.findMedia(base.hash)!)), `take.${base.ext}`, base.mime);
           const aj = await client.align({ audioHash: hash, transcript: ln.text.replace(/\[pause\s+\d+(?:\.\d+)?s\]/gi, ' ').replace(/\s+/g, ' ').trim(), language: 'en' });
           const al = await client.wait(aj, { signal: ctx.signal, onProgress: (j) => ctx.progress(0.5 + j.progress * 0.5, 'Aligning') });
           p.open.session.apply({ source: sourceOf(req), label: 'Align take', commands: [{ name: 'take.update', params: { id: takeId, set: { alignment: toAlignment(al) } } }] });
@@ -1587,7 +1737,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
           // Without an aligner the amplitude fallback stays in place (marked approximate).
           note = `Lip sync uses the audio level until the take is aligned: ${(e as Error).message}`;
         }
-        return { take: takeId, durationS: media.durationS, aligned, ...(note ? { note } : {}) };
+        return { take: takeId, durationS: media.durationS, aligned, ...(normalisedDb !== undefined ? { normalisedDb } : {}), ...(note ? { note } : {}) };
       }, p.id);
       return reply.code(202).send(publicJob(job));
     } catch (e) {
@@ -1615,6 +1765,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       hub.closeAll();
       await app.close();
       (await renderer)?.dispose();
+      await (await pool)?.close();
     },
   };
 }

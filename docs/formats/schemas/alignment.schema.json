@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/alignment.json",
+  "additionalProperties": false,
+  "description": "Times in seconds relative to the take start (SRS §3.5).",
+  "type": "object",
+  "properties": {
+    "words": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "start": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "end": {
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "text",
+          "start",
+          "end"
+        ]
+      }
+    },
+    "phonemes": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "type": "object",
+        "properties": {
+          "p": {
+            "type": "string"
+          },
+          "start": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "end": {
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "p",
+          "start",
+          "end"
+        ]
+      }
+    },
+    "method": {
+      "anyOf": [
+        {
+          "const": "forced",
+          "type": "string"
+        },
+        {
+          "const": "transcribed+forced",
+          "type": "string"
+        },
+        {
+          "const": "amplitude",
+          "type": "string"
+        },
+        {
+          "const": "fixture",
+          "type": "string"
+        }
+      ]
+    },
+    "confidence": {
+      "minimum": 0,
+      "maximum": 1,
+      "type": "number"
+    },
+    "aligner": {
+      "type": "string"
+    },
+    "envelope": {
+      "additionalProperties": false,
+      "description": "RMS envelope for the amplitude lip-sync fallback (FR-LIP-02, method \"amplitude\").",
+      "type": "object",
+      "properties": {
+        "windowS": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "minimum": 0,
+            "type": "number"
+          }
+        }
+      },
+      "required": [
+        "windowS",
+        "values"
+      ]
+    }
+  },
+  "required": [
+    "words",
+    "phonemes",
+    "method",
+    "confidence"
+  ]
+}

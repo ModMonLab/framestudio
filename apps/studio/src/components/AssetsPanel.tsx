@@ -1,7 +1,7 @@
 /** Library browser (Design System §5.3, FR-AST-03/04): search, categories with live counts, apply to the scene. */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Maximize2, Star, Upload } from 'lucide-react';
-import { AssetRow, Button, EmptyState, IconButton, Panel, SearchField, Section, Segmented, Select, useToasts } from '@frame/ui';
+import { AssetRow, Button, EmptyState, IconButton, Panel, SearchField, Section, Segmented, Select, useToasts, t as tt } from '@frame/ui';
 import { ImportDialog, IMPORT_ACCEPT } from './ImportDialog.js';
 import { trackFor } from '@frame/core';
 import { api, type UserPrefs } from '../lib/api.js';
@@ -98,7 +98,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
   const reason = (h: Hit): string | undefined => {
     if (!PLACEABLE.has(h.kind)) return 'Editing these is part of the character builder';
     if (h.incompatible) return h.incompatible;
-    if ((h.kind === 'exp' || h.kind === 'act') && !selChar) return 'Select a character first';
+    if ((h.kind === 'exp' || h.kind === 'overlay' || h.kind === 'act') && !selChar) return 'Select a character first';
     return undefined;
   };
 
@@ -109,8 +109,8 @@ export function AssetsPanel({ filter }: { filter: string }) {
 
   const pickedHit = all?.find((h) => h.ref === picked);
   return (
-    <Panel title={f.title} label={f.title} help="#/help/assets" actions={<><IconButton label="Open the full library" icon={<Maximize2 size={16} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/library`)} /><IconButton label="Import a file…" icon={<Upload size={16} />} onClick={() => fileInput.current?.click()} /></>} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
-      {all === undefined ? <p className="fr-faint" style={{ padding: 12 }}>Loading library…</p> : groups.length === 0 ? (
+    <Panel title={f.title} label={f.title} help="#/help/assets" actions={<><IconButton label={tt('Open the full library')} icon={<Maximize2 size={16} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/library`)} /><IconButton label={tt('Import a file…')} icon={<Upload size={16} />} onClick={() => fileInput.current?.click()} /></>} search={<SearchField label={`Search ${f.title.toLowerCase()}`} placeholder={`Search ${f.title.toLowerCase()}`} value={q} onChange={setQ} />} className="st-left">
+      {all === undefined ? <p className="fr-faint" style={{ padding: 12 }}>{tt('Loading library…')}</p> : groups.length === 0 ? (
         <EmptyState title={q ? 'No matches' : f.title}>{q ? `Nothing matches “${q}”.` : f.empty}</EmptyState>
       ) : groups.map(([cat, hits]) => (
         <Section key={cat} title={cat} summary={String(hits.length)} open={open[cat] ?? (groups.length <= 3 || q !== '')} onToggle={(o) => setOpen((x) => ({ ...x, [cat]: o }))}>
@@ -129,14 +129,14 @@ export function AssetsPanel({ filter }: { filter: string }) {
               onDragStart={(e) => { e.dataTransfer.setData(DRAG_TYPE, JSON.stringify(h)); e.dataTransfer.effectAllowed = 'copy'; }}
             />
           ))}
-          {hits.length > 60 && <p className="fr-faint" style={{ padding: '4px 12px' }}>{hits.length - 60} more · refine the search to see them</p>}
+          {hits.length > 60 && <p className="fr-faint" style={{ padding: '4px 12px' }}>{hits.length - 60}  {tt('more · refine the search to see them')}</p>}
         </Section>
       ))}
       <div className="st-assets-scope">
-        <Segmented label="Show" value={scope.startsWith('col:') ? 'all' : scope} onChange={setScope} options={[{ value: 'all', label: 'All' }, { value: 'fav', label: 'Favourites' }, { value: 'user', label: 'My library' }, { value: 'project', label: 'Project' }]} />
-        {!!prefs?.collections.length && <span className="st-tb-select"><Select label="Collection" placeholder="Collection" value={scope.startsWith('col:') ? scope : undefined} onChange={setScope} options={[...prefs.collections.map((c) => ({ value: `col:${c.id}`, label: c.name }))]} /></span>}
+        <Segmented label={tt('Show')} value={scope.startsWith('col:') ? 'all' : scope} onChange={setScope} options={[{ value: 'all', label: 'All' }, { value: 'fav', label: 'Favourites' }, { value: 'user', label: 'My library' }, { value: 'project', label: 'Project' }]} />
+        {!!prefs?.collections.length && <span className="st-tb-select"><Select label={tt('Collection')} placeholder={tt('Collection')} value={scope.startsWith('col:') ? scope : undefined} onChange={setScope} options={[...prefs.collections.map((c) => ({ value: `col:${c.id}`, label: c.name }))]} /></span>}
       </div>
-      <input ref={fileInput} type="file" hidden accept={IMPORT_ACCEPT} aria-label="Import a file" onChange={(e) => { setImporting(e.target.files?.[0]); e.target.value = ''; }} />
+      <input ref={fileInput} type="file" hidden accept={IMPORT_ACCEPT} aria-label={tt('Import a file')} onChange={(e) => { setImporting(e.target.files?.[0]); e.target.value = ''; }} />
       <ImportDialog file={importing} onClose={() => setImporting(undefined)} />
       {pickedHit && (
         <div className="st-panel-foot st-panel-foot--wrap">
@@ -147,7 +147,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
             const fav = prefs.favourites.includes(id) ? prefs.favourites.filter((x) => x !== id) : [...prefs.favourites, id];
             void savePrefs({ favourites: fav, collections: prefs.collections });
           }} />}
-          {prefs && <span className="st-tb-select"><Select label="Add to collection" placeholder="Collection…" value={undefined} onChange={(v) => {
+          {prefs && <span className="st-tb-select"><Select label={tt('Add to collection')} placeholder={tt('Collection…')} value={undefined} onChange={(v) => {
             const id = idOf(pickedHit.ref);
             if (v === '__new') {
               const name = window.prompt('Name the new collection');
@@ -155,9 +155,9 @@ export function AssetsPanel({ filter }: { filter: string }) {
               void savePrefs({ favourites: prefs.favourites, collections: [...prefs.collections, { id: `c${Date.now().toString(36)}`, name: name.trim(), items: [id] }] });
             } else void savePrefs({ favourites: prefs.favourites, collections: prefs.collections.map((c) => (c.id === v ? { ...c, items: c.items.includes(id) ? c.items.filter((x) => x !== id) : [...c.items, id] } : c)) });
           }} options={[...prefs.collections.map((c) => ({ value: c.id, label: `${c.items.includes(idOf(pickedHit.ref)) ? '✓ ' : ''}${c.name}` })), { value: '__new', label: 'New collection…' }]} /></span>}
-          {PART_KINDS.has(pickedHit.kind) && <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/part/${encodeURIComponent(pickedHit.ref)}`)}>Open in part editor</Button>}
-          {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Save to my library</Button>}
-          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'music' || pickedHit.kind === 'amb' || pickedHit.kind === 'cue' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' && pickedHit.tags.includes('caption') ? 'Use for captions' : pickedHit.kind === 'txt' ? 'Add at playhead' : pickedHit.kind === 'rcp' ? 'Apply…' : pickedHit.kind === 'tpl' ? 'New scene…' : 'Add to scene'}</Button>
+          {PART_KINDS.has(pickedHit.kind) && <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/part/${encodeURIComponent(pickedHit.ref)}`)}>{tt('Open in part editor')}</Button>}
+          {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>{tt('Save to my library')}</Button>}
+          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'overlay' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'music' || pickedHit.kind === 'amb' || pickedHit.kind === 'cue' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' && pickedHit.tags.includes('caption') ? 'Use for captions' : pickedHit.kind === 'txt' ? 'Add at playhead' : pickedHit.kind === 'rcp' ? 'Apply…' : pickedHit.kind === 'tpl' ? 'New scene…' : 'Add to scene'}</Button>
         </div>
       )}
     </Panel>
@@ -203,9 +203,10 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
       return undefined;
     }
     case 'exp':
+    case 'overlay':
     case 'act': {
       if (!o.character) return undefined;
-      const track = trackFor(scene, o.character, h.kind === 'exp' ? 'face' : 'acting');
+      const track = trackFor(scene, o.character, h.kind === 'act' ? 'acting' : 'face');
       if (!track) return undefined;
       await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + 96000), asset: h.ref, blendIn: 4800, blendOut: 4800 } }], `${h.name}`);
       return undefined;

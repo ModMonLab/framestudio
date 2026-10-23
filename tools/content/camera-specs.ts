@@ -43,4 +43,5 @@ export const MOVES: Record<string, CameraMove> = {
   'handheld-drift': { shake: 3, ease: 'linear' },
   'snap-zoom': { zoom: 1.5, ease: 'snap' },
   'bounce-zoom': { zoom: 1.3, ease: 'bounce' },
+  'rack-focus-blur': { blur: 14, zoom: 1.04, ease: 'inOut' },
 };

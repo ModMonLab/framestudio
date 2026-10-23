@@ -10,7 +10,7 @@ import type { ProjectState } from './state.js';
 import { TICKS_PER_SECOND } from './time.js';
 import { hash32 } from './ids.js';
 
-export type RecipeTrack = 'acting' | 'face' | 'gaze' | 'shot' | 'camera-move' | 'sfx' | 'effect' | 'music';
+export type RecipeTrack = 'acting' | 'face' | 'gaze' | 'shot' | 'camera-move' | 'sfx' | 'effect' | 'music' | 'text';
 
 /** A time inside the recipe: seconds from the start, a fraction of the anchor line, or a word of the anchor line. */
 export type TimeRef = number | { line: 'start' | 'end'; offset?: number } | { frac: number; offset?: number } | { word: 'first' | 'last' | number; edge?: 'start' | 'end'; offset?: number };
@@ -28,8 +28,11 @@ export interface RecipeStep {
   dur?: number;
   blendIn?: number;
   blendOut?: number;
-  /** Shot steps: framing preset and the roles to frame. */
-  shot?: { framing: string; subjects: string[] };
+  /**
+   * Shot steps: framing preset and the roles to frame. With `second` the shot shows two cameras at once: side by side
+   * (`layout: 'split'`) or the second as an inset (`'pip'`, picture in picture).
+   */
+  shot?: { framing: string; subjects: string[]; second?: { framing: string; subjects: string[] }; layout?: 'split' | 'pip' };
 }
 
 export interface RecipeRole { key: string; label: string; kind: 'character' | 'prop'; optional?: boolean }
@@ -147,9 +150,19 @@ export function expandRecipe(state: ProjectState, sceneId: string, ref: string, 
         return;
       }
       const cam = `cam_r${(hash32(`${group}:${i}`) >>> 0).toString(36).padStart(7, '0')}`;
-      const name = `${st.shot.framing.split('.').pop()!.split('@')[0]!.replace(/-/g, ' ')} · ${subjects.map((id) => scene.instances.find((x) => x.id === id)?.name ?? id).join(' & ')}`;
-      cmds.push({ name: 'camera.add', params: { scene: sceneId, id: cam, name, center: f.center, width: f.width, rotation: f.rotation, preset: st.shot.framing, subjects } });
+      const camName = (framing: string, ids: string[]) => `${framing.split('.').pop()!.split('@')[0]!.replace(/-/g, ' ')} · ${ids.map((id) => scene.instances.find((x) => x.id === id)?.name ?? id).join(' & ')}`;
+      cmds.push({ name: 'camera.add', params: { scene: sceneId, id: cam, name: camName(st.shot.framing, subjects), center: f.center, width: f.width, rotation: f.rotation, preset: st.shot.framing, subjects } });
       params.camera = cam;
+      if (st.shot.second) {
+        const subjects2 = st.shot.second.subjects.map((r) => o.roles[r]).filter((x): x is string => !!x);
+        const f2 = o.frame?.(st.shot.second.framing, subjects2, start);
+        if (f2) {
+          const cam2 = `cam_s${(hash32(`${group}:${i}:2`) >>> 0).toString(36).padStart(7, '0')}`;
+          cmds.push({ name: 'camera.add', params: { scene: sceneId, id: cam2, name: camName(st.shot.second.framing, subjects2), center: f2.center, width: f2.width, rotation: f2.rotation, preset: st.shot.second.framing, subjects: subjects2 } });
+          params.camera2 = cam2;
+          params.layout = st.shot.layout ?? 'split';
+        } else warnings.push(`Step ${i + 1}: could not frame ${st.shot.second.framing}`);
+      }
     }
     cmds.push({ name: 'clip.add', params: { scene: sceneId, track: track.id, start, end, ...(st.asset ? { asset: st.asset } : {}), params, group, recipe: ref, ...(st.blendIn !== undefined ? { blendIn: Math.round(st.blendIn * S) } : {}), ...(st.blendOut !== undefined ? { blendOut: Math.round(st.blendOut * S) } : {}) } });
     first = Math.min(first, start);

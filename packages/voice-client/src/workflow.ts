@@ -3,7 +3,7 @@
  * designed voice, generate takes for lines and align them. Storage and edits are injected, so the same code runs
  * against an open project in the server or in CLI local mode.
  */
-import { FrameError, type AssetManifest, type Command, type Delivery, type MediaRef, type Take, type VoiceData } from '@frame/schema';
+import { FrameError, type AssetManifest, type Command, type Delivery, type ConsentRecord, type MediaRef, type Take, type VoiceData } from '@frame/schema';
 import type { VoiceClient, WorkerJob } from './client.js';
 import { nextTakeNumber, toAlignment } from './takes.js';
 
@@ -93,6 +93,30 @@ export function designedVoiceManifest(o: { id: string; name: string; description
   } as AssetManifest;
 }
 
+/**
+ * A cloned voice (FR-VOI-04): its neutral reference is a real recording of the speaker, with the mandatory consent
+ * record stored in the asset (and so in exported .framevoice files).
+ */
+export function clonedVoiceManifest(o: { id: string; name: string; description: string; language: string; media: MediaRef; transcript: string; consent: ConsentRecord; date: string }): AssetManifest {
+  if (!o.consent?.statement || !o.consent.speakerName?.trim() || !o.consent.confirmedBy?.trim()) throw new FrameError('CONSENT_REQUIRED', 'Cloning a voice needs a consent statement, the speaker\'s name and who confirmed it');
+  const data: VoiceData = {
+    description: o.description,
+    method: 'clone',
+    language: o.language,
+    consent: o.consent,
+    references: [{ emotion: 'neutral', media: o.media, transcript: o.transcript, accepted: true, fixture: false }],
+    auditions: [],
+    engineData: {},
+  };
+  return {
+    schemaVersion: 1, id: o.id, version: 1, kind: 'voice', name: o.name, category: 'Voices', tags: ['voice', 'cloned'], synonyms: [], families: [], views: [], viewExemptions: {}, anchors: {}, capabilities: [], parameters: [], dependencies: [], layering: {}, previews: {},
+    license: { id: 'LicenseRef-Project-Owner', redistributable: false, commercialUse: true, attribution: `Voice of ${o.consent.speakerName}, used with consent (${o.consent.statement}).` },
+    provenance: { method: 'recorded', author: o.consent.confirmedBy, date: o.date, notes: `Cloned from a recording of ${o.consent.speakerName}; consent confirmed ${o.consent.date}.` },
+    review: { status: 'pending' },
+    data,
+  } as AssetManifest;
+}
+
 /* ------------------------------------------------------------------ takes (FR-VOI-07, FR-LIP-01) */
 
 export interface GenerateRequest {
@@ -108,6 +132,21 @@ export interface GenerateRequest {
 export interface GenerateResult {
   takes: { line: string; take: string; status: 'ready' | 'failed'; error?: string }[];
   fixture: boolean;
+}
+
+type DeliveryWant = { emotion?: string; pace?: number; instruction?: string };
+
+/**
+ * The delivery sent to the engine: a preset (Catalog Q2) supplies defaults, settings chosen on the line win, and only
+ * controls the engine reports are sent (FR-VOI-08).
+ */
+export function resolveDelivery(line: DeliveryWant & { preset?: string }, preset: DeliveryWant | undefined, controls: { emotion: string[]; pace: unknown; instruction: boolean } | undefined): DeliveryWant {
+  const want = { ...(preset ?? {}), ...Object.fromEntries(Object.entries(line).filter(([k, v]) => k !== 'preset' && v !== undefined)) } as DeliveryWant;
+  const out: DeliveryWant = {};
+  if (want.emotion && controls?.emotion.includes(want.emotion)) out.emotion = want.emotion;
+  if (want.pace !== undefined && want.pace !== 1 && controls?.pace) out.pace = want.pace;
+  if (want.instruction && controls?.instruction) out.instruction = want.instruction;
+  return out;
 }
 
 export async function generateTakes(client: VoiceClient, p: ProjectAccess, req: GenerateRequest, ctl: Ctl = {}): Promise<GenerateResult> {
@@ -144,10 +183,8 @@ export async function generateTakes(client: VoiceClient, p: ProjectAccess, req: 
     if (!refs.length) throw new FrameError('VALIDATION_FAILED', `Voice ${voice.name} has no accepted references`);
     // Delivery controls are sent only when the engine supports them (FR-VOI-08).
     const engine = caps.engines[0];
-    const delivery: { emotion?: string; pace?: number; instruction?: string } = {};
-    if (line.delivery.emotion && engine?.controls.emotion.includes(line.delivery.emotion)) delivery.emotion = line.delivery.emotion;
-    if (line.delivery.pace !== undefined && line.delivery.pace !== 1 && engine?.controls.pace) delivery.pace = line.delivery.pace;
-    if (line.delivery.instruction && engine?.controls.instruction) delivery.instruction = line.delivery.instruction;
+    const preset = line.delivery.preset ? (p.voice(line.delivery.preset)?.data as { delivery?: DeliveryWant } | undefined)?.delivery : undefined;
+    const delivery = resolveDelivery(line.delivery, preset, engine?.controls);
     // Placeholder take records show "Generating" immediately and survive failures with their error.
     const first = nextTakeNumber(Object.values(p.state().takes), lineId);
     const now = new Date().toISOString();
@@ -241,4 +278,21 @@ export function voiceWithReferences(voice: AssetManifest, accepted: RangeCandida
     provenance: { ...voice.provenance, date },
     data: { ...vd, references: refs, auditions: [...vd.auditions, ...accepted.map((a) => ({ text: a.transcript, media: a.media, emotion: a.emotion }))], engineData: {} },
   } as AssetManifest;
+}
+
+/* ------------------------------------------------------------------ re-align (FR-LIP-01, `frame align`) */
+
+/** Forced alignment of an existing take against its line's current text; replaces the take's alignment. */
+export async function alignTake(client: VoiceClient, p: ProjectAccess, takeId: string, language = 'en', ctl: Ctl = {}): Promise<{ take: string; words: number; method: string }> {
+  const take = p.state().takes[takeId];
+  if (!take) throw new FrameError('NOT_FOUND', `Take ${takeId} not found`);
+  if (!take.media) throw new FrameError('VALIDATION_FAILED', `Take ${takeId} has no audio yet`);
+  const line = Object.values(p.state().scenes).flatMap((s) => s.clips).find((c) => c.id === take.line)?.line;
+  if (!line) throw new FrameError('NOT_FOUND', `The line of take ${takeId} no longer exists`);
+  const hash = await client.uploadBlob(p.readMedia(take.media.hash), `take.${take.media.ext}`, take.media.mime);
+  const aj = await client.align({ audioHash: hash, transcript: stripPauses(line.text), language });
+  const al = await run(client, aj, ctl, [0, 1], 'Aligning');
+  const alignment = toAlignment(al);
+  p.apply([{ name: 'take.update', params: { id: takeId, set: { alignment } } }], 'Align take');
+  return { take: takeId, words: alignment.words.length, method: alignment.method };
 }

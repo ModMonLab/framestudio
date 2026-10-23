@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/line.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "speaker": {
+      "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix ins_.",
+      "type": "string"
+    },
+    "text": {
+      "maxLength": 4000,
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "delivery": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "preset": {
+          "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+          "description": "Asset reference id@version.",
+          "type": "string"
+        },
+        "emotion": {
+          "type": "string"
+        },
+        "pace": {
+          "minimum": 0.5,
+          "maximum": 2,
+          "type": "number"
+        },
+        "instruction": {
+          "maxLength": 500,
+          "type": "string"
+        }
+      }
+    },
+    "take": {
+      "pattern": "^tak_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix tak_.",
+      "type": "string"
+    },
+    "muted": {
+      "description": "Intentionally silent line (take state \"Muted\").",
+      "type": "boolean"
+    },
+    "caption": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "hidden": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mouthOverrides": {
+      "type": "array",
+      "items": {
+        "additionalProperties": false,
+        "description": "Times in seconds relative to the take start.",
+        "type": "object",
+        "properties": {
+          "shape": {
+            "description": "Mouth shape letter (Catalog A17).",
+            "anyOf": [
+              {
+                "const": "X",
+                "type": "string"
+              },
+              {
+                "const": "A",
+                "type": "string"
+              },
+              {
+                "const": "B",
+                "type": "string"
+              },
+              {
+                "const": "C",
+                "type": "string"
+              },
+              {
+                "const": "D",
+                "type": "string"
+              },
+              {
+                "const": "E",
+                "type": "string"
+              },
+              {
+                "const": "F",
+                "type": "string"
+              },
+              {
+                "const": "G",
+                "type": "string"
+              },
+              {
+                "const": "H",
+                "type": "string"
+              }
+            ]
+          },
+          "start": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "end": {
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "shape",
+          "start",
+          "end"
+        ]
+      }
+    }
+  },
+  "required": [
+    "speaker",
+    "text",
+    "revision",
+    "delivery",
+    "muted"
+  ]
+}

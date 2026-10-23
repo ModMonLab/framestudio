@@ -1,0 +1,234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/instance.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "id": {
+      "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix ins_.",
+      "type": "string"
+    },
+    "kind": {
+      "anyOf": [
+        {
+          "const": "character",
+          "type": "string"
+        },
+        {
+          "const": "prop",
+          "type": "string"
+        },
+        {
+          "const": "set-piece",
+          "type": "string"
+        },
+        {
+          "const": "effect",
+          "type": "string"
+        },
+        {
+          "const": "text",
+          "type": "string"
+        },
+        {
+          "const": "image",
+          "type": "string"
+        },
+        {
+          "const": "group",
+          "type": "string"
+        }
+      ]
+    },
+    "asset": {
+      "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+      "description": "Asset reference id@version.",
+      "type": "string"
+    },
+    "media": {
+      "description": "Media hash for image instances.",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "transform": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "scale": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "rotation": {
+          "description": "Degrees, clockwise.",
+          "type": "number"
+        },
+        "flipX": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "scale",
+        "rotation",
+        "flipX"
+      ]
+    },
+    "depthPlane": {
+      "type": "string"
+    },
+    "order": {
+      "description": "Layer order within the depth plane.",
+      "type": "number"
+    },
+    "parallax": {
+      "description": "Parallax factor (independent of draw order; FR-STG-02).",
+      "type": "number"
+    },
+    "opacity": {
+      "minimum": 0,
+      "maximum": 1,
+      "type": "number"
+    },
+    "parent": {
+      "pattern": "^ins_[A-Za-z0-9]{6,32}$",
+      "description": "Project-local ID with prefix ins_.",
+      "type": "string"
+    },
+    "visible": {
+      "type": "boolean"
+    },
+    "locked": {
+      "type": "boolean"
+    },
+    "character": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "look": {
+          "description": "Look id within the character asset.",
+          "type": "string"
+        },
+        "view": {
+          "anyOf": [
+            {
+              "const": "front",
+              "type": "string"
+            },
+            {
+              "const": "three",
+              "type": "string"
+            },
+            {
+              "const": "side",
+              "type": "string"
+            },
+            {
+              "const": "back",
+              "type": "string"
+            }
+          ]
+        },
+        "posture": {
+          "anyOf": [
+            {
+              "const": "standing",
+              "type": "string"
+            },
+            {
+              "const": "seated",
+              "type": "string"
+            },
+            {
+              "const": "crouched",
+              "type": "string"
+            },
+            {
+              "const": "kneeling",
+              "type": "string"
+            },
+            {
+              "const": "lying",
+              "type": "string"
+            }
+          ]
+        },
+        "baseExpression": {
+          "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+          "description": "Asset reference id@version.",
+          "type": "string"
+        },
+        "voice": {
+          "pattern": "^(?:[a-z0-9-]+\\.[a-z0-9-]+|user\\.[0-9a-f-]{36})@[1-9][0-9]*$",
+          "description": "Asset reference id@version.",
+          "type": "string"
+        },
+        "auto": {
+          "additionalProperties": false,
+          "description": "Automatic behaviour generators (FR-ACT-07, FR-ACT-08, FR-EXP-03).",
+          "type": "object",
+          "properties": {
+            "idle": {
+              "type": "boolean"
+            },
+            "listening": {
+              "type": "boolean"
+            },
+            "blinks": {
+              "type": "boolean"
+            },
+            "talkingGestures": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "idle",
+            "listening",
+            "blinks",
+            "talkingGestures"
+          ]
+        }
+      },
+      "required": [
+        "look",
+        "view",
+        "posture",
+        "auto"
+      ]
+    },
+    "propState": {
+      "description": "Initial prop state.",
+      "type": "string"
+    },
+    "params": {
+      "description": "Kind-specific parameters (text content, palette, colours...).",
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {}
+      }
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "name",
+    "transform",
+    "depthPlane",
+    "order",
+    "parallax",
+    "opacity",
+    "visible",
+    "locked",
+    "params"
+  ]
+}

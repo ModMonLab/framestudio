@@ -1,14 +1,16 @@
 /** Properties panel (Design System §7.1): Properties / Acting / Audio tabs with collapsible sections. */
 import { useEffect, useRef, useState } from 'react';
-import { Pause, Play, Plus, Sparkles, Upload, UserCog } from 'lucide-react';
-import { lineTakeState, lookAt, trackFor, type ProjectState } from '@frame/core';
+import { Mic, Pause, Play, Plus, Sparkles, Upload, UserCog } from 'lucide-react';
+import { lineTakeState, lookAt, randomId, trackFor, type ProjectState } from '@frame/core';
 import type { Clip, Instance, Scene, Take } from '@frame/schema';
-import { Button, Chip, EmptyState, IconButton, NumberField, Panel, Section, Segmented, Select, SliderRow, StatusBadge, Tabs, TextArea, ToggleRow, useSectionState, useToasts, type EditPhase } from '@frame/ui';
+import { Button, Chip, Dialog, EmptyState, IconButton, NumberField, Panel, Section, Segmented, Select, SliderRow, StatusBadge, Tabs, TextArea, ToggleRow, useSectionState, useToasts, type EditPhase, t as tt } from '@frame/ui';
 import { api, type WorkerStatus } from '../lib/api.js';
 import { useStudio, type Mode } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
 import { RangeDialog } from './RangeDialog.js';
 import { NotesEditor } from './NotesEditor.js';
+import { Recorder } from './Recorder.js';
+import { CloneDialog } from './CloneDialog.js';
 
 type Tab = 'properties' | 'acting' | 'audio';
 const DEFAULT_TAB: Record<Mode, Tab> = { stage: 'properties', direct: 'acting', edit: 'audio' };
@@ -27,12 +29,12 @@ export function PropertiesPanel({ mode }: { mode: Mode }) {
   const owner = inst ?? (clip ? scene?.instances.find((i) => i.id === scene.tracks.find((t) => t.id === clip.track)?.owner) : undefined);
 
   return (
-    <Panel label="Properties" className="st-right" help="#/help/modes">
-      <Tabs label="Properties tabs" value={tab} onChange={setTab} tabs={[{ value: 'properties', label: 'Properties' }, { value: 'acting', label: 'Acting' }, { value: 'audio', label: 'Audio' }]} style={{ padding: '0 8px' }} />
+    <Panel label={tt('Properties')} className="st-right" help="#/help/modes">
+      <Tabs label={tt('Properties tabs')} value={tab} onChange={setTab} tabs={[{ value: 'properties', label: 'Properties' }, { value: 'acting', label: 'Acting' }, { value: 'audio', label: 'Audio' }]} style={{ padding: '0 8px' }} />
       <div className="st-props-body">
-        {!scene ? <EmptyState title="No scene">Add a scene from the Layers panel.</EmptyState>
+        {!scene ? <EmptyState title={tt('No scene')}>{tt('Add a scene from the Layers panel.')}</EmptyState>
           : tab === 'properties' ? (inst ? <InstanceProps scene={scene} inst={inst} /> : clip ? <ClipProps scene={scene} clip={clip} /> : <SceneProps scene={scene} />)
-          : tab === 'acting' ? (owner?.kind === 'character' ? <ActingProps scene={scene} inst={owner} /> : <EmptyState title="Select a character">Expressions and gestures apply to the selected character at the playhead.</EmptyState>)
+          : tab === 'acting' ? (owner?.kind === 'character' ? <ActingProps scene={scene} inst={owner} /> : <EmptyState title={tt('Select a character')}>{tt('Expressions and gestures apply to the selected character at the playhead.')}</EmptyState>)
           : owner?.kind === 'character' ? <AudioProps scene={scene} inst={owner} clip={clip} project={project} /> : <SceneAudioProps scene={scene} />}
       </div>
     </Panel>
@@ -48,12 +50,12 @@ function SceneProps({ scene }: { scene: Scene }) {
   const episode = useStudio(studio, (s) => s.project?.episodes[s.project.sceneEpisode[scene.id] ?? '']);
   const [open, toggle] = useSections('scene', { scene: true });
   return (
-    <Section title="Scene" open={open.scene!} onToggle={(o) => toggle('scene', o)}>
+    <Section title={tt('Scene')} open={open.scene!} onToggle={(o) => toggle('scene', o)}>
       <div className="st-grid2">
-        <NumberField label="Duration" prefix="Len" unit=" s" precision={2} min={0.5} max={3600} value={scene.duration / 48000} onChange={(v, phase) => phase === 'commit' && void studio.exec([{ name: 'scene.setDuration', params: { id: scene.id, durationS: v, allowTruncate: false } }])} />
+        <NumberField label={tt('Duration')} prefix="Len" unit=" s" precision={2} min={0.5} max={3600} value={scene.duration / 48000} onChange={(v, phase) => phase === 'commit' && void studio.exec([{ name: 'scene.setDuration', params: { id: scene.id, durationS: v, allowTruncate: false } }])} />
       </div>
-      <NotesEditor label="Scene notes" value={scene.notes} onCommit={(v) => void studio.exec([{ name: 'scene.setNotes', params: { id: scene.id, notes: v } }], 'Edit scene notes')} rows={3} placeholder="Notes for this scene" />
-      {episode && <NotesEditor label="Episode notes" value={episode.notes} onCommit={(v) => void studio.exec([{ name: 'episode.setNotes', params: { id: episode.id, notes: v } }], 'Edit episode notes')} rows={3} placeholder={`Notes for ${episode.name}`} />}
+      <NotesEditor label={tt('Scene notes')} value={scene.notes} onCommit={(v) => void studio.exec([{ name: 'scene.setNotes', params: { id: scene.id, notes: v } }], 'Edit scene notes')} rows={3} placeholder={tt('Notes for this scene')} />
+      {episode && <NotesEditor label={tt('Episode notes')} value={episode.notes} onCommit={(v) => void studio.exec([{ name: 'episode.setNotes', params: { id: episode.id, notes: v } }], 'Edit episode notes')} rows={3} placeholder={`Notes for ${episode.name}`} />}
     </Section>
   );
 }
@@ -68,35 +70,77 @@ function InstanceProps({ scene, inst }: { scene: Scene; inst: Instance }) {
   const looks = (man?.data as { looks?: { id: string; name: string }[] } | undefined)?.looks ?? [];
   return (
     <>
-      <Section title="Transform" open={open.transform!} onToggle={(o) => toggle('transform', o)}>
+      <Section title={tt('Transform')} open={open.transform!} onToggle={(o) => toggle('transform', o)}>
         <div className="st-grid2">
-          <NumberField label="X position" prefix="X" value={inst.transform.x} precision={0} onChange={tf('x')} />
-          <NumberField label="Y position" prefix="Y" value={inst.transform.y} precision={0} onChange={tf('y')} />
-          <NumberField label="Scale" prefix="S" value={inst.transform.scale} precision={2} step={0.05} min={0.05} max={20} onChange={tf('scale')} />
-          <NumberField label="Rotation" prefix="R" unit="°" value={inst.transform.rotation} precision={1} onChange={tf('rotation')} />
+          <NumberField label={tt('X position')} prefix="X" value={inst.transform.x} precision={0} onChange={tf('x')} />
+          <NumberField label={tt('Y position')} prefix="Y" value={inst.transform.y} precision={0} onChange={tf('y')} />
+          <NumberField label={tt('Scale')} prefix="S" value={inst.transform.scale} precision={2} step={0.05} min={0.05} max={20} onChange={tf('scale')} />
+          <NumberField label={tt('Rotation')} prefix="R" unit="°" value={inst.transform.rotation} precision={1} onChange={tf('rotation')} />
         </div>
-        <ToggleRow label="Flip horizontally" checked={inst.transform.flipX} onChange={(v) => set({ transform: { ...inst.transform, flipX: v } }, `Flip ${inst.name}`)} />
+        <ToggleRow label={tt('Flip horizontally')} checked={inst.transform.flipX} onChange={(v) => set({ transform: { ...inst.transform, flipX: v } }, `Flip ${inst.name}`)} />
       </Section>
-      <Section title="Layer and depth" open={open.layer!} onToggle={(o) => toggle('layer', o)}>
-        <Select label="Depth plane" value={inst.depthPlane} options={scene.stage.depthPlanes.map((p) => ({ value: p.id, label: p.name }))} onChange={(v) => set({ depthPlane: v }, `Move ${inst.name} to ${v}`)} />
-        <SliderRow label="Opacity" value={Math.round(inst.opacity * 100)} min={0} max={100} defaultValue={100} format={(v) => `${Math.round(v)} %`} onChange={(v, phase) => phase === 'commit' && set({ opacity: v / 100 })} />
-        <SliderRow label="Parallax" value={Math.round(inst.parallax * 100)} min={0} max={200} defaultValue={100} format={(v) => `${Math.round(v)} %`} onChange={(v, phase) => phase === 'commit' && set({ parallax: v / 100 })} />
-        <ToggleRow label="Visible" checked={inst.visible} onChange={(v) => set({ visible: v })} />
-        <ToggleRow label="Locked" description="Locked objects select but do not move" checked={inst.locked} onChange={(v) => set({ locked: v }, `${v ? 'Lock' : 'Unlock'} ${inst.name}`)} />
+      <Section title={tt('Layer and depth')} open={open.layer!} onToggle={(o) => toggle('layer', o)}>
+        <Select label={tt('Depth plane')} value={inst.depthPlane} options={scene.stage.depthPlanes.map((p) => ({ value: p.id, label: p.name }))} onChange={(v) => set({ depthPlane: v }, `Move ${inst.name} to ${v}`)} />
+        <SliderRow label={tt('Opacity')} value={Math.round(inst.opacity * 100)} min={0} max={100} defaultValue={100} format={(v) => `${Math.round(v)} %`} onChange={(v, phase) => phase === 'commit' && set({ opacity: v / 100 })} />
+        <SliderRow label={tt('Parallax')} value={Math.round(inst.parallax * 100)} min={0} max={200} defaultValue={100} format={(v) => `${Math.round(v)} %`} onChange={(v, phase) => phase === 'commit' && set({ parallax: v / 100 })} />
+        <ToggleRow label={tt('Visible')} checked={inst.visible} onChange={(v) => set({ visible: v })} />
+        <ToggleRow label={tt('Locked')} description={tt('Locked objects select but do not move')} checked={inst.locked} onChange={(v) => set({ locked: v }, `${v ? 'Lock' : 'Unlock'} ${inst.name}`)} />
       </Section>
       {inst.kind === 'character' && inst.character && (
-        <Section title="Appearance" open={open.appearance!} onToggle={(o) => toggle('appearance', o)}>
-          {looks.length > 0 && <Select label="Look" value={inst.character.look} options={looks.map((l) => ({ value: l.id, label: l.name }))} onChange={(v) => set({ character: { ...inst.character!, look: v } }, `Change look of ${inst.name}`)} />}
-          <Select label="View" value={inst.character.view} options={[{ value: 'front', label: 'Front' }, { value: 'three', label: '¾' }, { value: 'side', label: 'Side' }, { value: 'back', label: 'Back' }]} onChange={(v) => set({ character: { ...inst.character!, view: v } }, `Turn ${inst.name}`)} />
-          <Select label="Posture" value={inst.character.posture} options={['standing', 'seated', 'crouched', 'kneeling', 'lying'].map((p) => ({ value: p, label: p[0]!.toUpperCase() + p.slice(1) }))} onChange={(v) => set({ character: { ...inst.character!, posture: v } }, `${inst.name} posture`)} />
-          <ToggleRow label="Idle motion" checked={inst.character.auto.idle} onChange={(v) => set({ character: { ...inst.character!, auto: { ...inst.character!.auto, idle: v } } })} />
-          <ToggleRow label="Listening reactions" checked={inst.character.auto.listening} onChange={(v) => set({ character: { ...inst.character!, auto: { ...inst.character!.auto, listening: v } } })} />
-          <ToggleRow label="Automatic blinks" checked={inst.character.auto.blinks} onChange={(v) => set({ character: { ...inst.character!, auto: { ...inst.character!.auto, blinks: v } } })} />
-          <Button icon={<UserCog size={14} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(studio.state.pid)}/builder/${scene.id}/${inst.id}`)}>Open in builder</Button>
+        <Section title={tt('Appearance')} open={open.appearance!} onToggle={(o) => toggle('appearance', o)}>
+          {looks.length > 0 && <Select label={tt('Look')} value={inst.character.look} options={looks.map((l) => ({ value: l.id, label: l.name }))} onChange={(v) => set({ character: { ...inst.character!, look: v } }, `Change look of ${inst.name}`)} />}
+          <Select label={tt('View')} value={inst.character.view} options={[{ value: 'front', label: 'Front' }, { value: 'three', label: '¾' }, { value: 'side', label: 'Side' }, { value: 'back', label: 'Back' }]} onChange={(v) => set({ character: { ...inst.character!, view: v } }, `Turn ${inst.name}`)} />
+          <Select label={tt('Posture')} value={inst.character.posture} options={['standing', 'seated', 'crouched', 'kneeling', 'lying'].map((p) => ({ value: p, label: p[0]!.toUpperCase() + p.slice(1) }))} onChange={(v) => set({ character: { ...inst.character!, posture: v } }, `${inst.name} posture`)} />
+          <ToggleRow label={tt('Idle motion')} checked={inst.character.auto.idle} onChange={(v) => set({ character: { ...inst.character!, auto: { ...inst.character!.auto, idle: v } } })} />
+          <ToggleRow label={tt('Listening reactions')} checked={inst.character.auto.listening} onChange={(v) => set({ character: { ...inst.character!, auto: { ...inst.character!.auto, listening: v } } })} />
+          <ToggleRow label={tt('Automatic blinks')} checked={inst.character.auto.blinks} onChange={(v) => set({ character: { ...inst.character!, auto: { ...inst.character!.auto, blinks: v } } })} />
+          <Button icon={<UserCog size={14} />} onClick={() => (location.hash = `#/p/${encodeURIComponent(studio.state.pid)}/builder/${scene.id}/${inst.id}`)}>{tt('Open in builder')}</Button>
         </Section>
       )}
       {inst.kind === 'set-piece' && inst.asset && typeof inst.params.part === 'string' && <KitLook scene={scene} inst={inst} />}
+      {inst.kind === 'prop' && <PropStates scene={scene} inst={inst} />}
     </>
+  );
+}
+
+/**
+ * Prop states (FR-PRP-01, FR-TML-01): the state at the start of the scene, and timed state changes on the prop's own
+ * track in the timeline's Props group (open the door at 3 s, close it at 6 s).
+ */
+function PropStates({ scene, inst }: { scene: Scene; inst: Instance }) {
+  const { studio, assets } = useCtx();
+  const time = useStudio(studio, (s) => s.time);
+  const [open, toggle] = useSections('propstate', { states: true });
+  const [next, setNext] = useState<string>();
+  // The prop's manifest may arrive after the panel first renders (a prop just added by an agent or the CLI).
+  const [, setLoaded] = useState(0);
+  useEffect(() => {
+    const off = assets.onChange(() => setLoaded((v) => v + 1));
+    return () => {
+      off();
+    };
+  }, [assets]);
+  const states = (inst.asset ? (assets.manifest(inst.asset)?.parameters ?? []) : []).find((p) => p.key === 'state')?.options ?? [];
+  if (states.length < 2) return null;
+  const label = (s: string) => s[0]!.toUpperCase() + s.slice(1).replace(/-/g, ' ');
+  const track = scene.tracks.find((t) => t.owner === inst.id);
+  const add = () => {
+    if (!next) return;
+    const trackId = track?.id ?? randomId('trk');
+    void studio.exec([
+      ...(track ? [] : [{ name: 'track.add', params: { scene: scene.id, id: trackId, kind: 'acting', owner: inst.id, name: 'State' } }]),
+      { name: 'clip.add', params: { scene: scene.id, track: trackId, start: time, end: Math.min(scene.duration, time + 96000), name: `${label(next)}`, params: { state: next } } },
+    ], `${inst.name}: ${label(next)} at ${(time / 48000).toFixed(1)} s`);
+  };
+  return (
+    <Section title={tt('State')} summary={label(inst.propState ?? 'default')} open={open.states!} onToggle={(o) => toggle('states', o)}>
+      <Select label={tt('At the start')} value={inst.propState ?? states[0]} options={states.map((s) => ({ value: s, label: label(s) }))} onChange={(v) => void studio.exec([{ name: 'instance.update', params: { scene: scene.id, id: inst.id, set: { propState: v } } }], `${inst.name} starts ${label(v)}`)} />
+      <div className="st-row">
+        <div style={{ flex: 1 }}><Select label={tt('Change to')} value={next} placeholder={tt('Choose a state')} options={states.map((s) => ({ value: s, label: label(s) }))} onChange={setNext} /></div>
+        <Button disabled={!next} disabledReason={tt('Choose a state')} onClick={add}>{tt('Add at playhead')}</Button>
+      </div>
+      <p className="fr-hint">{tt('State changes are clips in the timeline\'s Props group; drag or trim them there.')}</p>
+    </Section>
   );
 }
 
@@ -124,16 +168,16 @@ function KitLook({ scene, inst }: { scene: Scene; inst: Instance }) {
   const tod = typeof inst.params.timeOfDay === 'string' ? inst.params.timeOfDay : 'day';
   return (
     <Section title={kitName} summary={[kit.palettes?.find((p) => p.id === palette)?.name, times.find((t) => t.id === tod)?.name].filter(Boolean).join(' · ')} open={open.kit!} onToggle={(o) => toggle('kit', o)}>
-      <p className="fr-hint">Applies to every {kitName.toLowerCase()} piece in this scene.</p>
-      {kit.palettes && <div className="st-field-col"><span className="fr-label">Palette</span>
-        <div className="fr-chips" role="group" aria-label="Kit palette">{kit.palettes.map((p) => (
+      <p className="fr-hint">{tt('Applies to every')} {kitName.toLowerCase()}  {tt('piece in this scene.')}</p>
+      {kit.palettes && <div className="st-field-col"><span className="fr-label">{tt('Palette')}</span>
+        <div className="fr-chips" role="group" aria-label={tt('Kit palette')}>{kit.palettes.map((p) => (
           <Chip key={p.id} selected={p.id === palette} onClick={() => void apply({ palette: p.id })}>
             <span className="st-swatches" aria-hidden>{Object.values(p.colors).slice(0, 4).map((c, i) => <i key={i} style={{ background: c }} />)}</span>{p.name}
           </Chip>
         ))}</div>
       </div>}
-      {times.length > 0 && <div className="st-field-col"><span className="fr-label">Time of day</span>
-        <div className="fr-chips" role="group" aria-label="Time of day">{times.map((t) => <Chip key={t.id} selected={t.id === tod} onClick={() => void apply({ timeOfDay: t.id })}>{t.name}</Chip>)}</div>
+      {times.length > 0 && <div className="st-field-col"><span className="fr-label">{tt('Time of day')}</span>
+        <div className="fr-chips" role="group" aria-label={tt('Time of day')}>{times.map((t) => <Chip key={t.id} selected={t.id === tod} onClick={() => void apply({ timeOfDay: t.id })}>{t.name}</Chip>)}</div>
       </div>}
     </Section>
   );
@@ -147,12 +191,12 @@ function ClipProps({ scene, clip }: { scene: Scene; clip: Clip }) {
   const acting = scene.tracks.find((t) => t.id === clip.track)?.kind === 'acting' && !!clip.asset;
   return (
     <>
-    <Section title="Timing" open={open.timing!} onToggle={(o) => toggle('timing', o)}>
+    <Section title={tt('Timing')} open={open.timing!} onToggle={(o) => toggle('timing', o)}>
       <div className="st-grid2">
-        <NumberField label="Start" prefix="In" unit=" s" precision={2} min={0} value={clip.start / 48000} onChange={(v, p) => p === 'commit' && snap(v) !== clip.start && void studio.exec([{ name: 'clip.move', params: { scene: scene.id, ids: [clip.id], delta: snap(v) - clip.start } }])} />
-        <NumberField label="Length" prefix="Len" unit=" s" precision={2} min={1 / fps} value={(clip.end - clip.start) / 48000} onChange={(v, p) => p === 'commit' && void studio.exec([{ name: 'clip.trim', params: { scene: scene.id, id: clip.id, edge: 'end', to: clip.start + snap(v) } }])} />
+        <NumberField label={tt('Start')} prefix="In" unit=" s" precision={2} min={0} value={clip.start / 48000} onChange={(v, p) => p === 'commit' && snap(v) !== clip.start && void studio.exec([{ name: 'clip.move', params: { scene: scene.id, ids: [clip.id], delta: snap(v) - clip.start } }])} />
+        <NumberField label={tt('Length')} prefix="Len" unit=" s" precision={2} min={1 / fps} value={(clip.end - clip.start) / 48000} onChange={(v, p) => p === 'commit' && void studio.exec([{ name: 'clip.trim', params: { scene: scene.id, id: clip.id, edge: 'end', to: clip.start + snap(v) } }])} />
       </div>
-      <ToggleRow label="Enabled" checked={clip.enabled} onChange={(v) => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: clip.id, set: { enabled: v } } }])} />
+      <ToggleRow label={tt('Enabled')} checked={clip.enabled} onChange={(v) => void studio.exec([{ name: 'clip.update', params: { scene: scene.id, id: clip.id, set: { enabled: v } } }])} />
     </Section>
     {acting && <MotionProps scene={scene} clip={clip} />}
     {AUDIO_KINDS.has(scene.tracks.find((t) => t.id === clip.track)?.kind ?? '') && <ClipSound scene={scene} clip={clip} />}
@@ -172,16 +216,16 @@ function ClipSound({ scene, clip }: { scene: Scene; clip: Clip }) {
   const len = (clip.end - clip.start) / 48000;
   const ducks = typeof p.duck === 'boolean' ? p.duck : kind === 'music' || kind === 'ambience';
   return (
-    <Section title="Sound" summary={`${(p.gainDb ?? 0) >= 0 ? '+' : ''}${(p.gainDb ?? 0).toFixed(1)} dB`} open={open.sound!} onToggle={(o) => toggle('sound', o)}>
-      <SliderRow label="Gain" value={p.gainDb ?? 0} min={-40} max={12} step={0.5} defaultValue={0} format={(v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)} dB`} onChange={(v, ph) => ph === 'commit' && set({ gainDb: v }, `Clip gain ${v} dB`)} />
-      <SliderRow label="Pan" value={Math.round((p.pan ?? 0) * 100)} min={-100} max={100} defaultValue={0} format={(v) => (v === 0 ? 'Centre' : v < 0 ? `L ${-v}` : `R ${v}`)} onChange={(v, ph) => ph === 'commit' && set({ pan: v / 100 }, 'Clip pan')} />
+    <Section title={tt('Sound')} summary={`${(p.gainDb ?? 0) >= 0 ? '+' : ''}${(p.gainDb ?? 0).toFixed(1)} dB`} open={open.sound!} onToggle={(o) => toggle('sound', o)}>
+      <SliderRow label={tt('Gain')} value={p.gainDb ?? 0} min={-40} max={12} step={0.5} defaultValue={0} format={(v) => `${v >= 0 ? '+' : ''}${v.toFixed(1)} dB`} onChange={(v, ph) => ph === 'commit' && set({ gainDb: v }, `Clip gain ${v} dB`)} />
+      <SliderRow label={tt('Pan')} value={Math.round((p.pan ?? 0) * 100)} min={-100} max={100} defaultValue={0} format={(v) => (v === 0 ? 'Centre' : v < 0 ? `L ${-v}` : `R ${v}`)} onChange={(v, ph) => ph === 'commit' && set({ pan: v / 100 }, 'Clip pan')} />
       <div className="st-grid2">
-        <NumberField label="Fade in" prefix="In" unit=" s" precision={2} min={0} max={len} value={p.fadeIn ?? 0} onChange={(v, ph) => ph === 'commit' && set({ fadeIn: v }, 'Fade in')} />
-        <NumberField label="Fade out" prefix="Out" unit=" s" precision={2} min={0} max={len} value={p.fadeOut ?? 0} onChange={(v, ph) => ph === 'commit' && set({ fadeOut: v }, 'Fade out')} />
+        <NumberField label={tt('Fade in')} prefix="In" unit=" s" precision={2} min={0} max={len} value={p.fadeIn ?? 0} onChange={(v, ph) => ph === 'commit' && set({ fadeIn: v }, 'Fade in')} />
+        <NumberField label={tt('Fade out')} prefix="Out" unit=" s" precision={2} min={0} max={len} value={p.fadeOut ?? 0} onChange={(v, ph) => ph === 'commit' && set({ fadeOut: v }, 'Fade out')} />
       </div>
-      <Segmented label="Fade curve" value={p.fadeCurve === 'equal-power' ? 'equal-power' : 'linear'} onChange={(v) => set({ fadeCurve: v }, 'Fade curve')} options={[{ value: 'linear', label: 'Linear' }, { value: 'equal-power', label: 'Equal power' }]} />
-      <ToggleRow label="Mute this clip" checked={!!p.mute} onChange={(v) => set({ mute: v }, v ? 'Mute clip' : 'Unmute clip')} />
-      {kind !== 'dialogue' && <ToggleRow label="Duck under dialogue" checked={ducks} onChange={(v) => set({ duck: v }, v ? 'Duck under dialogue' : 'Do not duck')} />}
+      <Segmented label={tt('Fade curve')} value={p.fadeCurve === 'equal-power' ? 'equal-power' : 'linear'} onChange={(v) => set({ fadeCurve: v }, 'Fade curve')} options={[{ value: 'linear', label: 'Linear' }, { value: 'equal-power', label: 'Equal power' }]} />
+      <ToggleRow label={tt('Mute this clip')} checked={!!p.mute} onChange={(v) => set({ mute: v }, v ? 'Mute clip' : 'Unmute clip')} />
+      {kind !== 'dialogue' && <ToggleRow label={tt('Duck under dialogue')} checked={ducks} onChange={(v) => set({ duck: v }, v ? 'Duck under dialogue' : 'Do not duck')} />}
     </Section>
   );
 }
@@ -230,18 +274,18 @@ function MotionProps({ scene, clip }: { scene: Scene; clip: Clip }) {
   const keyed = Object.values(pose).some((ks) => ks.some((k) => Math.abs(k.t - u) < 0.005));
   return (
     <>
-      <Section title="Motion" open={open.motion!} onToggle={(o) => toggle('motion', o)}>
-        <SliderRow label="Anticipation" value={pct('anticipation')} defaultValue={0} format={(v) => `${Math.round(v)}%`} onChange={(v, p) => p === 'commit' && set({ anticipation: v / 100 }, 'Anticipation')} />
-        <SliderRow label="Overshoot" value={pct('overshoot')} defaultValue={0} format={(v) => `${Math.round(v)}%`} onChange={(v, p) => p === 'commit' && set({ overshoot: v / 100 }, 'Overshoot')} />
-        <SliderRow label="Squash and stretch" value={pct('squash')} defaultValue={0} format={(v) => `${Math.round(v)}%`} onChange={(v, p) => p === 'commit' && set({ squash: v / 100 }, 'Squash and stretch')} />
-        <ToggleRow label="Pose editor (advanced)" checked={advanced} onChange={setAdvanced} />
+      <Section title={tt('Motion')} open={open.motion!} onToggle={(o) => toggle('motion', o)}>
+        <SliderRow label={tt('Anticipation')} value={pct('anticipation')} defaultValue={0} format={(v) => `${Math.round(v)}%`} onChange={(v, p) => p === 'commit' && set({ anticipation: v / 100 }, 'Anticipation')} />
+        <SliderRow label={tt('Overshoot')} value={pct('overshoot')} defaultValue={0} format={(v) => `${Math.round(v)}%`} onChange={(v, p) => p === 'commit' && set({ overshoot: v / 100 }, 'Overshoot')} />
+        <SliderRow label={tt('Squash and stretch')} value={pct('squash')} defaultValue={0} format={(v) => `${Math.round(v)}%`} onChange={(v, p) => p === 'commit' && set({ squash: v / 100 }, 'Squash and stretch')} />
+        <ToggleRow label={tt('Pose editor (advanced)')} checked={advanced} onChange={setAdvanced} />
       </Section>
       {advanced && (
-        <Section title="Pose" summary={inside ? `${Math.round(u * 100)}% through${keyed ? ' · key' : ''}` : 'Move the playhead into the clip'} open={open.pose ?? true} onToggle={(o) => toggle('pose', o)}>
+        <Section title={tt('Pose')} summary={inside ? `${Math.round(u * 100)}% through${keyed ? ' · key' : ''}` : 'Move the playhead into the clip'} open={open.pose ?? true} onToggle={(o) => toggle('pose', o)}>
           {POSE_CONTROLS.map((c) => (
             <SliderRow key={`${c.key}${c.index ?? ''}`} label={c.label} disabled={!inside} value={valueAt(c)} min={-c.range} max={c.range} step={c.range / 100} defaultValue={0} format={(v) => `${c.unit ? Math.round(v) : v.toFixed(2)}${c.unit}`} onChange={(v, p) => p === 'commit' && setPose(c, v)} />
           ))}
-          <Button disabled={!Object.keys(pose).length} disabledReason="No pose keys on this clip" onClick={() => set({ pose: null }, 'Clear pose keys')}>Clear pose keys</Button>
+          <Button disabled={!Object.keys(pose).length} disabledReason={tt('No pose keys on this clip')} onClick={() => set({ pose: null }, 'Clear pose keys')}>{tt('Clear pose keys')}</Button>
         </Section>
       )}
     </>
@@ -287,17 +331,17 @@ function ActingProps({ scene, inst }: { scene: Scene; inst: Instance }) {
   const shownExp = [...exps].sort((a, b) => rank(a.ref, common) - rank(b.ref, common)).slice(0, 18);
   return (
     <>
-      <Section title="Expression" summary={exps.find((e) => e.ref === curExp)?.name ?? 'Base'} open={open.expression!} onToggle={(o) => toggle('expression', o)}>
-        <p className="fr-hint">Adds a 2 s expression clip at the playhead for {inst.name}.</p>
+      <Section title={tt('Expression')} summary={exps.find((e) => e.ref === curExp)?.name ?? 'Base'} open={open.expression!} onToggle={(o) => toggle('expression', o)}>
+        <p className="fr-hint">{tt('Adds a 2 s expression clip at the playhead for')} {inst.name}.</p>
         <div className="fr-chips">{shownExp.map((e) => <Chip key={e.ref} selected={e.ref === curExp} onClick={() => add('face', e.ref, e.name)}>{e.name}</Chip>)}</div>
-        {exps.length > shownExp.length && <p className="fr-faint">{exps.length - shownExp.length} more in Assets → Expressions</p>}
+        {exps.length > shownExp.length && <p className="fr-faint">{exps.length - shownExp.length}  {tt('more in Assets → Expressions')}</p>}
       </Section>
-      <Section title="Gesture" summary={acts.find((a) => a.ref === curAct)?.name ?? 'None'} open={open.gesture!} onToggle={(o) => toggle('gesture', o)}>
+      <Section title={tt('Gesture')} summary={acts.find((a) => a.ref === curAct)?.name ?? 'None'} open={open.gesture!} onToggle={(o) => toggle('gesture', o)}>
         <div className="fr-chips">{acts.slice(0, 24).map((a) => <Chip key={a.ref} selected={a.ref === curAct} onClick={() => add('acting', a.ref, a.name)}>{a.name}</Chip>)}</div>
       </Section>
       <WardrobeSection scene={scene} inst={inst} open={open.wardrobe!} onToggle={(o) => toggle('wardrobe', o)} acts={acts} />
-      <Section title="Use an object" summary={objects.length ? `${objects.length} in scene` : 'None'} open={open.objects!} onToggle={(o) => toggle('objects', o)}>
-        {!objects.length ? <p className="fr-hint">Add a prop that can be used (a mug, a phone, a door) to the scene.</p> : objects.map((o) => (
+      <Section title={tt('Use an object')} summary={objects.length ? `${objects.length} in scene` : 'None'} open={open.objects!} onToggle={(o) => toggle('objects', o)}>
+        {!objects.length ? <p className="fr-hint">{tt('Add a prop that can be used (a mug, a phone, a door) to the scene.')}</p> : objects.map((o) => (
           <div key={o.prop} className="st-field-col">
             <span className="fr-label">{o.name}</span>
             <div className="fr-chips" role="group" aria-label={`Use ${o.name}`}>{o.actions.map((a) => <Chip key={a.ref} onClick={() => void use(o.prop, a, o.name)}>{a.name}</Chip>)}</div>
@@ -342,18 +386,18 @@ function WardrobeSection({ scene, inst, open, onToggle, acts }: { scene: Scene; 
     void studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: time, end: Math.min(scene.duration, time + 72000), asset: g, blendIn: 2400, blendOut: 2400, params: { accessoryOp: op, accessory: id, accessoryAt: 0.4, hand } } }], `${op === 'remove' ? 'Take off' : op === 'wear' ? 'Put on' : 'Put away'} ${assets.manifest(a)?.name ?? id}`);
   };
   return (
-    <Section title="Wardrobe" summary={looks.find((l) => l.id === lookNow)?.name ?? lookNow} open={open} onToggle={onToggle}>
-      <p className="fr-hint">Changes at the playhead ({(time / 48000).toFixed(1)} s) and lasts until the next change.</p>
+    <Section title={tt('Wardrobe')} summary={looks.find((l) => l.id === lookNow)?.name ?? lookNow} open={open} onToggle={onToggle}>
+      <p className="fr-hint">{tt('Changes at the playhead (')}{(time / 48000).toFixed(1)}  {tt('s) and lasts until the next change.')}</p>
       <div className="st-grid2">
-        <Select label="Change look to" value={look} placeholder="Choose a look" options={looks.filter((l) => l.id !== lookNow).map((l) => ({ value: l.id, label: l.name }))} onChange={setLook} />
-        <Button disabled={!look || !track} disabledReason="Choose a look" onClick={change}>Change look</Button>
+        <Select label={tt('Change look to')} value={look} placeholder={tt('Choose a look')} options={looks.filter((l) => l.id !== lookNow).map((l) => ({ value: l.id, label: l.name }))} onChange={setLook} />
+        <Button disabled={!look || !track} disabledReason={tt('Choose a look')} onClick={change}>{tt('Change look')}</Button>
       </div>
-      <Select label="Accessory" value={acc ?? worn[0]} placeholder={worn.length ? 'Choose' : 'No accessories in this look'} disabled={!worn.length} disabledReason="This look has no accessories" options={worn.map((r) => ({ value: r, label: assets.manifest(r)?.name ?? r }))} onChange={setAcc} />
-      <Segmented label="Hand" value={hand} onChange={(v) => setHand(v as 'L' | 'R')} options={[{ value: 'R', label: 'Right hand' }, { value: 'L', label: 'Left hand' }]} />
-      <div className="fr-chips" role="group" aria-label="Accessory actions">
-        <Chip disabled={!worn.length} onClick={() => accessory('remove')}>Take off and hold</Chip>
-        <Chip disabled={!worn.length} onClick={() => accessory('wear')}>Put back on</Chip>
-        <Chip disabled={!worn.length} onClick={() => accessory('stow')}>Put away</Chip>
+      <Select label={tt('Accessory')} value={acc ?? worn[0]} placeholder={worn.length ? 'Choose' : 'No accessories in this look'} disabled={!worn.length} disabledReason={tt('This look has no accessories')} options={worn.map((r) => ({ value: r, label: assets.manifest(r)?.name ?? r }))} onChange={setAcc} />
+      <Segmented label={tt('Hand')} value={hand} onChange={(v) => setHand(v as 'L' | 'R')} options={[{ value: 'R', label: 'Right hand' }, { value: 'L', label: 'Left hand' }]} />
+      <div className="fr-chips" role="group" aria-label={tt('Accessory actions')}>
+        <Chip disabled={!worn.length} onClick={() => accessory('remove')}>{tt('Take off and hold')}</Chip>
+        <Chip disabled={!worn.length} onClick={() => accessory('wear')}>{tt('Put back on')}</Chip>
+        <Chip disabled={!worn.length} onClick={() => accessory('stow')}>{tt('Put away')}</Chip>
       </div>
     </Section>
   );
@@ -372,12 +416,12 @@ function SceneAudioProps({ scene }: { scene: Scene }) {
   const [open, toggle] = useSections('sceneaudio', { mix: true });
   const set = (patch: Record<string, number>) => void studio.exec([{ name: 'scene.setAudio', params: { id: scene.id, ...patch } }]);
   return (
-    <Section title="Mix" open={open.mix!} onToggle={(o) => toggle('mix', o)}>
-      <SliderRow label="Duck music under dialogue" value={scene.audio.duckingDb} min={-40} max={0} defaultValue={-12} format={(v) => `${v} dB`} onChange={(v, p) => p === 'commit' && set({ duckingDb: v })} />
-      <SliderRow label="Duck attack" value={scene.audio.duckAttack} min={0} max={2} step={0.05} defaultValue={0.15} format={(v) => `${v.toFixed(2)} s`} onChange={(v, p) => p === 'commit' && set({ duckAttack: v })} />
-      <SliderRow label="Duck release" value={scene.audio.duckRelease} min={0} max={4} step={0.05} defaultValue={0.4} format={(v) => `${v.toFixed(2)} s`} onChange={(v, p) => p === 'commit' && set({ duckRelease: v })} />
-      <ToggleRow label="Room tone under dialogue gaps" description="Fills silences with the scene's ambience, quietly" checked={scene.audio.roomTone} onChange={(v) => void studio.exec([{ name: 'scene.setAudio', params: { id: scene.id, roomTone: v } }], v ? 'Room tone on' : 'Room tone off')} />
-      <p className="fr-hint">The ducking curve shows on music and ambience tracks. Select a character to manage its voice and lines.</p>
+    <Section title={tt('Mix')} open={open.mix!} onToggle={(o) => toggle('mix', o)}>
+      <SliderRow label={tt('Duck music under dialogue')} value={scene.audio.duckingDb} min={-40} max={0} defaultValue={-12} format={(v) => `${v} dB`} onChange={(v, p) => p === 'commit' && set({ duckingDb: v })} />
+      <SliderRow label={tt('Duck attack')} value={scene.audio.duckAttack} min={0} max={2} step={0.05} defaultValue={0.15} format={(v) => `${v.toFixed(2)} s`} onChange={(v, p) => p === 'commit' && set({ duckAttack: v })} />
+      <SliderRow label={tt('Duck release')} value={scene.audio.duckRelease} min={0} max={4} step={0.05} defaultValue={0.4} format={(v) => `${v.toFixed(2)} s`} onChange={(v, p) => p === 'commit' && set({ duckRelease: v })} />
+      <ToggleRow label={tt('Room tone under dialogue gaps')} description={tt('Fills silences with the scene\'s ambience, quietly')} checked={scene.audio.roomTone} onChange={(v) => void studio.exec([{ name: 'scene.setAudio', params: { id: scene.id, roomTone: v } }], v ? 'Room tone on' : 'Room tone off')} />
+      <p className="fr-hint">{tt('The ducking curve shows on music and ambience tracks. Select a character to manage its voice and lines.')}</p>
     </Section>
   );
 }
@@ -392,6 +436,16 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const [count, setCount] = useState(2);
   const [newLine, setNewLine] = useState('');
   const [rangeOpen, setRangeOpen] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  const [normalise, setNormalise] = useState(false);
+  // Seed policy (FR-VOI-07): new random seeds, a fixed seed, or the chosen take's seed.
+  const [seedPolicy, setSeedPolicy] = useState<'random' | 'fixed' | 'reuse'>('random');
+  const [fixedSeed, setFixedSeed] = useState(1);
+  const [presets, setPresets] = useState<{ ref: string; name: string }[]>([]);
+  useEffect(() => {
+    api.library('', 'delivery', pid, 50).then((r) => setPresets(r.results.map((h) => ({ ref: h.ref, name: h.name })))).catch(() => setPresets([]));
+  }, [pid]);
   useEffect(() => {
     api.worker(pid).then(setWorker).catch(() => undefined);
   }, [pid]);
@@ -402,6 +456,7 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const voiceName = voiceRef ? project.assets[voiceRef]?.name ?? assets.manifest(voiceRef)?.name : undefined;
   const takes = line ? Object.values(project.takes).filter((t) => t.line === line.id).sort((a, b) => b.number - a.number) : [];
   const state = line ? lineTakeState(project, line) : undefined;
+  const chosenSeed = line?.line?.take ? project.takes[line.line.take]?.seed : undefined;
   const generating = Object.values(jobs).some((j) => j.kind === 'takes.generate' && (j.state === 'queued' || j.state === 'running'));
   const workerOk = worker?.state === 'connected' || worker?.state === 'busy';
   const engine = worker?.capabilities?.engines[0];
@@ -410,7 +465,7 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const upload = async (f: File) => {
     if (!line) return;
     try {
-      await api.uploadTake(pid, scene.id, line.id, f);
+      await api.uploadTake(pid, scene.id, line.id, f, { normalise });
     } catch (e) {
       studio.set({ lastError: { message: (e as Error).message } });
     }
@@ -418,7 +473,8 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
   const generate = async () => {
     if (!line) return;
     try {
-      await api.generateTakes(pid, { scene: scene.id, lines: [line.id], takes: count });
+      const seed = seedPolicy === 'fixed' ? fixedSeed : seedPolicy === 'reuse' ? chosenSeed : undefined;
+      await api.generateTakes(pid, { scene: scene.id, lines: [line.id], takes: count, ...(seed !== undefined ? { seed } : {}) });
     } catch (e) {
       studio.set({ lastError: { message: (e as Error).message } });
     }
@@ -435,16 +491,18 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
 
   return (
     <>
-      <Section title="Voice" summary={voiceName ?? 'None'} open={open.voice!} onToggle={(o) => toggle('voice', o)}>
-        {voiceName ? <p><b>{voiceName}</b></p> : <p className="fr-hint">{inst.name} has no voice yet.</p>}
+      <Section title={tt('Voice')} summary={voiceName ?? 'None'} open={open.voice!} onToggle={(o) => toggle('voice', o)}>
+        {voiceName ? <p><b>{voiceName}</b></p> : <p className="fr-hint">{inst.name}  {tt('has no voice yet.')}</p>}
         <div className="st-row">
           <Button icon={<Sparkles size={14} />} onClick={() => openVoiceDesigner(inst.id)}>{voiceName ? 'Design another voice…' : 'Design a voice…'}</Button>
-          {voiceRef && <Button disabled={!project.assets[voiceRef]} disabledReason="Only voices designed in this project can be extended" onClick={() => setRangeOpen(true)}>Emotional range…</Button>}
+          <Button icon={<Mic size={14} />} onClick={() => setCloning(true)}>{tt('Clone a voice…')}</Button>
+          {voiceRef && <Button disabled={!project.assets[voiceRef]} disabledReason={tt('Only voices designed in this project can be extended')} onClick={() => setRangeOpen(true)}>{tt('Emotional range…')}</Button>}
         </div>
-        {voiceRef && project.assets[voiceRef] && <p className="fr-faint">Emotions: {((project.assets[voiceRef]!.data as { references: { emotion: string; accepted: boolean }[] }).references.filter((r) => r.accepted).map((r) => r.emotion).join(', '))} · version {project.assets[voiceRef]!.version}</p>}
+        {voiceRef && project.assets[voiceRef] && <p className="fr-faint">{tt('Emotions:')} {((project.assets[voiceRef]!.data as { references: { emotion: string; accepted: boolean }[] }).references.filter((r) => r.accepted).map((r) => r.emotion).join(', '))}  {tt('· version')} {project.assets[voiceRef]!.version}</p>}
         {voiceRef && <RangeDialog voice={voiceRef} open={rangeOpen} onClose={() => setRangeOpen(false)} />}
+        {cloning && <CloneDialog scene={scene.id} instance={inst.id} onClose={() => setCloning(false)} />}
       </Section>
-      <Section title="Current line" summary={state} open={open.line!} onToggle={(o) => toggle('line', o)}>
+      <Section title={tt('Current line')} summary={state} open={open.line!} onToggle={(o) => toggle('line', o)}>
         {line?.line ? (
           <>
             <LineText key={`${line.id}:${line.line.revision}`} scene={scene} clip={line} />
@@ -452,32 +510,58 @@ function AudioProps({ scene, inst, clip, project }: { scene: Scene; inst: Instan
               <StatusBadge tone={state === 'Ready' ? 'success' : state === 'Generating' || state === 'Queued' ? 'info' : state === 'Muted' ? 'neutral' : 'warning'}>{state}</StatusBadge>
               <span className="fr-faint">{(line.start / 48000).toFixed(2)} s · {((line.end - line.start) / 48000).toFixed(2)} s</span>
             </div>
-            <ul className="st-takes" aria-label="Takes">
+            <ul className="st-takes" aria-label={tt('Takes')}>
               {takes.map((t) => <TakeRow key={t.id} take={t} chosen={line.line!.take === t.id} current={t.lineRevision === line.line!.revision} onChoose={() => void studio.exec([{ name: 'line.chooseTake', params: { scene: scene.id, id: line.id, take: t.id } }], `Choose take ${t.number}`)} />)}
-              {takes.length === 0 && <li className="fr-faint">No takes yet.</li>}
+              {takes.length === 0 && <li className="fr-faint">{tt('No takes yet.')}</li>}
             </ul>
             <div className="st-row">
-              <Select label="Number of takes" value={String(count)} options={[1, 2, 3, 4].map((n) => ({ value: String(n), label: `${n} take${n > 1 ? 's' : ''}` }))} onChange={(v) => setCount(Number(v))} />
-              <Button variant="primary" loading={generating} disabled={!workerOk || !voiceRef || line.line.muted} disabledReason={!voiceRef ? `Design a voice for ${inst.name} first` : !workerOk ? worker?.hint ?? worker?.message ?? 'The voice worker is not connected' : 'This line is muted'} onClick={() => void generate()}>Generate takes</Button>
+              <Select label={tt('Number of takes')} value={String(count)} options={[1, 2, 3, 4].map((n) => ({ value: String(n), label: `${n} take${n > 1 ? 's' : ''}` }))} onChange={(v) => setCount(Number(v))} />
+              <Button variant="primary" loading={generating} disabled={!workerOk || !voiceRef || line.line.muted} disabledReason={!voiceRef ? `Design a voice for ${inst.name} first` : !workerOk ? worker?.hint ?? worker?.message ?? 'The voice worker is not connected' : 'This line is muted'} onClick={() => void generate()}>{tt('Generate takes')}</Button>
             </div>
-            {worker?.fixture && <p className="fr-hint">The connected worker produces fixture audio — not real speech.</p>}
+            {worker?.fixture && <p className="fr-hint">{tt('The connected worker produces fixture audio — not real speech.')}</p>}
             <input ref={fileRef} type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,.aac,.webm,audio/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void upload(f); }} />
-            <Button icon={<Upload size={14} />} disabled={line.line.muted} disabledReason="This line is muted" onClick={() => fileRef.current?.click()}>Upload take…</Button>
+            <div className="st-row">
+              <Button icon={<Upload size={14} />} disabled={line.line.muted} disabledReason={tt('This line is muted')} onClick={() => fileRef.current?.click()}>{tt('Upload take…')}</Button>
+              <Button icon={<Mic size={14} />} disabled={line.line.muted} disabledReason={tt('This line is muted')} onClick={() => setRecording(true)}>{tt('Record take…')}</Button>
+            </div>
+            <ToggleRow label={tt('Normalise uploads and recordings')} description={tt('Peaks to −1 dBFS; the original file is kept')} checked={normalise} onChange={setNormalise} />
+            {recording && (
+              <Dialog title={`Record a take · ${inst.name}`} open onClose={() => setRecording(false)} footer={<Button onClick={() => setRecording(false)}>{tt('Close')}</Button>}>
+                <p className="st-rec-script">“{line.line.text}”</p>
+                <Recorder useLabel="Use as a take" onUse={(r) => { setRecording(false); void api.uploadTake(pid, scene.id, line.id, new File([r.wav as BlobPart], `recording-${r.number}.wav`), { normalise, recorded: true }).catch((e: Error) => studio.set({ lastError: { message: e.message } })); }} />
+              </Dialog>
+            )}
           </>
-        ) : <p className="fr-hint">{inst.name} has no lines in this scene.</p>}
-        <TextArea label="New line" value={newLine} onChange={setNewLine} rows={2} placeholder={`New line for ${inst.name}`} />
-        <Button icon={<Plus size={14} />} disabled={!newLine.trim()} disabledReason="Type the line first" onClick={() => void addLine()}>Add line at playhead</Button>
+        ) : <p className="fr-hint">{inst.name}  {tt('has no lines in this scene.')}</p>}
+        <TextArea label={tt('New line')} value={newLine} onChange={setNewLine} rows={2} placeholder={`New line for ${inst.name}`} />
+        <Button icon={<Plus size={14} />} disabled={!newLine.trim()} disabledReason={tt('Type the line first')} onClick={() => void addLine()}>{tt('Add line at playhead')}</Button>
       </Section>
       {line?.line && (
-        <Section title="Delivery" summary={line.line.delivery.emotion ?? 'Neutral'} open={open.delivery!} onToggle={(o) => toggle('delivery', o)}>
+        <Section title={tt('Delivery')} summary={presets.find((x) => x.ref === line.line!.delivery.preset)?.name ?? line.line.delivery.emotion ?? 'Neutral'} open={open.delivery!} onToggle={(o) => toggle('delivery', o)}>
+          {presets.length > 0 && <Select label={tt('Delivery preset')} value={line.line.delivery.preset ?? ''} options={[{ value: '', label: 'Custom' }, ...presets.map((x) => ({ value: x.ref, label: x.name }))]} onChange={(v) => void studio.exec([{ name: 'line.setDelivery', params: { scene: scene.id, id: line.id, delivery: v ? { preset: v } : {} } }], v ? `Delivery ${presets.find((x) => x.ref === v)?.name}` : 'Custom delivery')} />}
           {engine ? (
-            <Select label="Emotion" value={line.line.delivery.emotion ?? 'neutral'} options={engine.controls.emotion.map((e) => ({ value: e, label: e[0]!.toUpperCase() + e.slice(1) }))} onChange={(v) => void studio.exec([{ name: 'line.setDelivery', params: { scene: scene.id, id: line.id, delivery: { ...line.line!.delivery, emotion: v } } }])} />
-          ) : <p className="fr-hint">Delivery options appear when the voice worker is connected (they depend on its engine).</p>}
-          {engine && !engine.controls.pace && <p className="fr-faint">Pace is not supported by {engine.label}.</p>}
-          {engine && !engine.controls.instruction && <p className="fr-faint">Instruction text is not supported by {engine.label}.</p>}
+            <Select label={tt('Emotion')} value={line.line.delivery.emotion ?? 'neutral'} options={engine.controls.emotion.map((e) => ({ value: e, label: e[0]!.toUpperCase() + e.slice(1) }))} onChange={(v) => void studio.exec([{ name: 'line.setDelivery', params: { scene: scene.id, id: line.id, delivery: { ...line.line!.delivery, emotion: v } } }])} />
+          ) : <p className="fr-hint">{tt('Delivery options appear when the voice worker is connected (they depend on its engine).')}</p>}
+          {engine?.controls.pace ? <SliderRow label={tt('Pace')} value={line.line.delivery.pace ?? 1} min={0.5} max={2} step={0.05} defaultValue={1} format={(v) => `${v.toFixed(2)}×`} onChange={(v, ph) => ph === 'commit' && void studio.exec([{ name: 'line.setDelivery', params: { scene: scene.id, id: line.id, delivery: { ...line.line!.delivery, pace: v } } }], 'Change pace')} />
+            : engine && <p className="fr-faint">{tt('Pace is not supported by')} {engine.label}.</p>}
+          {engine?.controls.instruction ? <InstructionField key={`${line.id}:${line.line.delivery.instruction ?? ''}`} value={line.line.delivery.instruction ?? ''} onCommit={(v) => { const { instruction: _old, ...rest } = line.line!.delivery; void studio.exec([{ name: 'line.setDelivery', params: { scene: scene.id, id: line.id, delivery: v ? { ...rest, instruction: v } : rest } }], 'Change instruction'); }} />
+            : engine && <p className="fr-faint">{tt('Instruction text is not supported by')} {engine.label}.</p>}
+          <Select label={tt('Seeds')} value={seedPolicy} onChange={(v) => setSeedPolicy(v as typeof seedPolicy)} options={[{ value: 'random', label: 'New random seeds' }, { value: 'fixed', label: 'Fixed seed' }, { value: 'reuse', label: "Reuse the chosen take's seed", disabled: chosenSeed === undefined, disabledReason: 'The chosen take has no seed' }]} />
+          {seedPolicy === 'fixed' && <NumberField label={tt('Seed')} prefix="Seed" precision={0} min={0} max={2 ** 31 - 1} value={fixedSeed} onChange={(v, ph) => ph === 'commit' && setFixedSeed(Math.round(v))} />}
+          <p className="fr-faint">{seedPolicy === 'random' ? 'Each generation explores new variations.' : 'The same seed and settings reproduce the same takes on the same engine and model.'}</p>
         </Section>
       )}
     </>
+  );
+}
+
+/** Instruction text for engines that accept it (FR-VOI-07); one command per edit. */
+function InstructionField({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
+  const [text, setText] = useState(value);
+  return (
+    <div onBlur={() => text.trim() !== value && onCommit(text.trim())}>
+      <TextArea label={tt('Instruction')} value={text} onChange={setText} rows={2} placeholder={tt('e.g. dry, sarcastic')} />
+    </div>
   );
 }
 
@@ -489,7 +573,7 @@ function LineText({ scene, clip }: { scene: Scene; clip: Clip }) {
   };
   return (
     <div onBlur={commit}>
-      <TextArea label="Line" value={text} onChange={setText} rows={3} />
+      <TextArea label={tt('Line')} value={text} onChange={setText} rows={3} />
     </div>
   );
 }
@@ -517,12 +601,12 @@ function TakeRow({ take, chosen, current, onChoose }: { take: Take; chosen: bool
   return (
     <li className={`st-take ${chosen ? 'st-take--chosen' : ''}`}>
       <IconButton size="sm" label={playing ? `Stop take ${take.number}` : `Play take ${take.number}`} icon={playing ? <Pause size={13} /> : <Play size={13} />} disabled={!take.media} disabledReason={take.status === 'generating' ? 'Still generating' : 'No audio'} onClick={toggle} />
-      <span>Take {take.number}</span>
+      <span>{tt('Take')} {take.number}</span>
       <span className="fr-faint">{take.status === 'ready' ? `${(take.durationS ?? 0).toFixed(1)} s` : take.status === 'generating' ? 'Generating…' : take.status === 'failed' ? `Failed: ${take.error?.message ?? ''}` : take.status}</span>
-      {!current && <StatusBadge tone="warning">Previous text</StatusBadge>}
-      {take.fixture && <StatusBadge tone="neutral" title="Fixture audio — not real speech">Fixture</StatusBadge>}
+      {!current && <StatusBadge tone="warning">{tt('Previous text')}</StatusBadge>}
+      {take.fixture && <StatusBadge tone="neutral" title={tt('Fixture audio — not real speech')}>{tt('Fixture')}</StatusBadge>}
       <span className="fr-spacer" />
-      {take.status === 'ready' && current && (chosen ? <StatusBadge tone="success">Chosen</StatusBadge> : <Button variant="ghost" onClick={onChoose}>Use</Button>)}
+      {take.status === 'ready' && current && (chosen ? <StatusBadge tone="success">{tt('Chosen')}</StatusBadge> : <Button variant="ghost" onClick={onChoose}>{tt('Use')}</Button>)}
     </li>
   );
 }

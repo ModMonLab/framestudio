@@ -27,3 +27,5 @@ export type NodeRenderer = Renderer;
 export async function createNodeRenderer(opts: { fontsDir: string; images?: ImageResolver }): Promise<NodeRenderer> {
   return createRenderer(await loadCanvasKit(), loadFonts(opts.fontsDir), opts.images);
 }
+
+export { createRasterPool, poolSize, type RasterPool } from './pool.js';

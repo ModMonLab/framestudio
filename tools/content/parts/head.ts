@@ -106,6 +106,12 @@ function backOutline(h: HeadShape): PS[] {
   return [...right, [0, 0.92 * L], ...right.slice(1).reverse().map(mx)];
 }
 
+/** The head outline of a shape in a view (head space), for overlays that cover the whole face. */
+export function headOutline(name: string, view: View): PS[] {
+  const h = HEAD_SHAPES[name]!;
+  return view === 'front' ? frontOutline(h) : view === 'three' ? threeOutline(h) : view === 'side' ? sideOutline(h) : backOutline(h);
+}
+
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }

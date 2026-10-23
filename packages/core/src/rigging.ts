@@ -134,6 +134,12 @@ export interface RigRequest {
   mapping: Record<string, RigTarget>;
   /** Library parts that fill gaps: e.g. `{ mouth: 'mouth.<id>@1' }` when the artwork lacks speech shapes. */
   libraryParts?: Partial<Record<'mouth' | 'hands' | 'feet' | 'eyes' | 'brows', string>>;
+  /**
+   * Pivots set by the user (artwork units), per layer: `at` is the joint the layer turns around (shoulder, elbow,
+   * hip, knee, wrist, ankle); `end` is the far joint of a limb segment. Without one the layer's top centre (limbs,
+   * hands) or its own box (feet) is used.
+   */
+  pivots?: Record<string, { at: [number, number]; end?: [number, number] }>;
   colors?: Record<string, string>;
   /** IDs for generated assets. */
   newId: () => string;
@@ -191,6 +197,15 @@ export function rigArtwork(req: RigRequest): RigResult {
     const anchors: NonNullable<ViewArt['anchors']> = {};
     const box = (l: RigLayer, def: TargetDef): [number, number, number, number] => {
       const [x, y, w, h] = l.bounds;
+      const pv = req.pivots?.[l.id];
+      if (pv && def.space !== 'head' && def.space !== 'torso' && def.space !== 'pelvis') {
+        const [ax, ay] = pv.at;
+        if (def.space === 'handL' || def.space === 'handR') return [(x - ax) / h, (y - ay) / h, (x + w - ax) / h, (y + h - ay) / h];
+        if (def.space === 'footL' || def.space === 'footR') return [(x - ax) / w, (y - ay) / w, (x + w - ax) / w, (y + h - ay) / w];
+        // Limb segment: the pivot is the joint at v = 0, the end joint at v = 1; u in half-widths of the layer.
+        const len = Math.max(1, (pv.end?.[1] ?? y + h) - ay);
+        return [(x - ax) / (w / 2), (y - ay) / len, (x + w - ax) / (w / 2), (y + h - ay) / len];
+      }
       switch (def.space) {
         case 'head': return [(x - hc[0]) / (head[2] / 2), (y - hc[1]) / (head[3] / 2), (x + w - hc[0]) / (head[2] / 2), (y + h - hc[1]) / (head[3] / 2)];
         case 'torso': return [(x - (tb[0] + tb[2] / 2)) / (tb[2] / 2), (y - tb[1]) / tb[3], (x + w - (tb[0] + tb[2] / 2)) / (tb[2] / 2), (y + h - tb[1]) / tb[3]];
@@ -262,8 +277,13 @@ export function rigArtwork(req: RigRequest): RigResult {
   const provenance = { method: 'imported' as const, author: req.author, date: req.date, sourceFile: req.sourceFile, rightsStatement: req.rights, notes: 'Rigged with the rigging assistant.' };
   const parts: AssetManifest[] = [];
   const partRefs: Record<string, string> = {};
+  // Hands: a library hand set gives every hand pose an action asks for; drawn hands keep the one pose drawn.
+  const useLibraryHands = !!req.libraryParts?.hands;
+  if (!useLibraryHands && !partArt.has('hands')) problems.push({ severity: 'warning', message: 'No hand layers: the character has no hands; choose a library hand set so gestures show hand poses' });
+  else if (!useLibraryHands) problems.push({ severity: 'warning', message: 'Drawn hands keep the pose they are drawn in; choose a library hand set for pointing, fists and other hand poses' });
   for (const [part, byView] of partArt) {
     if (part === 'mouth' && useLibraryMouth) continue;
+    if (part === 'hands' && useLibraryHands) continue;
     const famArt = { views: byView, ...(Object.keys(exempt).length ? { exempt } : {}) };
     // Back views have no face features (FR-LIP-05); those parts declare it.
     const faceFeature = ['eyes', 'brows', 'nose', 'mouth'].includes(part);

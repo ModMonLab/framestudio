@@ -1,7 +1,7 @@
 /** Studio workspace (Design System §4, §7.1): app bar, rail, left panel, canvas, properties and timeline. */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Download, Image as ImageIcon, LayoutGrid, Layers, Moon, Music, Redo2, Sparkles, Sun, Trash2, Type, Undo2, Users } from 'lucide-react';
-import { AppBar, Breadcrumb, Button, Dialog, IconButton, MenuBar, Rail, StatusBadge, Tabs, Toolbar, ToolbarSeparator, useTheme, useToasts, VSep, type MenuEntry } from '@frame/ui';
+import { AppBar, Breadcrumb, Button, Dialog, IconButton, MenuBar, Rail, StatusBadge, Tabs, Toolbar, ToolbarSeparator, useTheme, useToasts, VSep, type MenuEntry, t as tt } from '@frame/ui';
 import { copySelection, pasteCommands, randomId, type ClipboardData } from '@frame/core';
 import type { Command } from '@frame/schema';
 import { Studio, useStudio, type Mode } from '../lib/store.js';
@@ -16,6 +16,7 @@ import { PropertiesPanel } from './PropertiesPanel.js';
 import { Timeline } from './Timeline.js';
 import { EpisodeView } from './EpisodeView.js';
 import { ScriptView } from './ScriptView.js';
+import { VoiceLibrary } from './VoiceLibrary.js';
 import { ProjectSettingsDialog } from './ProjectSettings.js';
 import { ExportDialog } from './ExportDialog.js';
 import { JobsButton } from './JobsButton.js';
@@ -52,7 +53,7 @@ export function useCtx(): Ctx {
 const SAVE_LABEL = { saved: 'Saved', saving: 'Saving…', unsaved: 'Unsaved', error: 'Not saved' } as const;
 const SAVE_TONE = { saved: 'success', saving: 'info', unsaved: 'warning', error: 'danger' } as const;
 
-export function Workspace({ pid, builder, part, screen }: { pid: string; builder?: { scene: string; instance: string }; part?: string; screen?: 'library' }) {
+export function Workspace({ pid, builder, part, screen }: { pid: string; builder?: { scene: string; instance: string }; part?: string; screen?: 'library' | 'voices' }) {
   const studio = useMemo(() => new Studio(pid), [pid]);
   const assets = useMemo(() => new AssetCache(pid), [pid]);
   const [failed, setFailed] = useState<string>();
@@ -94,16 +95,16 @@ export function Workspace({ pid, builder, part, screen }: { pid: string; builder
   if (failed) {
     return (
       <div className="fr-root st-app st-center">
-        <p role="alert">This project could not be opened: {failed}</p>
-        <Button onClick={() => (location.hash = '#/')}>Back to projects</Button>
+        <p role="alert">{tt('This project could not be opened:')} {failed}</p>
+        <Button onClick={() => (location.hash = '#/')}>{tt('Back to projects')}</Button>
       </div>
     );
   }
-  if (!project) return <div className="fr-root st-app st-center" aria-busy="true">Opening project…</div>;
+  if (!project) return <div className="fr-root st-app st-center" aria-busy="true">{tt('Opening project…')}</div>;
   const ctx: Ctx = { studio, assets, openExport: () => setExportOpen(true), openVoiceDesigner: (i) => setVoiceFor(i), openVersions: () => setVersionsOpen(true), importPackage: () => pkgInput.current?.click() };
   return (
     <StudioCtx.Provider value={ctx}>
-      <ContextMenuHost>{screen === 'library' ? <LibraryScreen /> : part ? <PartEditor key={part} partRef={part} /> : builder ? <Builder scene={builder.scene} instance={builder.instance} /> : <Shell />}</ContextMenuHost>
+      <ContextMenuHost>{screen === 'library' ? <LibraryScreen /> : screen === 'voices' ? <VoiceLibrary /> : part ? <PartEditor key={part} partRef={part} /> : builder ? <Builder scene={builder.scene} instance={builder.instance} /> : <Shell />}</ContextMenuHost>
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <VoiceDesigner open={voiceFor !== null} instance={voiceFor ?? undefined} onClose={() => setVoiceFor(null)} />
       <VersionsDialog pid={pid} open={versionsOpen} onClose={() => setVersionsOpen(false)} />
@@ -111,7 +112,7 @@ export function Workspace({ pid, builder, part, screen }: { pid: string; builder
       <TemplateDialog />
       <SettingsHost />
       <ExternalChangeDialog />
-      <input ref={pkgInput} type="file" accept=".framechar,.frameasset,.framevoice" hidden aria-label="Import package" onChange={(e) => { void onPackage(e.target.files?.[0]); e.target.value = ''; }} />
+      <input ref={pkgInput} type="file" accept=".framechar,.frameasset,.framevoice" hidden aria-label={tt('Import package')} onChange={(e) => { void onPackage(e.target.files?.[0]); e.target.value = ''; }} />
     </StudioCtx.Provider>
   );
 }
@@ -136,16 +137,16 @@ function ExternalChangeDialog() {
     }
   };
   return (
-    <Dialog title="Project changed on disk" open onClose={() => studio.set({ externalNotice: undefined })} footer={<>
-      <Button disabled={busy} onClick={() => studio.set({ externalNotice: undefined })}>Decide later</Button>
-      <Button disabled={busy} onClick={() => void keep('disk')}>Load the disk version</Button>
-      <Button variant="primary" disabled={busy} onClick={() => void keep('mine')}>Keep my changes</Button>
+    <Dialog title={tt('Project changed on disk')} open onClose={() => studio.set({ externalNotice: undefined })} footer={<>
+      <Button disabled={busy} onClick={() => studio.set({ externalNotice: undefined })}>{tt('Decide later')}</Button>
+      <Button disabled={busy} onClick={() => void keep('disk')}>{tt('Load the disk version')}</Button>
+      <Button variant="primary" disabled={busy} onClick={() => void keep('mine')}>{tt('Keep my changes')}</Button>
     </>}>
-      <p>Another program changed {notice.files.length === 1 ? 'a file' : `${notice.files.length} files`} in this project while you had unsaved changes. Saving is paused until you choose.</p>
-      <ul className="st-home-problems" aria-label="Changed files">
+      <p>{tt('Another program changed')} {notice.files.length === 1 ? 'a file' : `${notice.files.length} files`}  {tt('in this project while you had unsaved changes. Saving is paused until you choose.')}</p>
+      <ul className="st-home-problems" aria-label={tt('Changed files')}>
         {notice.files.map((f) => <li key={f} className="fr-mono">{f}{notice.conflicts.includes(f) ? ' — you changed this too' : ''}</li>)}
       </ul>
-      <p className="fr-hint">Loading the disk version drops your unsaved changes and restarts undo. Keeping yours overwrites the other program's edits.</p>
+      <p className="fr-hint">{tt('Loading the disk version drops your unsaved changes and restarts undo. Keeping yours overwrites the other program\'s edits.')}</p>
     </Dialog>
   );
 }
@@ -181,17 +182,17 @@ function Shell() {
           { id: 'templates', label: 'Templates', icon: <ImageIcon size={18} /> },
         ]} />
         {panels.left && (rail === 'layers' ? <LayersPanel /> : <AssetsPanel filter={rail} />)}
-        {panels.left && <ResizeHandle label="Resize left panel" value={leftW} min={220} max={420} defaultValue={272} onChange={setLeftW} dir={1} />}
+        {panels.left && <ResizeHandle label={tt('Resize left panel')} value={leftW} min={220} max={420} defaultValue={272} onChange={setLeftW} dir={1} />}
         <div className="st-center-col">
           <ContextToolbar />
           <CanvasView />
         </div>
-        {panels.right && <ResizeHandle label="Resize properties panel" value={rightW} min={260} max={440} defaultValue={300} onChange={setRightW} dir={-1} />}
+        {panels.right && <ResizeHandle label={tt('Resize properties panel')} value={rightW} min={260} max={440} defaultValue={300} onChange={setRightW} dir={-1} />}
         {panels.right && <PropertiesPanel mode={mode} />}
       </div>
-      {panels.timeline && <ResizeHandle label="Resize timeline" value={tlH} min={160} max={600} defaultValue={332} onChange={setTlH} dir={-1} orientation="horizontal" />}
+      {panels.timeline && <ResizeHandle label={tt('Resize timeline')} value={tlH} min={160} max={600} defaultValue={332} onChange={setTlH} dir={-1} orientation="horizontal" />}
       {panels.timeline && <TimelineArea />}
-      <span className="fr-sr" aria-live="polite">{mode} mode</span>
+      <span className="fr-sr" aria-live="polite">{mode}  {tt('mode')}</span>
       <Tour />
     </div>
   );
@@ -260,6 +261,7 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
     ] },
     { id: 'scene', label: 'Scene', items: [
       { id: 'voice', label: 'Design a voice…', onSelect: () => openVoiceDesigner(undefined) },
+      { id: 'voices', label: 'Voice library', onSelect: () => (location.hash = `#/p/${encodeURIComponent(studio.state.pid)}/voices`) },
       { id: 'set-save', label: 'Save set…', disabled: !scene?.instances.some((i) => i.kind === 'set-piece'), disabledReason: 'Place a kit in this scene first', onSelect: () => saveSceneAsSet(studio, (message) => toasts.show({ tone: 'success', message })) },
       { id: 'tpl-save-ep', label: 'Save episode as template…', disabled: !scene, disabledReason: 'Open a scene first', onSelect: () => saveSceneAsTemplate(studio, (message) => toasts.show({ tone: 'success', message }), 'episode') },
       { id: 'episode-view', label: 'Episode view', checked: !!studio.state.episodeView, onSelect: () => studio.set({ episodeView: !studio.state.episodeView, scriptView: false }) },
@@ -306,19 +308,19 @@ function TopBar({ onTogglePanel, panels }: { onTogglePanel: (k: 'left' | 'right'
           ...(scene ? [{ label: scene.name }] : []),
         ]} />
         <StatusBadge tone={connected ? SAVE_TONE[save.status] : 'warning'} title={save.error}>{connected ? SAVE_LABEL[save.status] : 'Reconnecting…'}</StatusBadge>
-        {connected && save.status === 'error' && !external && <Button variant="ghost" title={save.error} onClick={() => void api.save(studio.state.pid).then((r) => r.status === 'error' && toasts.show({ tone: 'error', message: `Still not saved: ${r.error ?? 'unknown error'}` }))}>Retry</Button>}
+        {connected && save.status === 'error' && !external && <Button variant="ghost" title={save.error} onClick={() => void api.save(studio.state.pid).then((r) => r.status === 'error' && toasts.show({ tone: 'error', message: `Still not saved: ${r.error ?? 'unknown error'}` }))}>{tt('Retry')}</Button>}
       </>}
-      center={<Tabs label="Workspace mode" value={mode} onChange={(m: Mode) => studio.set({ mode: m })} tabs={[{ value: 'stage', label: 'Stage', shortcut: '1' }, { value: 'direct', label: 'Direct', shortcut: '2' }, { value: 'edit', label: 'Edit', shortcut: '3' }]} />}
+      center={<Tabs label={tt('Workspace mode')} value={mode} onChange={(m: Mode) => studio.set({ mode: m })} tabs={[{ value: 'stage', label: 'Stage', shortcut: '1' }, { value: 'direct', label: 'Direct', shortcut: '2' }, { value: 'edit', label: 'Edit', shortcut: '3' }]} />}
       right={<>
         <ProblemsButton />
         <ActivityButton />
         <WorkerBadge />
         <JobsButton />
         <IconButton label={resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} icon={resolved === 'dark' ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')} />
-        <IconButton label={undoLabel ? `Undo ${undoLabel}` : 'Undo'} shortcut="Ctrl Z" icon={<Undo2 size={16} />} disabled={!canUndo} disabledReason="Nothing to undo" onClick={() => void studio.undo()} />
-        <IconButton label={redoLabel ? `Redo ${redoLabel}` : 'Redo'} shortcut="Ctrl Shift Z" icon={<Redo2 size={16} />} disabled={!canRedo} disabledReason="Nothing to redo" onClick={() => void studio.redo()} />
+        <IconButton label={undoLabel ? `Undo ${undoLabel}` : 'Undo'} shortcut="Ctrl Z" icon={<Undo2 size={16} />} disabled={!canUndo} disabledReason={tt('Nothing to undo')} onClick={() => void studio.undo()} />
+        <IconButton label={redoLabel ? `Redo ${redoLabel}` : 'Redo'} shortcut="Ctrl Shift Z" icon={<Redo2 size={16} />} disabled={!canRedo} disabledReason={tt('Nothing to redo')} onClick={() => void studio.redo()} />
         <Button onClick={() => studio.set({ playing: !studio.state.playing })}>{studio.state.playing ? 'Stop' : 'Preview'}</Button>
-        <Button variant="primary" data-tour="export" icon={<Download size={14} />} onClick={openExport}>Export</Button>
+        <Button variant="primary" data-tour="export" icon={<Download size={14} />} onClick={openExport}>{tt('Export')}</Button>
       </>}
     />
   );
@@ -335,16 +337,16 @@ function ContextToolbar() {
   const clip = first?.kind === 'clip' ? scene?.clips.find((c) => c.id === first.id) : undefined;
   const name = inst?.name ?? (clip ? clip.line?.text.slice(0, 40) ?? clip.name ?? clip.asset?.split('@')[0] ?? 'Clip' : undefined);
   return (
-    <Toolbar label="Selection">
+    <Toolbar label={tt('Selection')}>
       {name ? (
         <span className="st-selname"><span className="st-dot" style={{ background: inst?.kind === 'character' ? 'var(--color-cat-character, var(--color-accent))' : 'var(--color-accent)' }} />{name}</span>
       ) : (
-        <span className="fr-faint">Nothing selected · click an object on the stage, in Layers or on the timeline</span>
+        <span className="fr-faint">{tt('Nothing selected · click an object on the stage, in Layers or on the timeline')}</span>
       )}
       <ToolbarSeparator />
       <span className="fr-spacer" />
-      <IconButton label="Duplicate" shortcut="Ctrl D" icon={<Copy size={15} />} disabled={!name} disabledReason="Select an object or clip" onClick={() => void duplicateSelection(studio)} />
-      <IconButton label="Delete" shortcut="Delete" icon={<Trash2 size={15} />} disabled={!name} disabledReason="Select an object or clip" onClick={() => void deleteSelection(studio)} />
+      <IconButton label={tt('Duplicate')} shortcut="Ctrl D" icon={<Copy size={15} />} disabled={!name} disabledReason={tt('Select an object or clip')} onClick={() => void duplicateSelection(studio)} />
+      <IconButton label={tt('Delete')} shortcut="Delete" icon={<Trash2 size={15} />} disabled={!name} disabledReason={tt('Select an object or clip')} onClick={() => void deleteSelection(studio)} />
     </Toolbar>
   );
 }

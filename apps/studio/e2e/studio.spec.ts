@@ -517,6 +517,16 @@ test('rigging assistant: a layered PSD becomes a character with declared view ga
   await page.getByRole('option', { name: /^Library: / }).first().click();
   await expect(dlg.getByText('Rig check passed')).toBeVisible();
   await expect(dlg.getByRole('img', { name: /hero, (Front|Three-quarter) view/ })).toHaveCount(2);
+  // A joint set by clicking the layer, and the library hand set for hand poses (FR-IMP-03).
+  await dlg.getByRole('button', { name: /^Set the joint of upper_arm_L/ }).first().click();
+  const joint = page.getByRole('dialog', { name: /^Joint · upper_arm_L/ });
+  const img = (await joint.getByRole('img').boundingBox())!;
+  await page.mouse.click(img.x + img.width / 2, img.y + 6);
+  await joint.getByRole('button', { name: 'Done' }).click();
+  await expect(dlg.getByRole('button', { name: /^Set the joint of upper_arm_L/ }).first()).toHaveText('Joint set');
+  await dlg.getByRole('button', { name: 'Library hands: Use the drawn hands' }).click();
+  await page.getByRole('option', { name: /^Library: / }).first().click();
+  await expect(dlg.getByText('Rig check passed')).toBeVisible();
   const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
   await dlg.getByRole('button', { name: 'Save character' }).click();
@@ -525,6 +535,7 @@ test('rigging assistant: a layered PSD becomes a character with declared view ga
   const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
   const chr = Object.values(st.assets as Record<string, { kind: string; name: string; viewExemptions: Record<string, string> }>).find((a) => a.kind === 'chr' && a.name === 'hero')!;
   expect(Object.keys(chr.viewExemptions).sort()).toEqual(['back', 'side']);
+  expect((chr as unknown as { data: { parts: { hands: string } } }).data.parts.hands).toMatch(/^base\./);
   const sid = st.episodes[st.project.episodes[0]].scenes[0];
   expect(st.scenes[sid].instances.some((i: { name: string }) => i.name === 'hero')).toBe(true);
   await page.waitForTimeout(800);
@@ -1044,4 +1055,81 @@ test('the camera frame is dragged on the whole stage; aspect ratios preview with
   await expect(page.locator('.st-safe-ui')).toBeVisible();
   const c = (await page.getByTestId('stage-canvas').boundingBox())!;
   expect(c.height).toBeGreaterThan(c.width);
+});
+
+test.describe(() => {
+  // The config's fake microphone (Chromium's test beeps) exercises the recorder without a real device. Not speech.
+  test.use({ permissions: ['microphone'] });
+  test('records a take and clones a voice with consent; the voice library lists it with its consent and users (FR-VOI-01/04/05)', async ({ page }) => {
+    await openProject(page, sample(false));
+    await page.getByRole('treeitem', { name: /Maya Bennett/ }).first().click();
+    await page.getByRole('tab', { name: 'Audio' }).click();
+    // Record a take for the current line.
+    await page.getByRole('button', { name: 'Record take…' }).click();
+    const rec = page.getByRole('dialog', { name: /^Record a take/ });
+    await rec.getByRole('button', { name: 'Record', exact: true }).click();
+    await expect(rec.getByText(/^Recording 1$/)).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(2500);
+    await rec.getByRole('button', { name: 'Stop' }).click();
+    await rec.getByRole('button', { name: 'Use as a take' }).click();
+    await expect(rec).toBeHidden();
+    await expect(page.getByRole('list', { name: 'Takes' })).toContainText('Chosen', { timeout: 30_000 });
+    // Clone: blocked until the consent section is complete.
+    await page.getByRole('button', { name: 'Clone a voice…' }).click();
+    const dlg = page.getByRole('dialog', { name: 'Clone a voice' });
+    await dlg.getByRole('button', { name: 'Record', exact: true }).click();
+    await expect(dlg.getByText(/^Recording 1$/)).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(5000);
+    await dlg.getByRole('button', { name: 'Stop' }).click();
+    await dlg.getByRole('button', { name: 'Use this recording' }).click();
+    await expect(dlg.getByText(/Using Recording 1/)).toBeVisible();
+    await dlg.getByLabel('What is said in the recording').fill('Test tones from the fake microphone.');
+    await expect(dlg.getByRole('button', { name: 'Clone voice' })).toBeDisabled();
+    await dlg.getByRole('radio', { name: 'This is my own voice' }).check();
+    await dlg.getByRole('textbox', { name: "Speaker's name" }).fill('Test Speaker');
+    await dlg.getByRole('checkbox', { name: 'I confirm the statement above' }).check();
+    await dlg.getByRole('button', { name: 'Clone voice' }).click();
+    await expect(dlg).toBeHidden();
+    await expect(page.getByText("Maya Bennett's voice", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    // The voice library.
+    const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+    await page.goto(`/#/p/${encodeURIComponent(pid)}/voices`);
+    const list = page.getByRole('list', { name: 'Voices' });
+    await list.getByRole('button', { name: /Maya Bennett's voice/ }).click();
+    const details = page.getByRole('complementary', { name: 'Voice details' });
+    await expect(details.getByText('Cloned')).toBeVisible();
+    await expect(details.getByText(/Consent: own voice of Test Speaker/)).toBeVisible();
+    await expect(details.getByText(/Maya Bennett · /)).toBeVisible();
+    const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
+  });
+});
+
+test('a prop state change lands in the Props group; pinch zoom zooms the timeline (FR-TML-01, FR-TML-08, FR-PRP-01)', async ({ page }) => {
+  await openProject(page, sample(false));
+  const pid = decodeURIComponent(page.url().split('#/p/')[1]!.split('/')[0]!);
+  const state = async () => (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
+  const st = await state();
+  const sid = st.episodes[st.project.episodes[0]].scenes[0];
+  const add = await page.request.post(`/api/projects/${pid}/commands`, { data: { commands: [{ name: 'instance.add', params: { scene: sid, kind: 'prop', asset: 'prop.door@1', name: 'Side door', transform: { x: 1600, y: 1000 }, depthPlane: 'back' } }] } });
+  expect(add.ok()).toBe(true);
+  await page.getByRole('treeitem', { name: /Side door/ }).first().click();
+  await page.getByRole('tab', { name: 'Properties', exact: true }).click();
+  await page.getByRole('button', { name: 'Change to: Choose a state' }).click();
+  await page.getByRole('option', { name: 'Open' }).click();
+  await page.getByRole('button', { name: 'Add at playhead' }).click();
+  const timeline = page.getByRole('region', { name: 'Timeline' });
+  await expect(timeline.getByRole('button', { name: /^Props/ })).toBeVisible();
+  await expect.poll(async () => (await state()).scenes[sid].clips.some((c: { params: { state?: string } }) => c.params.state === 'open')).toBe(true);
+  // Trackpad pinch (ctrl + wheel) over the lanes zooms in.
+  const zoom = timeline.getByRole('slider', { name: 'Zoom' });
+  const val = async () => Number(await zoom.inputValue());
+  const before = await val();
+  expect(before).toBeGreaterThan(0);
+  const box = (await timeline.locator('.st-tl-body').boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 20);
+  await page.keyboard.down('Control');
+  await page.mouse.wheel(0, -120);
+  await page.keyboard.up('Control');
+  await expect.poll(val).toBeGreaterThan(before);
 });

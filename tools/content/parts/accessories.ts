@@ -401,5 +401,17 @@ export const WORN_PROPS: Record<string, AccSpec> = {
       ...(back ? [] : [ell(a, c + 0.18, 0.56, 0.08, 0.08, 'metal'), ell(a, c - 0.12, 0.46, 0.04, 0.04, 'metal')]),
     ]);
   } },
+  // A cone hat on an elastic, tipped slightly; the pompom and stripes read from every side.
+  'party-hat': { colors: { acc: '#E2537A', stripe: '#F7D154', pom: '#FFFFFF' }, draw: ({ a, view, line: ln }) => {
+    const sh = view === 'side' ? 0.1 : view === 'three' ? 0.05 : 0;
+    a.layer('acc.head', 'head', [
+      poly(a, [[-0.5 + sh, -0.92], [0.12 + sh, -2.25], [0.55 + sh, -0.9]], 'acc', 0, ln('acc')),
+      line(a, [[-0.32 + sh, -1.3], [0.42 + sh, -1.3]], 'stripe', 4),
+      line(a, [[-0.12 + sh, -1.72], [0.3 + sh, -1.72]], 'stripe', 4),
+      ell(a, 0.12 + sh, -2.28, 0.16, 0.16, 'pom', ln('pom')),
+      ...(view === 'back' ? [] : [line(a, [[-0.5 + sh, -0.92], [-0.6 + sh, 0.5]], 'acc.deep', 0.8)]),
+    ]);
+  } },
+  backpack: { colors: { acc: '#C0583F' }, draw: bag('backpack') },
 };
 export const wornPropPart = (name: string) => partOf(WORN_PROPS[name]!, 'acc');

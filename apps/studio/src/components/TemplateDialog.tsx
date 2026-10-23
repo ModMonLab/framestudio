@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import type { TemplateData } from '@frame/core';
-import { Button, Dialog, Select, useToasts } from '@frame/ui';
+import { Button, Dialog, Select, useToasts, t as tt } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio, type Studio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -90,14 +90,14 @@ export function TemplateDialog() {
   const title = target ? `New scene from ${target.name}` : `Replace ${recastInst?.name ?? 'character'}`;
   return (
     <Dialog title={title} open={open} onClose={close} footer={<>
-      <Button onClick={close}>Cancel</Button>
+      <Button onClick={close}>{tt('Cancel')}</Button>
       <Button variant="primary" loading={busy} onClick={() => void apply()} disabled={target ? !data : !cast.role || cast.role === recastInst?.asset} disabledReason={target ? 'Loading the template' : 'Choose a different character'}>{target ? 'Create scene' : 'Replace'}</Button>
     </>}>
-      {target && !data ? <p className="fr-faint">Loading…</p> : (
+      {target && !data ? <p className="fr-faint">{tt('Loading…')}</p> : (
         <div className="st-form st-form--flush">
           {target ? data!.roles.map((r) => (
             <Select key={r.key} label={r.label} value={cast[r.key]} onChange={(v) => setCast((x) => ({ ...x, [r.key]: v }))} options={characters} />
-          )) : <Select label="Character" value={cast.role} onChange={(v) => setCast({ role: v })} options={characters} />}
+          )) : <Select label={tt('Character')} value={cast.role} onChange={(v) => setCast({ role: v })} options={characters} />}
           <p className="fr-hint">{target
             ? `Adds a ${data!.scene.durationS} s scene with its set, cast, cameras, shots, music and titles. Everything stays editable.`
             : 'Keeps every clip, gaze and shot; cameras framed on this character are reframed for the new one.'}</p>

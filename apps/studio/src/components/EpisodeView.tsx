@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, ListVideo, PlayCircle } from 'lucide-react';
 import { formatTimecode } from '@frame/core';
 import type { Scene } from '@frame/schema';
-import { Button, IconButton, Select } from '@frame/ui';
+import { Button, IconButton, Select, t as tt } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -45,14 +45,14 @@ export function EpisodeView() {
   const move = (id: string, to: number) => void studio.exec([{ name: 'scene.move', params: { id, episode: ep.id, index: to } }], 'Reorder scenes');
 
   return (
-    <section className="st-timeline st-episode" aria-label="Episode">
-      <div className="st-tl-toolbar" role="toolbar" aria-label="Episode">
+    <section className="st-timeline st-episode" aria-label={tt('Episode')}>
+      <div className="st-tl-toolbar" role="toolbar" aria-label={tt('Episode')}>
         <ListVideo size={15} aria-hidden />
         <b>{ep.name}</b>
-        <span className="fr-faint">{ep.scenes.length} scenes · {formatTimecode(total)}</span>
+        <span className="fr-faint">{ep.scenes.length}  {tt('scenes ·')} {formatTimecode(total)}</span>
         <span className="fr-spacer" />
-        <Button icon={<PlayCircle size={14} />} onClick={() => studio.set({ scene: sceneId ?? ep.scenes[0], time: 0, episodePlay: true, playing: true, selection: [] })}>Play episode</Button>
-        <Button onClick={() => studio.set({ episodeView: false })}>Back to timeline</Button>
+        <Button icon={<PlayCircle size={14} />} onClick={() => studio.set({ scene: sceneId ?? ep.scenes[0], time: 0, episodePlay: true, playing: true, selection: [] })}>{tt('Play episode')}</Button>
+        <Button onClick={() => studio.set({ episodeView: false })}>{tt('Back to timeline')}</Button>
       </div>
       <ol className="st-ep-strip">
         {ep.scenes.map((id, i) => {
@@ -72,8 +72,8 @@ export function EpisodeView() {
                 <b className="st-ep-name">{sc.name}</b>
                 <span className="fr-faint fr-mono">{formatTimecode(sc.duration)}</span>
                 <span className="fr-spacer" />
-                <IconButton size="sm" label={`Move ${sc.name} earlier`} icon={<ArrowLeft size={13} />} disabled={i === 0} disabledReason="Already first" onClick={() => move(id, i - 1)} />
-                <IconButton size="sm" label={`Move ${sc.name} later`} icon={<ArrowRight size={13} />} disabled={i === ep.scenes.length - 1} disabledReason="Already last" onClick={() => move(id, i + 1)} />
+                <IconButton size="sm" label={`Move ${sc.name} earlier`} icon={<ArrowLeft size={13} />} disabled={i === 0} disabledReason={tt('Already first')} onClick={() => move(id, i - 1)} />
+                <IconButton size="sm" label={`Move ${sc.name} later`} icon={<ArrowRight size={13} />} disabled={i === ep.scenes.length - 1} disabledReason={tt('Already last')} onClick={() => move(id, i + 1)} />
               </div>
             </li>
           );

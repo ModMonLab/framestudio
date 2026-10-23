@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/cli-envelope.json",
+  "anyOf": [
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "ok": {
+          "const": true,
+          "type": "boolean"
+        },
+        "result": {
+          "description": "Command-specific result; see `frame describe` and docs/formats/cli.md."
+        }
+      },
+      "required": [
+        "ok",
+        "result"
+      ]
+    },
+    {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "ok": {
+          "const": false,
+          "type": "boolean"
+        },
+        "error": {
+          "additionalProperties": false,
+          "type": "object",
+          "properties": {
+            "code": {
+              "anyOf": [
+                {
+                  "const": "USAGE",
+                  "type": "string"
+                },
+                {
+                  "const": "VALIDATION_FAILED",
+                  "type": "string"
+                },
+                {
+                  "const": "REVISION_CONFLICT",
+                  "type": "string"
+                },
+                {
+                  "const": "NOT_FOUND",
+                  "type": "string"
+                },
+                {
+                  "const": "WORKER_UNAVAILABLE",
+                  "type": "string"
+                },
+                {
+                  "const": "RENDER_FAILED",
+                  "type": "string"
+                },
+                {
+                  "const": "CANCELLED",
+                  "type": "string"
+                },
+                {
+                  "const": "PERMISSION_REQUIRED",
+                  "type": "string"
+                },
+                {
+                  "const": "CONSENT_REQUIRED",
+                  "type": "string"
+                },
+                {
+                  "const": "INTERNAL",
+                  "type": "string"
+                },
+                {
+                  "const": "SCHEMA_TOO_NEW",
+                  "type": "string"
+                },
+                {
+                  "const": "MIGRATION_REQUIRED",
+                  "type": "string"
+                },
+                {
+                  "const": "CONFLICT",
+                  "type": "string"
+                },
+                {
+                  "const": "UNSUPPORTED",
+                  "type": "string"
+                },
+                {
+                  "const": "IO_ERROR",
+                  "type": "string"
+                },
+                {
+                  "const": "INVALID_PACKAGE",
+                  "type": "string"
+                }
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "details": {},
+            "hint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      },
+      "required": [
+        "ok",
+        "error"
+      ]
+    }
+  ]
+}

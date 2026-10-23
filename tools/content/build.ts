@@ -12,11 +12,16 @@ import { headPart, HEAD_SHAPES } from './parts/head.js';
 import { browPart, earsPart, eyesPart, mouthPart, nosePart } from './parts/features.js';
 import { bodyPart, feetPart, handsPart, HAND_POSES } from './parts/body.js';
 import { hairPart } from './parts/hair.js';
+import { FACIAL_HAIR, FRINGE_STYLES, facialHairPart, fringePart } from './parts/facial-hair.js';
+import { OVERLAY_IDS, overlayPart } from './parts/overlays.js';
+import { LAYERS, PRESET_LOOKS } from './wardrobe-looks.js';
 import { bottomPart, shoePart, topPart } from './parts/wardrobe.js';
 import { BOTTOMS, DRESSES, OUTERS, SHOES, TOPS } from './catalog-specs.js';
 import { ACTIONS, EXPRESSIONS } from './performance-specs.js';
 import { CAST, castData } from './cast-specs.js';
-import { COFFEE_KIT_PARTS, PROPS, propPart, kitPartsData } from './parts/props.js';
+import { COFFEE_KIT_PARTS, PROPS as KIT_PROPS, propPart, kitPartsData } from './parts/props.js';
+import { CATALOG_PROPS_A } from './parts/props-catalog.js';
+import { CATALOG_PROPS_B } from './parts/props-catalog2.js';
 import { BUBBLES, CAPTION_STYLES, GRAPHICS, WORLD_TEXT } from './text-specs.js';
 import { OUTPUT_PRESETS } from './output-specs.js';
 import { renderSound, SR } from './sounds.js';
@@ -31,6 +36,7 @@ import { BEDROOM_KIT, CITY_STREET_KIT, CLASSROOM_KIT, FOREST_KIT, GYM_KIT, HOSPI
 import type { KitParts } from './parts/props.js';
 import { PATTERNS } from './parts/patterns.js';
 import { SETS } from './set-specs.js';
+import { DELIVERIES } from './voice-specs.js';
 
 type Mark = { name: string; x: number; y: number; facing: 'left' | 'right' | 'front' };
 const MORE_KITS: Record<string, { parts: KitParts; marks: Mark[]; ambience?: string; props: string[] }> = {
@@ -51,6 +57,8 @@ const MORE_KITS: Record<string, { parts: KitParts; marks: Mark[]; ambience?: str
 };
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+
+const PROPS = { ...KIT_PROPS, ...CATALOG_PROPS_A, ...CATALOG_PROPS_B };
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const outDir = path.join(repo, 'content/assets');
@@ -124,7 +132,7 @@ const HAIR_CTL: Record<string, unknown> = {
   volume: slider('hair.volume').control, length: slider('hair.length').control, 'curl-tightness': slider('hair.curl').control,
   parting: { type: 'enum', option: 'parting', options: ['left', 'centre', 'right', 'none'], default: 'none' },
   'hair-colour': { type: 'color', color: 'hair', presets: ['#1E1612', '#2F221C', '#4A3020', '#6B4423', '#8A5A2B', '#A8743A', '#C9A063', '#E3C98F', '#B5552E', '#8C2F1F', '#D9D4CC', '#9A9A9A', '#5A5A5A', '#2A2A3A', '#5E2E6E', '#2E5E8C'], default: '#2F221C' },
-  'highlight-colour': { type: 'color', color: 'hairHighlight', presets: [], default: null },
+  'highlight-colour': { type: 'color', color: 'hairHighlight', presets: ['#C9A063', '#E3C98F', '#B5552E', '#D9D4CC', '#8A5A2B', '#5E2E6E', '#2E5E8C', '#C24A7A'], default: null },
   'highlight-amount': slider('hair.highlight').control, greying: slider('hair.grey').control, flyaways: slider('hair.flyaways').control, sway: slider('hair.sway').control,
 };
 
@@ -208,6 +216,8 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'mouth': return partBuilt(mouthPart(s), { capabilities: ['rig.biped@1', 'mouthshapes.9'] });
     case 'ears': return partBuilt(earsPart(s), { anchors: { earring: 'ear' } });
     case 'hair': return partBuilt(hairPart(s), { capabilities: ['rig.biped@1', 'hat-compatible'] });
+    case 'fringe': return FRINGE_STYLES.includes(s) ? partBuilt(fringePart(s)) : undefined;
+    case 'facial-hair': return FACIAL_HAIR.includes(s) ? partBuilt(facialHairPart(s), { capabilities: ['rig.biped@1', 'mouthshapes.9'] }) : undefined;
     case 'feet': return partBuilt(feetPart(s));
     case 'top': return TOPS[s] ? partBuilt(topPart(TOPS[s]!)) : undefined;
     case 'outer': return OUTERS[s] ? partBuilt(topPart(OUTERS[s]!)) : undefined;
@@ -216,6 +226,9 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'identity': return IDENTITY[s] ? partBuilt(identityPart(s)) : undefined;
     case 'acc': return ACCESSORIES[s] ? partBuilt(accessoryPart(s)) : undefined;
     case 'skin-detail': return SKIN_DETAILS[s] ? partBuilt(skinDetailPart(s)) : undefined;
+    case 'overlay': return OVERLAY_IDS.includes(s) ? partBuilt(overlayPart(s)) : undefined;
+    case 'look': return PRESET_LOOKS[s] ? { data: { look: PRESET_LOOKS[s] }, dependencies: [...PRESET_LOOKS[s]!.garments, ...PRESET_LOOKS[s]!.accessories] } : undefined;
+    case 'layer': return LAYERS[s] ? { data: { layer: LAYERS[s] } } : undefined;
     case 'makeup': return MAKEUP[s] ? partBuilt(makeupPart(s)) : undefined;
     case 'shoe': return SHOES[s] ? partBuilt(shoePart(SHOES[s]!)) : undefined;
     case 'hand': return HAND_POSES[s] ? { data: { handPose: s, set: 'base.hands@1' }, families: ['flat', 'illustrated'], views: ALL_VIEWS, dependencies: ['base.hands@1'], capabilities: ['rig.biped@1'] } : undefined;
@@ -236,6 +249,7 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'stage': return { data: { lifeStage: { headRatio: { flat: STAGES[s]!.flat, illustrated: STAGES[s]!.illustrated }, heightScale: STAGES[s]!.height } } };
     case 'skin': return { data: { skinTone: { base: SKIN_TONES[s], undertone: item.undertone?.toLowerCase() } } };
     case 'exp': return EXPRESSIONS[s] ? { data: { expression: EXPRESSIONS[s] }, families: ['flat', 'illustrated'], views: ['front', 'three', 'side'], viewExemptions: { back: 'Faces are not visible from behind; expressions still drive head attitude.' }, capabilities: ['rig.biped@1'] } : undefined;
+    case 'delivery': return DELIVERIES[s] ? { data: { delivery: DELIVERIES[s] } } : undefined;
     case 'set': return SETS[s] ? { data: { set: SETS[s] }, families: ['flat', 'illustrated'], views: ['front'], dependencies: [SETS[s]!.kit, ...new Set(SETS[s]!.props.map((p) => p.ref))] } : undefined;
     case 'pattern': return PATTERNS[s] ? { data: { pattern: PATTERNS[s] }, families: ['flat', 'illustrated'], ...(PATTERNS[s]!.image ? { tags: ['image'] } : !PATTERNS[s]!.layers.length ? { tags: ['plain'] } : {}) } : undefined;
     case 'act': {

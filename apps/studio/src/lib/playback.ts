@@ -143,3 +143,21 @@ export function usePlayback() {
     };
   }, [playing, studio]);
 }
+
+/* Scrub with audio (FR-TML-05): while the playhead is dragged, a short slice of the mix plays at each position. */
+const plans = new WeakMap<object, AudioPlan>();
+let scrubStop: (() => void) | undefined;
+let lastScrub = 0;
+export function scrubAudio(pid: string, scene: object, makePlan: () => AudioPlan, tSec: number): void {
+  const now = performance.now();
+  if (now - lastScrub < 60) return;
+  lastScrub = now;
+  let plan = plans.get(scene);
+  if (!plan) plans.set(scene, (plan = makePlan()));
+  scrubStop?.();
+  scrubStop = undefined;
+  void playPlan(pid, plan, tSec).then((stop) => {
+    scrubStop = stop;
+    setTimeout(stop, 90);
+  });
+}

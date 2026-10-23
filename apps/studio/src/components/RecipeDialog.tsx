@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { formatTimecode, type RecipeData } from '@frame/core';
-import { Button, Dialog, Select, useToasts } from '@frame/ui';
+import { Button, Dialog, Select, useToasts, t as tt } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -72,19 +72,19 @@ export function RecipeDialog() {
 
   return (
     <Dialog title={target ? `Apply ${target.name}` : 'Apply recipe'} open={!!target} onClose={close} footer={<>
-      <Button onClick={close}>Cancel</Button>
-      <Button variant="primary" loading={busy} onClick={() => void apply()} disabled={!data || missing.length > 0 || (!!data.anchor && !line)} disabledReason={missing.length ? `Assign ${missing.map((r) => r.label).join(', ')}` : 'Choose the line'}>Apply</Button>
+      <Button onClick={close}>{tt('Cancel')}</Button>
+      <Button variant="primary" loading={busy} onClick={() => void apply()} disabled={!data || missing.length > 0 || (!!data.anchor && !line)} disabledReason={missing.length ? `Assign ${missing.map((r) => r.label).join(', ')}` : 'Choose the line'}>{tt('Apply')}</Button>
     </>}>
-      {!data ? <p className="fr-faint">Loading…</p> : (
+      {!data ? <p className="fr-faint">{tt('Loading…')}</p> : (
         <div className="st-form st-form--flush">
           {data.roles.map((r) => (
             <Select key={r.key} label={r.label} placeholder={`Choose a ${r.kind}`} value={roles[r.key]} onChange={(v) => setRoles((x) => ({ ...x, [r.key]: v }))}
               options={(scene?.instances ?? []).filter((i) => i.kind === r.kind).map((i) => ({ value: i.id, label: i.name }))} />
           ))}
           {data.anchor ? (
-            <Select label="Line" placeholder="Choose a line" value={line} onChange={setLine} options={lines.map((c) => ({ value: c.id, label: `${formatTimecode(c.start)} — ${c.line!.text.slice(0, 50)}` }))} />
-          ) : <p className="fr-hint">Starts at the playhead ({formatTimecode(time)}) and lasts about {data.duration.toFixed(1)} s.</p>}
-          <p className="fr-hint">Adds ordinary clips grouped together: move them as one, ungroup, or edit them one by one.</p>
+            <Select label={tt('Line')} placeholder={tt('Choose a line')} value={line} onChange={setLine} options={lines.map((c) => ({ value: c.id, label: `${formatTimecode(c.start)} — ${c.line!.text.slice(0, 50)}` }))} />
+          ) : <p className="fr-hint">{tt('Starts at the playhead (')}{formatTimecode(time)}{tt(') and lasts about')} {data.duration.toFixed(1)} s.</p>}
+          <p className="fr-hint">{tt('Adds ordinary clips grouped together: move them as one, ungroup, or edit them one by one.')}</p>
         </div>
       )}
     </Dialog>

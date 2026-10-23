@@ -41,6 +41,9 @@ jobs:
         run: choco install ffmpeg -y --no-progress
       - run: pnpm typecheck
       - run: pnpm lint
+      # Dependency audit (NFR-09): no known high or critical vulnerabilities.
+      - if: runner.os == 'Linux'
+        run: pnpm audit --audit-level high
       - run: pnpm test
         env:
           CI: "true"

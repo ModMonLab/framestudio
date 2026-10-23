@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/command.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "name": {
+      "pattern": "^[a-z]+(\\.[a-z][a-zA-Z]*)+$",
+      "description": "Command name, e.g. scene.add, clip.move.",
+      "type": "string"
+    },
+    "params": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {}
+      }
+    }
+  },
+  "required": [
+    "name",
+    "params"
+  ]
+}

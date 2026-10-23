@@ -130,8 +130,18 @@ export interface RandomiseOptions {
   skins: string[];
   hairColors: string[];
   bodies: string[];
+  lifeStages?: string[];
   /** Keep these unchanged (constraints). */
-  keep: { lifeStage: boolean; body: boolean; palette: boolean };
+  keep: RandomiseKeep;
+}
+
+/** Randomise constraints (FR-BLD-05): what stays, and whether parts must be drawn in the project's style family. */
+export interface RandomiseKeep {
+  lifeStage: boolean;
+  body: boolean;
+  palette: boolean;
+  /** Only parts that have artwork in the project's style family. */
+  family: boolean;
 }
 
 /** "Randomise" within constraints (FR-BLD-05): parts, body base and colours; identity, looks and voice stay. */
@@ -142,6 +152,10 @@ export function randomise(d: Draft, o: RandomiseOptions, seed: number): Draft {
   for (const [key, refs] of Object.entries(o.parts)) {
     const v = pick(refs);
     if (v) next.data.parts[key] = v;
+  }
+  if (!o.keep.lifeStage) {
+    const ls = pick(o.lifeStages ?? []);
+    if (ls) next.data.lifeStage = ls;
   }
   if (!o.keep.body) {
     const b = pick(o.bodies);

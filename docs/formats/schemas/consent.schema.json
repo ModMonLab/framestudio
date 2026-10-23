@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/consent.json",
+  "additionalProperties": false,
+  "description": "Mandatory for cloned voices (FR-VOI-04).",
+  "type": "object",
+  "properties": {
+    "statement": {
+      "anyOf": [
+        {
+          "const": "own-voice",
+          "type": "string"
+        },
+        {
+          "const": "documented-consent",
+          "type": "string"
+        }
+      ]
+    },
+    "speakerName": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "confirmedBy": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "date": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "statement",
+    "speakerName",
+    "confirmedBy",
+    "date"
+  ]
+}

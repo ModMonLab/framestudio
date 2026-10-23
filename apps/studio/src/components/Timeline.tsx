@@ -1,10 +1,11 @@
 /** Timeline (Design System §6.2): toolbar, ruler, grouped tracks, clips, lip-sync lane, playhead. */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Bot, ChevronRight, HelpCircle, Eye, EyeOff, Lock, Maximize, Scan, SkipBack, Sparkles, SplitSquareHorizontal, Video, Volume2 } from 'lucide-react';
 import { applyOverrides, conflictingClipIds, duckCurve, scheduleSceneAudio, formatTimecode, lineTakeState, mouthTrackFromAlignment, type ProjectState } from '@frame/core';
 import type { Clip, MouthBlock, MouthShape, Scene, Track } from '@frame/schema';
 import { LevelMeter } from './LevelMeter.js';
-import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts } from '@frame/ui';
+import { scrubAudio } from '../lib/playback.js';
+import { Button, IconButton, PlayFilled, PauseFilled, SearchField, Segmented, SliderRow, useToasts, t as tt } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -42,12 +43,65 @@ export function Timeline() {
   const scroller = useRef<HTMLDivElement>(null);
   const scene = sceneId ? project.scenes[sceneId] : undefined;
   const fps = project.project.frameRate;
+  // Pinch zoom (FR-TML-08): trackpad pinch (ctrl + wheel) and two-finger touch, anchored under the fingers.
+  const pxRef = useRef(pxPerSec);
+  pxRef.current = pxPerSec;
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const zoomAt = (clientX: number, factor: number) => {
+      const old = pxRef.current;
+      const next = Math.max(10, Math.min(300, old * factor));
+      if (next === old) return;
+      const local = clientX - el.getBoundingClientRect().left - HEADER + el.scrollLeft;
+      setPx(next);
+      requestAnimationFrame(() => el.scrollTo({ left: Math.max(0, (local / old) * next - (clientX - el.getBoundingClientRect().left - HEADER)) }));
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      zoomAt(e.clientX, Math.exp(-e.deltaY * 0.01));
+    };
+    const touches = new Map<number, number>();
+    let span = 0;
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      touches.set(e.pointerId, e.clientX);
+      if (touches.size === 2) span = Math.abs([...touches.values()].reduce((a, b) => a - b));
+    };
+    const move = (e: PointerEvent) => {
+      if (!touches.has(e.pointerId)) return;
+      touches.set(e.pointerId, e.clientX);
+      if (touches.size !== 2 || span < 10) return;
+      const xs = [...touches.values()];
+      const now = Math.abs(xs[0]! - xs[1]!);
+      zoomAt((xs[0]! + xs[1]!) / 2, now / span);
+      span = now;
+    };
+    const up = (e: PointerEvent) => touches.delete(e.pointerId);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+    };
+  }, [sceneId]);
 
   const groups = useMemo<Group[]>(() => {
     if (!scene) return [];
     const byOwner = (owner: string) => scene.tracks.filter((t) => t.owner === owner);
     const g: Group[] = [{ id: 'camera', name: 'Camera', key: 'camera', tracks: scene.tracks.filter((t) => t.owner === 'scene' && (t.kind === 'shot' || t.kind === 'camera-move')) }];
     for (const i of scene.instances.filter((x) => x.kind === 'character')) g.push({ id: i.id, name: i.name, key: 'character', tracks: byOwner(i.id) });
+    // Props with their own tracks (state changes, FR-TML-01); interactions stay on the character's Acting lane.
+    const props = scene.instances.filter((i) => i.kind !== 'character').map((i) => i.id);
+    const propTracks = scene.tracks.filter((t) => props.includes(t.owner)).map((t) => ({ ...t, name: `${scene.instances.find((i) => i.id === t.owner)!.name} · ${t.name}` }));
+    if (propTracks.length) g.push({ id: 'props', name: 'Props', key: 'prop', tracks: propTracks });
     g.push({ id: 'fx', name: 'Effects and text', key: 'effect', tracks: scene.tracks.filter((t) => t.owner === 'scene' && (t.kind === 'effect' || t.kind === 'text')) });
     g.push({ id: 'sound', name: 'Sound', key: 'sound', tracks: scene.tracks.filter((t) => t.owner === 'scene' && (t.kind === 'music' || t.kind === 'ambience' || t.kind === 'sfx')) });
     return g
@@ -63,10 +117,12 @@ export function Timeline() {
   if (!scene) return null;
   const width = Math.max(600, (scene.duration / 48000) * pxPerSec + 40);
   const x = (ticks: number) => (ticks / 48000) * pxPerSec;
-  const seekFromEvent = (e: React.PointerEvent | React.MouseEvent) => {
+  const seekFromEvent = (e: React.PointerEvent | React.MouseEvent, scrub = false) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const t = Math.round(((e.clientX - r.left) / pxPerSec) * fps) * (48000 / fps);
-    studio.set({ time: Math.max(0, Math.min(scene.duration - 1, t)), playing: false });
+    const t = Math.max(0, Math.min(scene.duration - 1, Math.round(((e.clientX - r.left) / pxPerSec) * fps) * (48000 / fps)));
+    studio.set({ time: t, playing: false });
+    // Dragging the playhead plays the mix under it (FR-TML-05).
+    if (scrub) scrubAudio(pid, scene, () => scheduleSceneAudio(project, scene, undefined, { manifest: (ref) => assets.manifest(ref) }), t / 48000);
   };
   const selIds = new Set(selection.map((s) => s.id));
   const selClips = scene.clips.filter((c) => selIds.has(c.id));
@@ -93,9 +149,9 @@ export function Timeline() {
   const longScene = scene.duration > 90 * 48000;
 
   return (
-    <section className="st-timeline" aria-label="Timeline">
-      <div className="st-tl-toolbar" role="toolbar" aria-label="Transport">
-        <IconButton label="Back to start" shortcut="Home" icon={<SkipBack size={15} />} onClick={() => studio.set({ time: 0, playing: false })} />
+    <section className="st-timeline" aria-label={tt('Timeline')}>
+      <div className="st-tl-toolbar" role="toolbar" aria-label={tt('Transport')}>
+        <IconButton label={tt('Back to start')} shortcut="Home" icon={<SkipBack size={15} />} onClick={() => studio.set({ time: 0, playing: false })} />
         <button type="button" className="st-play" aria-label={playing ? 'Pause' : 'Play'} aria-keyshortcuts="Space" onClick={() => studio.set({ playing: !playing })}>{playing ? <PauseFilled /> : <PlayFilled />}</button>
         <LevelMeter playing={playing} />
         <span className="fr-mono st-timecode" aria-live="off">{formatTimecode(time)} / {formatTimecode(scene.duration)}</span>
@@ -104,8 +160,8 @@ export function Timeline() {
           icon={<Sparkles size={13} />}
           loading={autoBusy}
           disabled={!scene.instances.some((i) => i.kind === 'character')}
-          disabledReason="Add a character first"
-          title="Generate talking gestures and listening reactions as editable clips (characters with automatic behaviour on)"
+          disabledReason={tt('Add a character first')}
+          title={tt('Generate talking gestures and listening reactions as editable clips (characters with automatic behaviour on)')}
           onClick={() => {
             setAutoBusy(true);
             api.autoPerformance(pid, scene.id, { kinds: ['talking', 'listening'] })
@@ -113,31 +169,31 @@ export function Timeline() {
               .catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))
               .finally(() => setAutoBusy(false));
           }}
-        >Auto performance</Button>
+        >{tt('Auto performance')}</Button>
         <Button
           icon={<Volume2 size={13} />}
-          title="Add sound cues for actions and prop states as editable sound clips"
+          title={tt('Add sound cues for actions and prop states as editable sound clips')}
           onClick={() => api.soundCues(pid, scene.id).then((r) => toasts.show({ tone: 'success', message: r.cues ? `${r.cues} sound cues on the Sound track` : 'No actions with sounds yet.' })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}
-        >Sound cues</Button>
+        >{tt('Sound cues')}</Button>
         <Button
           icon={<Video size={13} />}
-          title="Generate editable shots from the dialogue: an establishing wide, speaker close-ups and reactions"
+          title={tt('Generate editable shots from the dialogue: an establishing wide, speaker close-ups and reactions')}
           onClick={() => api.coverage(pid, scene.id).then((r) => toasts.show({ tone: 'success', message: `${r.shots} shots on the Shot track. Undo removes them.` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}
-        >Auto coverage</Button>
-        <div style={{ width: 170 }}><SearchField label="Filter tracks" placeholder="Filter tracks" value={q} onChange={setQ} /></div>
-        <Segmented label="Track filter" value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'picture', label: 'Picture' }, { value: 'audio', label: 'Audio' }]} />
-        <Button icon={<SplitSquareHorizontal size={13} />} aria-pressed={ripple} title="Ripple: moving, trimming or deleting a clip shifts the later clips on its track" onClick={() => studio.set({ ripple: !ripple })}>Ripple</Button>
-        <IconButton label="Zoom to selection" icon={<Scan size={14} />} disabled={!selClips.length} disabledReason="Select clips first" onClick={() => zoomTo(Math.min(...selClips.map((c) => c.start)), Math.max(...selClips.map((c) => c.end)))} />
-        <IconButton label="Zoom to fit" icon={<Maximize size={14} />} onClick={() => { const w = (scroller.current?.clientWidth ?? 800) - HEADER - 40; setPx(Math.max(10, Math.min(300, w / Math.max(1, scene.duration / 48000)))); }} />
-        <div style={{ width: 220 }}><SliderRow inline label="Zoom" value={pxPerSec} min={10} max={300} defaultValue={60} format={(v) => `${Math.round(v)}`} onChange={(v) => setPx(v)} /></div>
-        <IconButton size="sm" label="Help: Timeline" icon={<HelpCircle size={14} />} onClick={() => (location.hash = '#/help/timeline')} />
+        >{tt('Auto coverage')}</Button>
+        <div style={{ width: 170 }}><SearchField label={tt('Filter tracks')} placeholder={tt('Filter tracks')} value={q} onChange={setQ} /></div>
+        <Segmented label={tt('Track filter')} value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'picture', label: 'Picture' }, { value: 'audio', label: 'Audio' }]} />
+        <Button icon={<SplitSquareHorizontal size={13} />} aria-pressed={ripple} title={tt('Ripple: moving, trimming or deleting a clip shifts the later clips on its track')} onClick={() => studio.set({ ripple: !ripple })}>{tt('Ripple')}</Button>
+        <IconButton label={tt('Zoom to selection')} icon={<Scan size={14} />} disabled={!selClips.length} disabledReason={tt('Select clips first')} onClick={() => zoomTo(Math.min(...selClips.map((c) => c.start)), Math.max(...selClips.map((c) => c.end)))} />
+        <IconButton label={tt('Zoom to fit')} icon={<Maximize size={14} />} onClick={() => { const w = (scroller.current?.clientWidth ?? 800) - HEADER - 40; setPx(Math.max(10, Math.min(300, w / Math.max(1, scene.duration / 48000)))); }} />
+        <div style={{ width: 220 }}><SliderRow inline label={tt('Zoom')} value={pxPerSec} min={10} max={300} defaultValue={60} format={(v) => `${Math.round(v)}`} onChange={(v) => setPx(v)} /></div>
+        <IconButton size="sm" label={tt('Help: Timeline')} icon={<HelpCircle size={14} />} onClick={() => (location.hash = '#/help/timeline')} />
       </div>
       {longScene && <MiniMap scene={scene} pxPerSec={pxPerSec} scroller={scroller} />}
       <div className="st-tl-body" ref={scroller}>
         <div className="st-tl-grid" style={{ width: HEADER + width }}>
           <div className="st-tl-ruler-row">
             <div className="st-tl-corner" style={{ width: HEADER }} />
-            <div className="st-tl-ruler" style={{ width }} onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); seekFromEvent(e); }} onPointerMove={(e) => e.buttons & 1 && seekFromEvent(e)} role="slider" aria-label="Playhead" aria-valuemin={0} aria-valuemax={scene.duration / 48000} aria-valuenow={time / 48000} aria-valuetext={formatTimecode(time)} tabIndex={0}>
+            <div className="st-tl-ruler" style={{ width }} onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); seekFromEvent(e); }} onPointerMove={(e) => e.buttons & 1 && seekFromEvent(e, true)} role="slider" aria-label={tt('Playhead')} aria-valuemin={0} aria-valuemax={scene.duration / 48000} aria-valuenow={time / 48000} aria-valuetext={formatTimecode(time)} tabIndex={0}>
               {ticksFor(scene.duration, pxPerSec).map((s) => <span key={s} className="st-tick" style={{ left: s * pxPerSec }}>{s % 60 === 0 && s >= 60 ? `${s / 60}:00` : `${s}s`}</span>)}
               {scene.markers.map((m) => (
                 <button key={m.id} type="button" className="st-marker" style={{ left: x(m.at) }} title={`${m.name} (double-click to rename, right-click to delete)`} aria-label={`Marker ${m.name}`}
@@ -184,8 +240,8 @@ export function Timeline() {
                         if (!raw) return;
                         e.preventDefault();
                         const h = JSON.parse(raw) as Hit;
-                        if ((t.kind === 'face' && h.kind !== 'exp') || (t.kind === 'acting' && h.kind !== 'act')) {
-                          studio.set({ lastError: { message: t.kind === 'face' ? 'Only expressions go on the Face lane.' : 'Only actions go on the Acting lane.' } });
+                        if ((t.kind === 'face' && h.kind !== 'exp' && h.kind !== 'overlay') || (t.kind === 'acting' && h.kind !== 'act')) {
+                          studio.set({ lastError: { message: t.kind === 'face' ? 'Only expressions and face overlays go on the Face lane.' : 'Only actions go on the Acting lane.' } });
                           return;
                         }
                         const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -422,7 +478,7 @@ function MiniMap({ scene, pxPerSec, scroller }: { scene: Scene; pxPerSec: number
   };
   const kinds = new Map(scene.tracks.map((t) => [t.id, t.kind]));
   return (
-    <div className="st-minimap" role="slider" aria-label="Timeline overview" aria-valuemin={0} aria-valuemax={Math.round(span)} aria-valuenow={Math.round(view.left)} tabIndex={0}
+    <div className="st-minimap" role="slider" aria-label={tt('Timeline overview')} aria-valuemin={0} aria-valuemax={Math.round(span)} aria-valuenow={Math.round(view.left)} tabIndex={0}
       onPointerDown={(e) => { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); go(e); }} onPointerMove={(e) => e.buttons & 1 && go(e)}>
       {scene.clips.map((c) => <span key={c.id} className={`st-mini-clip st-cat--${CATEGORY[kinds.get(c.track) ?? ''] ?? 'effect'}`} style={{ left: `${(c.start / scene.duration) * 100}%`, width: `${Math.max(0.2, ((c.end - c.start) / scene.duration) * 100)}%` }} />)}
       <span className="st-mini-view" style={{ left: `${(view.left / span) * 100}%`, width: `${Math.min(100, (view.len / span) * 100)}%` }} />

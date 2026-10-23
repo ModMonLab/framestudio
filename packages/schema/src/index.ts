@@ -3,11 +3,13 @@ import { AssetManifest, Locks, PackageManifest, Take, Alignment, VoiceData, Cons
 import { Clip, Episode, Instance, Project, Scene, Track, Camera, Line } from './project.js';
 import { Command, CommandBatch, FrameErrorSchema, HistoryEntry, Problem } from './command.js';
 import { MediaRef } from './common.js';
+import { CliEnvelope, CliMutation, JobRecord } from './cli.js';
 
 export * from './common.js';
 export * from './project.js';
 export * from './media.js';
 export * from './command.js';
+export * from './cli.js';
 export * from './validate.js';
 export * from './migrate.js';
 export { Type } from '@sinclair/typebox';
@@ -36,6 +38,9 @@ export const schemas: Record<string, TSchema> = {
   error: FrameErrorSchema,
   problem: Problem,
   history: HistoryEntry,
+  'cli-envelope': CliEnvelope,
+  'cli-mutation': CliMutation,
+  job: JobRecord,
 };
 
 export function jsonSchema(name: string): object | undefined {

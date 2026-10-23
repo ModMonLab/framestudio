@@ -9,7 +9,10 @@ import { prng } from '../ids.js';
 
 /** Atmosphere (J1): weather, particles, lighting overlays, foreground and colour grades. */
 export interface AtmoData {
-  type: 'rain' | 'snow' | 'hail' | 'fog' | 'particles' | 'light' | 'vignette' | 'flash' | 'flicker' | 'rays' | 'grade' | 'clouds' | 'wind';
+  type: 'rain' | 'snow' | 'hail' | 'fog' | 'particles' | 'light' | 'vignette' | 'flash' | 'flicker' | 'rays' | 'grade' | 'clouds' | 'wind'
+    | 'haze' | 'traffic' | 'crowd' | 'trees' | 'ripples' | 'city-lights' | 'screens' | 'fan' | 'plants' | 'curtain' | 'window-frame' | 'heads';
+  /** Animated backgrounds draw behind the characters (after the back plane); everything else in front. */
+  layer?: 'back' | 'front';
   color?: string;
   /** Particles per 1000 px² of frame (or layer count for fog/clouds). */
   density?: number;
@@ -31,17 +34,72 @@ export interface AtmoData {
 
 /** Effects (K1): attached to the screen, a stage point or a character. */
 export interface EffectData {
-  type: 'symbol' | 'flash' | 'star' | 'ring' | 'puff' | 'speed-lines' | 'radial-lines' | 'tint' | 'spotlight' | 'silhouette' | 'freeze' | 'principle';
+  type: 'symbol' | 'flash' | 'star' | 'ring' | 'puff' | 'speed-lines' | 'radial-lines' | 'tint' | 'spotlight' | 'silhouette' | 'freeze' | 'principle' | 'swoosh' | 'streak' | 'afterimage' | 'smear' | 'grade';
   symbol?: 'question' | 'exclamation' | 'hearts' | 'anger' | 'sweat' | 'sparkles' | 'gloom' | 'bulb' | 'zzz' | 'notes' | 'swirl' | 'ellipsis';
   color?: string;
   size?: number;
   /** Animation principle applied to the attached character (FR-ACT-09): squash/stretch, bounce, wobble. */
-  principle?: 'anticipation' | 'squash' | 'overshoot' | 'bounce' | 'wobble' | 'jiggle';
+  principle?: 'anticipation' | 'squash' | 'overshoot' | 'bounce' | 'wobble' | 'jiggle' | 'follow-through' | 'ease';
+  /** Treatments: a colour matrix applied to the picture (split tone). */
+  matrix?: ColorMatrix;
 }
+
+/** How an animation-principle effect deforms its character at clip progress u (FR-ACT-09, Catalog K1). */
+export interface Deform { sx: number; sy: number; rot: number; dy: number }
+
+export function principleDeform(p: NonNullable<EffectData['principle']>, u: number, s: number, k: number): Deform {
+  const d: Deform = { sx: 1, sy: 1, rot: 0, dy: 0 };
+  const decay = 1 - u;
+  switch (p) {
+    case 'squash': {
+      d.sy = 1 - 0.18 * Math.sin(TAU * u * 2) * decay * k;
+      d.sx = 1 / d.sy;
+      break;
+    }
+    case 'bounce': {
+      d.dy = -Math.abs(Math.sin(Math.PI * u * 3)) * decay * 60 * k;
+      const contact = Math.max(0, 1 - Math.abs(Math.sin(Math.PI * u * 3)) * 6);
+      d.sy = 1 - 0.1 * contact * decay * k;
+      d.sx = 1 / d.sy;
+      break;
+    }
+    case 'wobble':
+      d.rot = Math.sin(TAU * u * 4) * decay * 6 * k;
+      break;
+    case 'jiggle': {
+      const j = Math.sin(TAU * s * 9) * 0.035 * decay * k;
+      d.sx = 1 + j;
+      d.sy = 1 - j;
+      break;
+    }
+    case 'anticipation': {
+      // Crouch before the move, then stretch into it.
+      const v = u < 0.4 ? -0.12 * Math.sin((Math.PI * u) / 0.4) : 0.1 * Math.sin((Math.PI * (u - 0.4)) / 0.6);
+      d.sy = 1 + v * k;
+      d.sx = 1 / d.sy;
+      break;
+    }
+    case 'overshoot': {
+      const g = 1 + 0.15 * Math.exp(-5 * u) * Math.sin(TAU * u * 2.2) * k;
+      d.sx = g;
+      d.sy = g;
+      break;
+    }
+    case 'follow-through':
+      d.rot = 5 * k * Math.exp(-4 * u) * Math.sin(TAU * u * 3);
+      break;
+    case 'ease':
+      break; // a time warp, applied to the character's performance (see evaluate.ts)
+  }
+  return d;
+}
+
+/** Slow in and out over a clip: the time a character's performance is sampled at (ease presets). */
+export const easeInOut = (u: number) => (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2);
 
 /** Transitions (K2) between shots (and at a scene's first shot, from black). */
 export interface TransitionData {
-  type: 'cut' | 'fade' | 'crossfade' | 'wipe' | 'slide' | 'push' | 'iris' | 'zoom' | 'glitch' | 'shape';
+  type: 'cut' | 'fade' | 'crossfade' | 'wipe' | 'slide' | 'push' | 'iris' | 'zoom' | 'glitch' | 'shape' | 'page';
   color?: string;
   dir?: 'left' | 'right' | 'up' | 'down';
   /** Iris direction / shape reveal outline. */
@@ -151,6 +209,170 @@ export function atmosphereItems(a: AtmoData, w: number, h: number, s: number, k:
     case 'light':
       out.push({ k: 'rect', x: 0, y: 0, w, h, fill: { color }, op: 0.6 * k, ...(a.blend ? { blend: a.blend } : { blend: 'multiply' }) });
       return out;
+    case 'haze': {
+      // Heat shimmer: faint wavy bands drifting up from the ground.
+      const items: Item[] = [];
+      for (let i = 0; i < 9; i++) {
+        const y0 = h * (1 - frac(rnd() + s * 0.08 * (0.6 + rnd() * 0.4)) * 0.6);
+        let d = '';
+        for (let x = 0; x <= w; x += w / 24) d += `${x ? 'L' : 'M'}${x.toFixed(1)} ${(y0 + Math.sin(x / (w * 0.06) + s * 3 + i) * h * 0.006).toFixed(1)}`;
+        items.push({ k: 'path', d, stroke: { paint: { color }, width: h * 0.012, cap: 'round' }, op: 0.12 });
+      }
+      out.push({ k: 'group', items, blur: 6 * scale, op: Math.min(1, k) });
+      return out;
+    }
+    case 'traffic': {
+      // Distant cars passing both ways on a road band.
+      const n = Math.max(2, Math.round(a.density ?? 6));
+      for (let i = 0; i < n; i++) {
+        const dir = i % 2 ? 1 : -1;
+        const cw = w * (0.08 + rnd() * 0.04);
+        const ch = cw * 0.32;
+        const y = h * (0.6 + (i % 2) * 0.04);
+        const x = frac(rnd() + (s * (a.speed ?? 0.12) * (0.7 + rnd() * 0.6) * dir)) * (w + 2 * cw) - cw;
+        const body = ['#3A4150', '#6B2E34', '#2E4A6B', '#7A7A7A', '#C9A13A'][Math.floor(rnd() * 5)]!;
+        out.push({ k: 'group', op: 0.85 * Math.min(1, k), items: [
+          { k: 'rect', x, y: y - ch, w: cw, h: ch * 0.6, r: ch * 0.2, fill: { color: body } },
+          { k: 'rect', x: x + cw * 0.2, y: y - ch * 1.35, w: cw * 0.55, h: ch * 0.45, r: ch * 0.15, fill: { color: body } },
+          { k: 'ellipse', cx: x + cw * 0.22, cy: y - ch * 0.38, rx: ch * 0.2, ry: ch * 0.2, fill: { color: '#141414' } },
+          { k: 'ellipse', cx: x + cw * 0.78, cy: y - ch * 0.38, rx: ch * 0.2, ry: ch * 0.2, fill: { color: '#141414' } },
+        ] });
+      }
+      return out;
+    }
+    case 'crowd':
+    case 'heads': {
+      // Silhouettes: a background crowd bobbing on the back plane, or big heads in the foreground.
+      const fg = a.type === 'heads';
+      const n = fg ? 5 : Math.max(6, Math.round(a.density ?? 14));
+      const items: Item[] = [];
+      for (let i = 0; i < n; i++) {
+        const r = fg ? h * (0.12 + rnd() * 0.05) : h * (0.025 + rnd() * 0.01);
+        const x = ((i + 0.5) / n) * w + (rnd() - 0.5) * (w / n) * 0.6;
+        const base = fg ? h * 1.04 : h * (0.66 + rnd() * 0.03);
+        const bob = Math.abs(Math.sin(s * (1.6 + rnd()) + i)) * r * (fg ? 0.15 : 0.35);
+        const y = base - bob;
+        items.push({ k: 'ellipse', cx: x, cy: y - r * (fg ? 1.4 : 2.6), rx: r, ry: r * 1.1, fill: { color } });
+        items.push({ k: 'ellipse', cx: x, cy: y, rx: r * 2, ry: r * (fg ? 1.4 : 1.8), fill: { color } });
+      }
+      out.push({ k: 'group', items, op: (fg ? 0.92 : 0.55) * Math.min(1, k), ...(fg ? { blur: 2 * scale } : {}) });
+      return out;
+    }
+    case 'trees': {
+      const n = Math.max(2, Math.round(a.density ?? 5));
+      for (let i = 0; i < n; i++) {
+        const x = ((i + 0.5) / n) * w + (rnd() - 0.5) * (w / n) * 0.5;
+        const ht = h * (0.25 + rnd() * 0.15);
+        const base = h * 0.66;
+        const sway = Math.sin(s * (0.9 + rnd() * 0.5) + i) * 3;
+        const rot = (sway * Math.PI) / 180;
+        const [c, sn] = [Math.cos(rot), Math.sin(rot)];
+        out.push({ k: 'group', tf: [c, sn, -sn, c, x - x * c + base * sn, base - x * sn - base * c], op: 0.8 * Math.min(1, k), items: [
+          { k: 'rect', x: x - ht * 0.03, y: base - ht * 0.45, w: ht * 0.06, h: ht * 0.45, fill: { color: '#4A3A2C' } },
+          { k: 'ellipse', cx: x, cy: base - ht * 0.68, rx: ht * 0.28, ry: ht * 0.34, fill: { color } },
+          { k: 'ellipse', cx: x - ht * 0.15, cy: base - ht * 0.55, rx: ht * 0.2, ry: ht * 0.22, fill: { color } },
+          { k: 'ellipse', cx: x + ht * 0.16, cy: base - ht * 0.57, rx: ht * 0.2, ry: ht * 0.22, fill: { color } },
+        ] });
+      }
+      return out;
+    }
+    case 'ripples': {
+      const n = count(a.density ?? 40);
+      const items: Item[] = [];
+      for (let i = 0; i < n; i++) {
+        const y = h * (0.7 + rnd() * 0.3);
+        const x = frac(rnd() + s * 0.02 * (rnd() - 0.5)) * w;
+        const len = w * (0.02 + rnd() * 0.05) * (0.6 + 0.4 * Math.sin(s * 2 + i));
+        items.push({ k: 'path', d: `M${(x - len).toFixed(1)} ${y.toFixed(1)}L${(x + len).toFixed(1)} ${y.toFixed(1)}`, stroke: { paint: { color }, width: Math.max(1, 2.2 * scale), cap: 'round' }, op: 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(s * 3 + i * 1.7)) });
+      }
+      out.push({ k: 'group', items, op: Math.min(1, k) });
+      return out;
+    }
+    case 'city-lights': {
+      const n = count(a.density ?? 60);
+      const items: Item[] = [];
+      for (let i = 0; i < n; i++) {
+        const x = rnd() * w;
+        const y = h * (0.15 + rnd() * 0.45);
+        const tw = 0.5 + 0.5 * Math.sin(s * (1 + rnd() * 3) + i * 2.1);
+        const r = (1.6 + rnd() * 2.4) * scale;
+        items.push({ k: 'ellipse', cx: x, cy: y, rx: r, ry: r, fill: { color: rnd() < 0.3 ? '#FFD27A' : color }, op: 0.35 + 0.65 * tw });
+      }
+      out.push({ k: 'group', items, op: Math.min(1, k) });
+      return out;
+    }
+    case 'screens': {
+      const n = Math.max(2, Math.round(a.density ?? 6));
+      for (let i = 0; i < n; i++) {
+        const sw = w * (0.06 + rnd() * 0.05);
+        const sh = sw * 0.62;
+        const x = ((i + 0.5) / n) * w - sw / 2;
+        const y = h * (0.28 + rnd() * 0.2);
+        const hue = ['#3C7DD9', '#3CB371', '#D9A23C', '#8A5CD9'][Math.floor(rnd() * 4)]!;
+        const flick = 0.65 + 0.35 * Math.sin(s * (5 + rnd() * 6) + i);
+        out.push({ k: 'group', op: Math.min(1, k), items: [
+          { k: 'rect', x: x - sw * 0.04, y: y - sw * 0.04, w: sw * 1.08, h: sh + sw * 0.08, r: sw * 0.03, fill: { color: '#1E2026' } },
+          { k: 'rect', x, y, w: sw, h: sh, fill: { color: hue }, op: flick },
+          ...[0.25, 0.45, 0.65].map((f) => ({ k: 'rect' as const, x: x + sw * 0.1, y: y + sh * f, w: sw * (0.4 + frac(f * 7 + Math.floor(s * 2) * 0.37) * 0.45), h: sh * 0.07, fill: { color: '#FFFFFF' }, op: 0.55 })),
+        ] });
+      }
+      return out;
+    }
+    case 'fan': {
+      // A ceiling fan at the top of the frame, blades turning (seen from below at an angle).
+      const cx = w / 2;
+      const cy = h * 0.08;
+      const R = h * 0.22;
+      const items: Item[] = [{ k: 'rect', x: cx - h * 0.006, y: 0, w: h * 0.012, h: cy, fill: { color } }];
+      for (let i = 0; i < 4; i++) {
+        const ang = s * (a.speed ?? 6) + (i * Math.PI) / 2;
+        const bx = Math.cos(ang) * R * 0.55;
+        const by = Math.sin(ang) * R * 0.55 * 0.22;
+        items.push({ k: 'ellipse', cx: cx + bx, cy: cy + by, rx: Math.abs(Math.cos(ang)) * R * 0.48 + R * 0.06, ry: R * 0.06, fill: { color } });
+      }
+      items.push({ k: 'ellipse', cx, cy, rx: h * 0.035, ry: h * 0.022, fill: { color: '#2A2A2E' } });
+      out.push({ k: 'group', items, op: 0.95 * Math.min(1, k) });
+      return out;
+    }
+    case 'plants': {
+      // Out-of-focus leaves in the bottom corners.
+      const items: Item[] = [];
+      for (const side of [0, 1]) for (let i = 0; i < 5; i++) {
+        const bx = side ? w * (1.02 - rnd() * 0.12) : w * (-0.02 + rnd() * 0.12);
+        const by = h * 1.05;
+        const len = h * (0.3 + rnd() * 0.25);
+        const ang = (side ? -1 : 1) * (0.4 + rnd() * 0.6) + Math.sin(s * 0.8 + i) * 0.04 - Math.PI / 2;
+        const tx = bx + Math.cos(ang) * len;
+        const ty = by + Math.sin(ang) * len;
+        const nx = -Math.sin(ang) * len * 0.18;
+        const ny = Math.cos(ang) * len * 0.18;
+        items.push({ k: 'path', d: `M${bx.toFixed(1)} ${by.toFixed(1)}Q${((bx + tx) / 2 + nx).toFixed(1)} ${((by + ty) / 2 + ny).toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)}Q${((bx + tx) / 2 - nx).toFixed(1)} ${((by + ty) / 2 - ny).toFixed(1)} ${bx.toFixed(1)} ${by.toFixed(1)}Z`, fill: { color: i % 2 ? color : '#2F5A34' } });
+      }
+      out.push({ k: 'group', items, blur: 14 * scale, op: 0.95 * Math.min(1, k) });
+      return out;
+    }
+    case 'curtain': {
+      // A curtain edge on the left with soft folds, swaying a little.
+      const cw = w * 0.16;
+      const items: Item[] = [];
+      for (let i = 0; i < 4; i++) {
+        const x = (i / 4) * cw;
+        const sway = Math.sin(s * 0.7 + i) * w * 0.004;
+        items.push({ k: 'path', d: `M${x.toFixed(1)} 0L${(x + cw / 4 + 1).toFixed(1)} 0L${(x + cw / 4 + sway * 2).toFixed(1)} ${h}L${(x + sway).toFixed(1)} ${h}Z`, fill: { color: i % 2 ? color : shadeHex(color, 0.8) } });
+      }
+      out.push({ k: 'group', items, op: 0.97 * Math.min(1, k) });
+      return out;
+    }
+    case 'window-frame': {
+      const bw = h * 0.04;
+      const items: Item[] = [
+        { k: 'rect', x: 0, y: 0, w, h: bw, fill: { color } }, { k: 'rect', x: 0, y: h - bw, w, h: bw, fill: { color } },
+        { k: 'rect', x: 0, y: 0, w: bw, h, fill: { color } }, { k: 'rect', x: w - bw, y: 0, w: bw, h, fill: { color } },
+        { k: 'rect', x: w / 2 - bw * 0.35, y: 0, w: bw * 0.7, h, fill: { color } }, { k: 'rect', x: 0, y: h * 0.45 - bw * 0.35, w, h: bw * 0.7, fill: { color } },
+      ];
+      out.push({ k: 'group', items, op: Math.min(1, k) });
+      return out;
+    }
     case 'vignette':
       out.push({ k: 'rect', x: 0, y: 0, w, h, fill: { radial: { center: [w / 2, h / 2], radius: Math.hypot(w, h) / 2, stops: [{ offset: 0.45, color: '#00000000' }, { offset: 1, color: a.color ?? '#000000' }] } }, op: 0.85 * k });
       return out;
@@ -341,6 +563,27 @@ export function effectItems(e: EffectData, x: number, y: number, r: number, w: n
     }
     case 'tint':
       return [{ k: 'rect', x: 0, y: 0, w, h, fill: { color: e.color ?? '#4F7CFF' }, op: 0.35 * k * pop, blend: 'color' }];
+    case 'swoosh': {
+      // A crescent of motion behind the attached point.
+      const R = rr * 2.2;
+      const a0 = Math.PI * (0.6 + u * 0.3);
+      const a1 = a0 + Math.PI * 0.9;
+      const p = (a: number, rad: number) => `${(x + Math.cos(a) * rad).toFixed(1)} ${(y + Math.sin(a) * rad).toFixed(1)}`;
+      const d = `M${p(a0, R)}A${R} ${R} 0 0 1 ${p(a1, R)}A${R * 0.82} ${R * 0.82} 0 0 0 ${p(a0, R * 0.9)}Z`;
+      return [{ k: 'path', d, fill: { color }, op: 0.75 * k * pop }];
+    }
+    case 'streak': {
+      // Motion-blur streaks trailing the attached point.
+      const rnd = prng(seed);
+      const items: Item[] = [];
+      for (let i = 0; i < 7; i++) {
+        const yy = y + (rnd() - 0.5) * rr * 2.4;
+        const len = rr * (1.5 + rnd() * 2.5);
+        const x0 = x - rr * 0.8 - rnd() * rr * 0.6;
+        items.push({ k: 'path', d: `M${x0.toFixed(1)} ${yy.toFixed(1)}L${(x0 - len).toFixed(1)} ${yy.toFixed(1)}`, stroke: { paint: { color }, width: Math.max(1.5, rr * 0.06), cap: 'round' }, op: (0.35 + rnd() * 0.4) * k * pop });
+      }
+      return items;
+    }
     case 'spotlight': {
       const R = Math.max(rr * 1.6, h * 0.18);
       const d = `M0 0L${w} 0L${w} ${h}L0 ${h}ZM${x - R} ${y}A${R} ${R} 0 1 0 ${x + R} ${y}A${R} ${R} 0 1 0 ${x - R} ${y}Z`;
@@ -400,6 +643,17 @@ export function transitionItems(tr: TransitionData, a: Item[], b: Item[], u: num
       const off = Math.sin(u * 50) * w * 0.03;
       return [grp(band ? b : a, { tf: [1, 0, 0, 1, off, 0] }), grp(band ? a : b, { clip: rect(0, h * frac(u * 3.7), w, h * 0.12), tf: [1, 0, 0, 1, -off, 0] })];
     }
+    case 'page': {
+      // A page turns from the right: A's remaining part, the folded-over back of the page, B underneath.
+      const slant = h * 0.38;
+      const xb = (w + slant) * (1 - e) - slant * 0.2;
+      const xt = xb + slant;
+      const flap = Math.min(w * 0.16, (w + slant - xb) * 0.45);
+      const keep = `M0 0L${Math.min(w, Math.max(0, xt))} 0L${Math.min(w, Math.max(0, xb))} ${h}L0 ${h}Z`;
+      if (xt <= 0) return b;
+      const back = `M${xt} 0L${xb} ${h}L${xb - flap} ${h}L${xt - flap * 0.55} 0Z`;
+      return [grp(b), grp(a, { clip: keep }), { k: 'path', d: back, fill: { color: '#EEE9DF' }, op: 0.97 }, { k: 'path', d: `M${xt} 0L${xb} ${h}`, stroke: { paint: { color: '#00000040' }, width: Math.max(1, h / 300) } }];
+    }
     case 'shape': {
       const R = Math.hypot(w, h) * e;
       const [cx, cy] = focus;
@@ -419,5 +673,11 @@ const blob = (cx: number, cy: number, r: number) => {
   }
   return `${d}Z`;
 };
+
+function shadeHex(c: string, f: number): string {
+  const [r, g, b] = hexToRgb(c);
+  const h = (x: number) => Math.max(0, Math.min(255, Math.round(x * f))).toString(16).padStart(2, '0');
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
 
 export { hexToRgb };

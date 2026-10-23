@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frame.local/schema/media.json",
+  "additionalProperties": false,
+  "type": "object",
+  "properties": {
+    "hash": {
+      "pattern": "^sha256-[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "mime": {
+      "type": "string"
+    },
+    "ext": {
+      "pattern": "^[a-z0-9]{1,8}$",
+      "type": "string"
+    },
+    "bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "durationS": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "sampleRate": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "channels": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "width": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "height": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "hash",
+    "mime",
+    "ext",
+    "bytes"
+  ]
+}
