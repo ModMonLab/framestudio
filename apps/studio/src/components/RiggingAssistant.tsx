@@ -46,6 +46,10 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
   const [name, setName] = useState('');
   const [rights, setRights] = useState('I made this artwork or own the rights to it');
   const [libMouth, setLibMouth] = useState('');
+  const [libHands, setLibHands] = useState('');
+  // Joints set by the user per layer (artwork units): limbs turn around `at` and reach `end` (FR-IMP-03).
+  const [pivots, setPivots] = useState<Record<string, { at: [number, number]; end?: [number, number] }>>({});
+  const [pivotFor, setPivotFor] = useState<string>();
   const [built, setBuilt] = useState<BuildResult>();
   const [busy, setBusy] = useState(false);
   const [gesture, setGesture] = useState('');
@@ -54,6 +58,7 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
   const [, setTick] = useState(0);
   const canvases = useRef<(HTMLCanvasElement | null)[]>([]);
   const mouths = useKind('mouth', pid);
+  const handSets = (useKind('base', pid) ?? []).filter((b) => (assets.manifest(b.ref)?.data as { slot?: string } | undefined)?.slot === 'hands');
   const acts = useKind('act', pid);
 
   useEffect(() => {
@@ -83,6 +88,8 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
     }).catch((e: Error) => setError(e.message));
   }, [file, pid]);
 
+  const libraryParts = { ...(libMouth ? { mouth: libMouth } : {}), ...(libHands ? { hands: libHands } : {}) };
+  const rigExtras = { ...(Object.keys(libraryParts).length ? { libraryParts } : {}), ...(Object.keys(pivots).length ? { pivots } : {}) };
   const layersPayload = useMemo(() => read?.layers.map(({ suggestion: _s, propSuggestion: _p, planeSuggestion: _q, hidden: _h, ...l }) => l), [read]);
   const objectBody = () => ({ kind, name, fileName: read!.fileName, rights, layers: layersPayload, mapping, ...(kind === 'prop' && Number(height) > 0 ? { height: Number(height) } : {}), ...(kind === 'set' ? { width: read!.width, artHeight: read!.height } : {}) });
   // Dry-run build on every change (debounced): manifests for the preview and the rig check.
@@ -95,13 +102,13 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => {
-      api.buildRig(pid, { name, fileName: read.fileName, rights, layers: layersPayload, mapping, ...(libMouth ? { libraryParts: { mouth: libMouth } } : {}) })
+      api.buildRig(pid, { name, fileName: read.fileName, rights, layers: layersPayload, mapping, ...rigExtras })
         .then((r) => setBuilt(r as BuildResult))
         .catch((e: Error) => setError(e.message));
     }, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [read, layersPayload, mapping, libMouth, name, rights, pid, kind, height]);
+  }, [read, layersPayload, mapping, libMouth, libHands, pivots, name, rights, pid, kind, height]);
 
   // Preview: the rigged draft on a neutral copy of the current scene, in every drawn view.
   const local = useMemo(() => new Map((built ? [...built.parts, built.character] : []).map((m) => [`${m.id}@${m.version}`, m])), [built]);
@@ -149,7 +156,7 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
       return;
     }
     try {
-      const r = await api.buildRig(pid, { name, fileName: read.fileName, rights, layers: layersPayload, mapping, ...(libMouth ? { libraryParts: { mouth: libMouth } } : {}), save: true, ...(sceneId ? { place: { scene: sceneId, x: project.project.output.width / 2, y: project.project.output.height * 0.92 } } : {}) });
+      const r = await api.buildRig(pid, { name, fileName: read.fileName, rights, layers: layersPayload, mapping, ...rigExtras, save: true, ...(sceneId ? { place: { scene: sceneId, x: project.project.output.width / 2, y: project.project.output.height * 0.92 } } : {}) });
       toasts.show({ tone: 'success', message: `${name} is rigged${sceneId ? ' and placed in the scene' : ''}` });
       if ((r as { instance?: string }).instance) studio.set({ selection: [{ kind: 'instance', id: (r as { instance: string }).instance }] });
       onClose();
@@ -218,6 +225,7 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
                       <span className="st-rig__thumb" aria-hidden>{l.media ? <img src={api.mediaUrl(pid, l.media)} alt="" /> : <span className="fr-faint">SVG</span>}</span>
                       <span className="st-rig__name" title={l.group ? `${l.group}/${l.name}` : l.name}>{l.name}{l.hidden && <span className="fr-faint"> · hidden</span>}</span>
                       <span className="st-rig__target"><Select label={`${kind === 'set' ? 'Depth plane' : kind === 'prop' ? 'State' : 'Rig target'} for ${l.name}`} value={mapping[l.id]} onChange={(v) => setMapping((m) => ({ ...m, [l.id]: v }))} options={targetOptions} /></span>
+                      {kind === 'character' && JOINTED.test(mapping[l.id] ?? '') && <Button onClick={() => setPivotFor(l.id)} aria-label={`Set the joint of ${l.name}`}>{pivots[l.id] ? 'Joint set' : 'Joint…'}</Button>}
                     </li>
                   ))}
                 </ul>
@@ -253,6 +261,11 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
               <Select label="Library mouth" placeholder="Use the drawn mouth shapes" value={libMouth || undefined} onChange={setLibMouth} options={[{ value: '', label: 'Use the drawn mouth shapes' }, ...(mouths ?? []).map((m) => ({ value: m.ref, label: `Library: ${m.name}` }))]} />
               <p className="fr-hint">Speech needs all nine mouth shapes (mouth_A … mouth_H, mouth_X) in every drawn view, or a library mouth.</p>
             </div>
+            <div className="st-field-col">
+              <span className="fr-label">Hand poses</span>
+              <Select label="Library hands" placeholder="Use the drawn hands" value={libHands || undefined} onChange={setLibHands} options={[{ value: '', label: 'Use the drawn hands' }, ...handSets.map((m) => ({ value: m.ref, label: `Library: ${m.name}` }))]} />
+              <p className="fr-hint">Drawn hands keep the pose they are drawn in; a library hand set gives pointing, fists and every other hand pose.</p>
+            </div>
             </>)}
             <div aria-live="polite">
               {(kind === 'character' ? built : object) && (errors.length ? <StatusBadge tone="danger">Rig check: {errors.length} problem(s)</StatusBadge> : <StatusBadge tone="success">Rig check passed</StatusBadge>)}
@@ -261,6 +274,44 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
           </div>
         </div>
       )}
+      {pivotFor && read && <JointEditor layer={read.layers.find((l) => l.id === pivotFor)!} pid={pid} limb={/arm|thigh|shin/.test(mapping[pivotFor] ?? '')} value={pivots[pivotFor]} onClose={() => setPivotFor(undefined)} onChange={(v) => setPivots((p) => { const n = { ...p }; if (v) n[pivotFor] = v; else delete n[pivotFor]; return n; })} />}
+    </Dialog>
+  );
+}
+
+const JOINTED = /^(upper_arm|forearm|hand|thigh|shin|foot)_[LR]$/;
+
+/**
+ * Joint editor (FR-IMP-03 pivots): click the layer to put the joint it turns around (shoulder, elbow, hip, knee,
+ * wrist, ankle); for an arm or leg segment, Shift-click puts the far joint. Numbers can be typed too.
+ */
+function JointEditor({ layer, pid, limb, value, onChange, onClose }: { layer: ReadLayer; pid: string; limb: boolean; value?: { at: [number, number]; end?: [number, number] }; onChange: (v: { at: [number, number]; end?: [number, number] } | undefined) => void; onClose: () => void }) {
+  const [x, y, w, h] = layer.bounds;
+  const scale = Math.min(320 / w, 320 / h, 4);
+  const at = value?.at ?? [x + w / 2, y];
+  const end = value?.end ?? [x + w / 2, y + h];
+  const set = (k: 'at' | 'end', p: [number, number]) => onChange({ at: k === 'at' ? p : at, ...(limb ? { end: k === 'end' ? p : end } : {}) });
+  const num = (v: string, d: number) => (Number.isFinite(Number(v)) && v.trim() !== '' ? Number(v) : d);
+  return (
+    <Dialog title={`Joint · ${layer.name}`} open onClose={onClose} footer={<><Button onClick={() => { onChange(undefined); onClose(); }}>Reset</Button><Button variant="primary" onClick={onClose}>Done</Button></>}>
+      <div className="st-row" style={{ alignItems: 'flex-start' }}>
+        <svg width={w * scale} height={h * scale} viewBox={`${x} ${y} ${w} ${h}`} className="st-joint" role="img" aria-label={`${layer.name} with its joint${limb ? 's' : ''}`}
+          onClick={(e) => {
+            const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+            const p: [number, number] = [Math.round(x + (e.clientX - r.left) / scale), Math.round(y + (e.clientY - r.top) / scale)];
+            set(e.shiftKey && limb ? 'end' : 'at', p);
+          }}>
+          {layer.media ? <image href={api.mediaUrl(pid, layer.media)} x={x} y={y} width={w} height={h} /> : <rect x={x} y={y} width={w} height={h} fill="var(--color-subtle)" />}
+          <circle cx={at[0]} cy={at[1]} r={4 / scale} fill="var(--color-accent)" />
+          {limb && <><line x1={at[0]} y1={at[1]} x2={end[0]} y2={end[1]} stroke="var(--color-accent)" strokeWidth={1.5 / scale} /><circle cx={end[0]} cy={end[1]} r={4 / scale} fill="none" stroke="var(--color-accent)" strokeWidth={1.5 / scale} /></>}
+        </svg>
+        <div className="st-field-col">
+          <TextField label="Joint x" value={String(at[0])} onChange={(v) => set('at', [num(v, at[0]), at[1]])} />
+          <TextField label="Joint y" value={String(at[1])} onChange={(v) => set('at', [at[0], num(v, at[1])])} />
+          {limb && <TextField label="Far joint y" value={String(end[1])} onChange={(v) => set('end', [end[0], num(v, end[1])])} />}
+          <p className="fr-hint">Click to place the joint this layer turns around{limb ? '; Shift-click places the far joint (elbow, wrist, knee or ankle)' : ''}. Units are artwork pixels.</p>
+        </div>
+      </div>
     </Dialog>
   );
 }

@@ -517,6 +517,16 @@ test('rigging assistant: a layered PSD becomes a character with declared view ga
   await page.getByRole('option', { name: /^Library: / }).first().click();
   await expect(dlg.getByText('Rig check passed')).toBeVisible();
   await expect(dlg.getByRole('img', { name: /hero, (Front|Three-quarter) view/ })).toHaveCount(2);
+  // A joint set by clicking the layer, and the library hand set for hand poses (FR-IMP-03).
+  await dlg.getByRole('button', { name: /^Set the joint of upper_arm_L/ }).first().click();
+  const joint = page.getByRole('dialog', { name: /^Joint · upper_arm_L/ });
+  const img = (await joint.getByRole('img').boundingBox())!;
+  await page.mouse.click(img.x + img.width / 2, img.y + 6);
+  await joint.getByRole('button', { name: 'Done' }).click();
+  await expect(dlg.getByRole('button', { name: /^Set the joint of upper_arm_L/ }).first()).toHaveText('Joint set');
+  await dlg.getByRole('button', { name: 'Library hands: Use the drawn hands' }).click();
+  await page.getByRole('option', { name: /^Library: / }).first().click();
+  await expect(dlg.getByText('Rig check passed')).toBeVisible();
   const axe = await new AxeBuilder({ page }).include('[role="dialog"]').withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([]);
   await dlg.getByRole('button', { name: 'Save character' }).click();
@@ -525,6 +535,7 @@ test('rigging assistant: a layered PSD becomes a character with declared view ga
   const st = (await (await page.request.get(`/api/projects/${pid}/state`)).json()).state;
   const chr = Object.values(st.assets as Record<string, { kind: string; name: string; viewExemptions: Record<string, string> }>).find((a) => a.kind === 'chr' && a.name === 'hero')!;
   expect(Object.keys(chr.viewExemptions).sort()).toEqual(['back', 'side']);
+  expect((chr as unknown as { data: { parts: { hands: string } } }).data.parts.hands).toMatch(/^base\./);
   const sid = st.episodes[st.project.episodes[0]].scenes[0];
   expect(st.scenes[sid].instances.some((i: { name: string }) => i.name === 'hero')).toBe(true);
   await page.waitForTimeout(800);

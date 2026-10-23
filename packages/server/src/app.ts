@@ -32,6 +32,8 @@ interface RigBuildBody {
   layers: (RigLayer & { group?: string })[];
   mapping: Record<string, string>;
   libraryParts?: Record<string, string>;
+  /** Characters: joints set in the rigging assistant, per layer id (artwork units). */
+  pivots?: Record<string, { at: [number, number]; end?: [number, number] }>;
   /** Props: height on stage in output pixels. */
   height?: number;
   /** Sets: artwork size. */
@@ -907,7 +909,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       const lib = library(p);
       if (b.kind === 'prop' || b.kind === 'set') return buildObject(p, b, sourceOf(req));
       for (const ref of Object.values(b.libraryParts ?? {})) if (ref && !lib.has(ref)) throw new FrameError('NOT_FOUND', `${ref} is not in the library`);
-      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: (b.mapping ?? {}) as Record<string, RigTarget>, libraryParts: b.libraryParts ?? {}, newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
+      const res = rigArtwork({ name: b.name.trim(), layers: b.layers ?? [], mapping: (b.mapping ?? {}) as Record<string, RigTarget>, libraryParts: b.libraryParts ?? {}, ...(b.pivots ? { pivots: b.pivots } : {}), newId: () => randomUUID(), author: sourceOf(req), date: new Date().toISOString().slice(0, 10), sourceFile: String(b.fileName ?? ''), rights: b.rights });
       const local = new Map([...res.parts, res.character].map((m) => [`${m.id}@${m.version}`, m]));
       const look = (r: string) => local.get(r) ?? (lib.manifest(r) as AssetManifest | undefined);
       const check = checkCharacter(res.character, look, lib.byKind('act').map((x) => x.manifest));

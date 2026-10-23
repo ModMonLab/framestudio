@@ -133,6 +133,36 @@ describe('rigging assistant (FR-IMP-03, AC-12 path)', () => {
     return f ? new Uint8Array(fs.readFileSync(f)) : undefined;
   } });
 
+  it('uses pivots set in the assistant for limbs, and a library hand set in place of drawn hands', () => {
+    const layers: RigLayer[] = [
+      { id: 'h', name: 'head', bounds: [130, 40, 140, 180] },
+      { id: 't', name: 'torso', bounds: [140, 250, 120, 320] },
+      { id: 'ua', name: 'upper_arm_L', bounds: [262, 240, 30, 170] },
+      { id: 'hand', name: 'hand_L', bounds: [260, 550, 30, 40] },
+    ];
+    const base = { name: 'Pivot', layers, mapping: {}, newId: ids, author: 'tester', date: '2026-10-23', sourceFile: 'p.psd', rights: 'mine' };
+    const boxOf = (r: ReturnType<typeof rigArtwork>, id: string) => {
+      const arm = r.parts.find((m) => m.name.endsWith('Body'))!;
+      const art = (arm.data as { families: { flat: { views: { front: { layers: { space: string; shapes: { art: { box: number[]; src: number[] } }[] }[] } } } } }).families.flat.views.front;
+      return art.layers.flatMap((l) => l.shapes).find((x) => x.art.src.join() === layers.find((l) => l.id === id)!.bounds.join())!.art.box;
+    };
+    // Default: the layer spans the bone [-1, 0, 1, 1].
+    expect(boxOf(rigArtwork(base), 'ua')).toEqual([-1, 0, 1, 1]);
+    // Shoulder 20 px below the layer top, elbow at 400: the bone starts inside the drawing.
+    const pv = boxOf(rigArtwork({ ...base, pivots: { ua: { at: [277, 260], end: [277, 400] } } }), 'ua');
+    expect(pv[0]).toBeCloseTo(-1);
+    expect(pv[1]).toBeCloseTo(-20 / 140);
+    expect(pv[3]).toBeCloseTo(150 / 140);
+    // Drawn hands keep one pose (warned); a library hand set replaces them.
+    expect(rigArtwork(base).problems.some((x) => /hand set/.test(x.message))).toBe(true);
+    const lib = libraryFor({ contentDir: CONTENT });
+    const hands = lib.byKind('base').find((x) => (x.manifest.data as { slot?: string }).slot === 'hands')!.manifest;
+    const withLib = rigArtwork({ ...base, libraryParts: { hands: `${hands.id}@${hands.version}` } });
+    expect(withLib.problems.some((x) => /hand set/.test(x.message))).toBe(false);
+    expect((withLib.character.data as { parts: Record<string, string> }).parts.hands).toBe(`${hands.id}@${hands.version}`);
+    expect(withLib.parts.some((m) => m.name.endsWith('Hands'))).toBe(false);
+  });
+
   it('rigs a prop with states from state layers and switches them in a scene', async () => {
     expect(suggestPropTarget({ name: 'state_on' })).toBe('state:on');
     expect(suggestPropTarget({ name: 'glow', group: 'State: Off' })).toBe('state:off');
