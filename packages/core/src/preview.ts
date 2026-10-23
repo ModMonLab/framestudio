@@ -16,7 +16,7 @@ import type { CharacterData } from './perform/character.js';
 /** Character-part kinds and the `parts` key they replace on the preview character. */
 const PART_KEYS: Record<string, string> = { head: 'head', eyes: 'eyes', brow: 'brows', nose: 'nose', mouth: 'mouth', ears: 'ears', hair: 'hair', fringe: 'fringe', 'facial-hair': 'facialHair', feet: 'feet' };
 const GARMENT_KINDS = new Set(['top', 'outer', 'bottom', 'dress', 'shoe', 'acc']);
-const FACE_FRAMED = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'exp', 'skin', 'makeup', 'skin-detail', 'eyestate', 'browstate', 'mouthshape', 'face-ctl', 'eye-ctl', 'hair-ctl']);
+const FACE_FRAMED = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'exp', 'skin', 'makeup', 'skin-detail', 'eyestate', 'browstate', 'mouthshape', 'face-ctl', 'eye-ctl', 'hair-ctl', 'overlay']);
 
 export interface PreviewSetup {
   state: ProjectState;
@@ -43,7 +43,7 @@ function mostDifferent(presets: string[], from: string): string | undefined {
 
 /** Kinds that have a visual preview; others (output presets, controls without art) return undefined. */
 export function previewable(kind: string): boolean {
-  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'skin-detail' || kind === 'makeup' || kind === 'identity' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'eyestate' || kind === 'browstate' || kind === 'face-ctl' || kind === 'eye-ctl' || kind === 'hair-ctl' || kind === 'prop' || kind === 'kit' || kind === 'txt' || kind === 'pattern' || kind === 'set';
+  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'skin-detail' || kind === 'makeup' || kind === 'identity' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'overlay' || kind === 'eyestate' || kind === 'browstate' || kind === 'face-ctl' || kind === 'eye-ctl' || kind === 'hair-ctl' || kind === 'prop' || kind === 'kit' || kind === 'txt' || kind === 'pattern' || kind === 'set';
 }
 
 const PREVIEW_USER_ID = 'user.00000000-0000-4000-8000-0000000000ff';
@@ -134,12 +134,12 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
     return { state: s.state, scene, t: 48000, framing: 'face', subject: inst };
   }
   if (control?.target === 'body') return { state: s.state, scene, t, framing: 'full', subject: inst };
-  if (m.kind === 'exp' || m.kind === 'act') {
+  if (m.kind === 'exp' || m.kind === 'act' || m.kind === 'overlay') {
     const sc = s.state.scenes[scene]!;
-    const track = trackFor(sc, inst, m.kind === 'exp' ? 'face' : 'acting')!;
+    const track = trackFor(sc, inst, m.kind === 'act' ? 'acting' : 'face')!;
     apply([{ name: 'clip.add', params: { scene, track: track.id, start: 0, end: 48000 * 4, asset: ref, blendIn: 0, blendOut: 0 } }]);
     // Expressions read best once settled; actions at their midpoint.
-    t = m.kind === 'exp' ? 48000 : 48000 * 1.2;
+    t = m.kind === 'act' ? 48000 * 1.2 : 48000;
   }
   if (m.kind === 'hand') {
     // A held pose: the right hand raised in front of the chest showing the hand shape.

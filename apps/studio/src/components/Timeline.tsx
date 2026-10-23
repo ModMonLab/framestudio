@@ -240,8 +240,8 @@ export function Timeline() {
                         if (!raw) return;
                         e.preventDefault();
                         const h = JSON.parse(raw) as Hit;
-                        if ((t.kind === 'face' && h.kind !== 'exp') || (t.kind === 'acting' && h.kind !== 'act')) {
-                          studio.set({ lastError: { message: t.kind === 'face' ? 'Only expressions go on the Face lane.' : 'Only actions go on the Acting lane.' } });
+                        if ((t.kind === 'face' && h.kind !== 'exp' && h.kind !== 'overlay') || (t.kind === 'acting' && h.kind !== 'act')) {
+                          studio.set({ lastError: { message: t.kind === 'face' ? 'Only expressions and face overlays go on the Face lane.' : 'Only actions go on the Acting lane.' } });
                           return;
                         }
                         const r = (e.currentTarget as HTMLElement).getBoundingClientRect();

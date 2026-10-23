@@ -252,7 +252,7 @@ export function CanvasView() {
     const h = JSON.parse(raw) as Hit;
     const target = hit(e.clientX - stage.left, e.clientY - stage.top);
     const targetIsChar = target && project.scenes[sceneId]!.instances.find((i) => i.id === target)?.kind === 'character';
-    if ((h.kind === 'exp' || h.kind === 'act') && !targetIsChar) {
+    if ((h.kind === 'exp' || h.kind === 'overlay' || h.kind === 'act') && !targetIsChar) {
       studio.set({ lastError: { message: `Drop ${h.name} onto a character.` } });
       return;
     }

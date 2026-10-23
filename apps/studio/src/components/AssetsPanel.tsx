@@ -98,7 +98,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
   const reason = (h: Hit): string | undefined => {
     if (!PLACEABLE.has(h.kind)) return 'Editing these is part of the character builder';
     if (h.incompatible) return h.incompatible;
-    if ((h.kind === 'exp' || h.kind === 'act') && !selChar) return 'Select a character first';
+    if ((h.kind === 'exp' || h.kind === 'overlay' || h.kind === 'act') && !selChar) return 'Select a character first';
     return undefined;
   };
 
@@ -157,7 +157,7 @@ export function AssetsPanel({ filter }: { filter: string }) {
           }} options={[...prefs.collections.map((c) => ({ value: c.id, label: `${c.items.includes(idOf(pickedHit.ref)) ? '✓ ' : ''}${c.name}` })), { value: '__new', label: 'New collection…' }]} /></span>}
           {PART_KINDS.has(pickedHit.kind) && <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(pid)}/part/${encodeURIComponent(pickedHit.ref)}`)}>Open in part editor</Button>}
           {pickedHit.source === 'project' && pickedHit.ref.startsWith('user.') && <Button onClick={() => void api.saveToLibrary(pid, [pickedHit.ref]).then((r) => toasts.show({ tone: 'success', message: r.added.length ? `Saved ${pickedHit.name} to your library` : `${pickedHit.name} is already in your library` })).catch((e: Error) => toasts.show({ tone: 'error', message: e.message }))}>Save to my library</Button>}
-          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'music' || pickedHit.kind === 'amb' || pickedHit.kind === 'cue' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' && pickedHit.tags.includes('caption') ? 'Use for captions' : pickedHit.kind === 'txt' ? 'Add at playhead' : pickedHit.kind === 'rcp' ? 'Apply…' : pickedHit.kind === 'tpl' ? 'New scene…' : 'Add to scene'}</Button>
+          <Button variant="primary" disabled={!!reason(pickedHit)} disabledReason={reason(pickedHit)} onClick={() => void apply(pickedHit)}>{pickedHit.kind === 'exp' || pickedHit.kind === 'overlay' || pickedHit.kind === 'act' || pickedHit.kind === 'sfx' || pickedHit.kind === 'music' || pickedHit.kind === 'amb' || pickedHit.kind === 'cue' || pickedHit.kind === 'atmo' || pickedHit.kind === 'fx' ? 'Add at playhead' : pickedHit.kind === 'txt' && pickedHit.tags.includes('caption') ? 'Use for captions' : pickedHit.kind === 'txt' ? 'Add at playhead' : pickedHit.kind === 'rcp' ? 'Apply…' : pickedHit.kind === 'tpl' ? 'New scene…' : 'Add to scene'}</Button>
         </div>
       )}
     </Panel>
@@ -203,9 +203,10 @@ export async function placeAsset(studio: Studio, h: Hit, o: { at?: number; posit
       return undefined;
     }
     case 'exp':
+    case 'overlay':
     case 'act': {
       if (!o.character) return undefined;
-      const track = trackFor(scene, o.character, h.kind === 'exp' ? 'face' : 'acting');
+      const track = trackFor(scene, o.character, h.kind === 'act' ? 'acting' : 'face');
       if (!track) return undefined;
       await studio.exec([{ name: 'clip.add', params: { scene: scene.id, track: track.id, start: at, end: Math.min(scene.duration, at + 96000), asset: h.ref, blendIn: 4800, blendOut: 4800 } }], `${h.name}`);
       return undefined;

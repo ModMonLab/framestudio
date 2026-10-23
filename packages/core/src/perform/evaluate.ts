@@ -15,7 +15,7 @@ import { characterVariant, resolveCharacter, type AssetResolver } from './charac
 import { motionAt, type Motion } from './locomotion.js';
 import { holderAt, propStateAt, type Interaction } from './interact.js';
 import { bubbleItems, graphicItems, worldTextItems, type BubbleStyle, type GraphicStyle, type WorldTextStyle } from './text.js';
-import { atmosphereItems, effectItems, gradeMatrix, SILHOUETTE_MATRIX, transitionItems, type AtmoData, type EffectData, type TransitionData } from './fx.js';
+import { atmosphereItems, easeInOut, effectItems, gradeMatrix, principleDeform, SILHOUETTE_MATRIX, transitionItems, type AtmoData, type Deform, type EffectData, type TransitionData } from './fx.js';
 import { captionItems, DEFAULT_CAPTION_STYLE, stripPauseMarkers, type CaptionStyle } from '../captions.js';
 
 
@@ -88,22 +88,26 @@ export interface CameraState {
   width: number;
   rotation: number;
   shake: [number, number];
+  /** Picture blur in output pixels at 1080p (rack focus), when a move asks for it. */
+  blur?: number;
 }
 
 /** Active camera at t: shot track → camera, then camera-move clips (FR-CAM-02/03). */
-export function cameraAt(scene: Scene, t: number, assets: AssetResolver, aspect?: string): CameraState {
+export function cameraAt(scene: Scene, t: number, assets: AssetResolver, aspect?: string, cameraId?: string): CameraState {
   const shotTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'shot' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   const shot = scene.clips.find((c) => c.enabled && shotTracks.has(c.track) && t >= c.start && t < c.end);
-  const camId = (shot?.params.camera as string | undefined) ?? scene.defaultCamera;
+  // A named camera (the second picture of a split or inset shot) is drawn as framed, without the scene's moves.
+  const camId = cameraId ?? (shot?.params.camera as string | undefined) ?? scene.defaultCamera;
   const cam = scene.cameras.find((c) => c.id === camId) ?? scene.cameras[0]!;
   const ov = aspect ? cam.ratioOverrides[aspect] : undefined;
   let center: [number, number] = ov ? [ov.center.x, ov.center.y] : [cam.center.x, cam.center.y];
   let width = ov ? ov.width : cam.width;
   let rotation = cam.rotation;
   let shake: [number, number] = [0, 0];
+  let blur = 0;
   const moveTracks = new Set(scene.tracks.filter((tr) => tr.kind === 'camera-move' && !tr.mute && !tr.hidden).map((tr) => tr.id));
   for (const c of scene.clips) {
-    if (!c.enabled || !moveTracks.has(c.track) || t < c.start) continue;
+    if (cameraId || !c.enabled || !moveTracks.has(c.track) || t < c.start) continue;
     const move = (c.asset ? (assets.manifest(c.asset)?.data as { move?: CameraMove } | undefined)?.move : undefined) ?? (c.params.move as CameraMove | undefined);
     if (!move) continue;
     const dur = c.end - c.start;
@@ -113,6 +117,8 @@ export function cameraAt(scene: Scene, t: number, assets: AssetResolver, aspect?
     if (move.dx) center = [center[0] + move.dx * k, center[1]];
     if (move.dy) center = [center[0], center[1] + move.dy * k];
     if (move.roll) rotation += move.roll * k;
+    // Rack focus: soft at the start of the clip, sharp at its end.
+    if (move.blur && t < c.end) blur = Math.max(blur, move.blur * (1 - k));
     if (move.shake && t < c.end) {
       const rnd = prng(hash32(c.id) ^ Math.floor(sec(t) * 30));
       const amp = move.shake * (1 - u * 0.5) * ((c.params.intensity as number | undefined) ?? 1);
@@ -137,7 +143,7 @@ export function cameraAt(scene: Scene, t: number, assets: AssetResolver, aspect?
       center = [center[0] + (p[0] - center[0]) * k, center[1]];
     }
   }
-  return { cam, center, width, rotation, shake };
+  return { cam, center, width, rotation, shake, ...(blur > 0.01 ? { blur } : {}) };
 }
 
 export interface CameraMove {
@@ -146,6 +152,8 @@ export interface CameraMove {
   dy?: number;
   roll?: number;
   shake?: number;
+  /** Rack focus: the picture starts this blurred (px at 1080p) and comes into focus over the clip. */
+  blur?: number;
   target?: boolean;
   /** Keep the target's starting framing while it moves (follow subject). */
   follow?: boolean;
@@ -366,7 +374,15 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
       continue;
     }
     const e = c.asset ? (assets.manifest(c.asset)?.data as { expression?: ExpressionData } | undefined)?.expression : undefined;
-    if (!e) continue;
+    if (!e) {
+      // A face overlay used on its own (Catalog E2): blush, tears, sweat… for the clip's span.
+      if (c.asset && assets.manifest(c.asset)?.kind === 'overlay') {
+        const key = c.asset.split('@')[0]!;
+        overlays[key] = Math.max(overlays[key] ?? 0, clipWeight(t, c.start, c.end, c.blendIn, c.blendOut) * (((c.params.intensity as number | undefined) ?? 100) / 100));
+        if (!extraParts.includes(c.asset)) extraParts.push(c.asset);
+      }
+      continue;
+    }
     const intensity = ((c.params.intensity as number | undefined) ?? e.intensity ?? 70) / 100;
     const w = clipWeight(t, c.start, c.end, c.blendIn, c.blendOut) * intensity;
     const tuned: ExpressionData = { ...e, ...((c.params.tune as ExpressionData | undefined) ?? {}) };
@@ -388,6 +404,8 @@ function perform(state: ProjectState, scene: Scene, inst: Instance, t: number, a
     if (tuned.overlay) {
       const key = tuned.overlay.split('@')[0]!;
       overlays[key] = Math.max(overlays[key] ?? 0, w * (tuned.overlayAmount ?? 1));
+      // The overlay's art (Catalog E2) joins the character while the expression shows it.
+      if (!extraParts.includes(tuned.overlay)) extraParts.push(tuned.overlay);
     }
     if (tuned.gaze) gaze = [gaze[0] + tuned.gaze[0] * w, gaze[1] + tuned.gaze[1] * w];
     if (tuned.head) pose.head = { yaw: pose.head.yaw + (tuned.head.yaw ?? 0) * w, pitch: pose.head.pitch + (tuned.head.pitch ?? 0) * w, roll: pose.head.roll + (tuned.head.roll ?? 0) * w };
@@ -631,6 +649,24 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
   };
 
   const motions = motionContext(scene, t, o.assets);
+  // Animation-principle effects on characters (K1): squash, bounce, wobble… deform the attached character; ease
+  // presets warp its performance time; afterimage and smear draw ghosts of it.
+  const deform = new Map<string, Deform>();
+  const warp = new Map<string, number>();
+  const ghosts: { id: string; kind: 'afterimage' | 'smear'; k: number }[] = [];
+  for (const c of fxClips) {
+    const e = fxData(c)?.effect;
+    const at = c.params.attach;
+    if (!e || typeof at !== 'string' || at === 'screen') continue;
+    const u = (tIn - c.start) / Math.max(1, c.end - c.start);
+    const k = Number(c.params.intensity ?? 1);
+    if (e.type === 'principle' && e.principle === 'ease') warp.set(at, c.start + Math.round(easeInOut(u) * (c.end - c.start)));
+    else if (e.type === 'principle' && e.principle) {
+      const d = principleDeform(e.principle, u, sec(tIn - c.start), k);
+      const prev = deform.get(at) ?? { sx: 1, sy: 1, rot: 0, dy: 0 };
+      deform.set(at, { sx: prev.sx * d.sx, sy: prev.sy * d.sy, rot: prev.rot + d.rot, dy: prev.dy + d.dy });
+    } else if (e.type === 'afterimage' || e.type === 'smear') ghosts.push({ id: at, kind: e.type, k });
+  }
   // Characters are composed once per frame (props held in their hands need the hand position first).
   const composedCache = new Map<string, { composed: ReturnType<typeof composeCharacter>; perf: PerfResult; missing: string[]; fading?: Item; w?: number } | null>();
   const composeInst = (inst: Instance) => {
@@ -641,7 +677,7 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
       return null;
     }
     const mo = motions.motion(inst);
-    const perf = perform(state, scene, inst, t, o.assets, fps, mo, motions.posOf);
+    const perf = perform(state, scene, inst, warp.get(inst.id) ?? t, o.assets, fps, mo, motions.posOf);
     // A costume change (FR-WRD-03) dissolves the previous look into the new one over the clip's transition.
     const lk = lookAt(scene, inst.id, inst.character.look, t);
     const build = (look: string) => {
@@ -681,7 +717,10 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
           tr = { ...tr, x: hm.x + a[0] * k - g[0] * tr.scale * (flip ? -1 : 1), y: hm.y + a[1] * k - g[1] * tr.scale, flipX: flip, rotation: 0 };
         }
       }
-      const local: Mat = mul(T(tr.x + px, tr.y + py), mul(R(tr.rotation), S(tr.scale * (tr.flipX && inst.kind !== 'character' ? -1 : 1), tr.scale)));
+      const df = deform.get(inst.id);
+      const local: Mat = df
+        ? mul(T(tr.x + px, tr.y + py + df.dy), mul(R(tr.rotation + df.rot), S(tr.scale * df.sx * (tr.flipX && inst.kind !== 'character' ? -1 : 1), tr.scale * df.sy)))
+        : mul(T(tr.x + px, tr.y + py), mul(R(tr.rotation), S(tr.scale * (tr.flipX && inst.kind !== 'character' ? -1 : 1), tr.scale)));
       const m = mul(view, local);
       let content: Item[] = [];
       if (inst.kind === 'character' && inst.asset && inst.character) {
@@ -742,6 +781,54 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
     const fb = subject ? boxes[subject] : undefined;
     picture = transitionItems(trData, before, after, u, o.width, o.height, fb ? [fb.x + fb.w / 2, fb.y + fb.h * 0.25] : [o.width / 2, o.height / 2]);
   } else picture = drawInstances(cs);
+  if (ghosts.length) {
+    // Afterimage: fading copies where the character was a moment ago; smear: a stretched blur along its motion.
+    const view = viewMatrix(scene, cs, o.width, o.height, designAspect, 1);
+    for (const g of ghosts) {
+      const i = picture.findIndex((it) => it.k === 'group' && (it as GroupItem).id === g.id);
+      const inst = scene.instances.find((x) => x.id === g.id);
+      if (i < 0 || !inst) continue;
+      const now = motions.motion(inst);
+      const copies: Item[] = [];
+      const steps = g.kind === 'afterimage' ? [0.08, 0.16, 0.24] : [0.05];
+      for (const [n, dt] of steps.entries()) {
+        const before = motionContext(scene, Math.max(0, t - Math.round(dt * TICKS_PER_SECOND)), o.assets).motion(inst);
+        const dx = (before.x - now.x) * view[0] + (before.y - now.y) * view[2];
+        const dy = (before.x - now.x) * view[1] + (before.y - now.y) * view[3];
+        if (g.kind === 'smear') {
+          const len = Math.hypot(dx, dy);
+          if (len < 1) continue;
+          copies.push({ k: 'group', items: [picture[i]!], tf: [1, 0, 0, 1, dx * 0.5, dy * 0.5], op: 0.45 * g.k, blur: Math.min(30, len * 0.35) });
+        } else copies.push({ k: 'group', items: [picture[i]!], tf: [1, 0, 0, 1, dx, dy], op: (0.4 - n * 0.12) * g.k });
+      }
+      picture.splice(i, 0, ...copies.reverse());
+    }
+  }
+  if (cs.blur) picture = [{ k: 'group', items: picture, blur: cs.blur * (o.height / 1080) }];
+  // Two cameras at once (Catalog M1 edits): split screen side by side, or a picture-in-picture inset.
+  const second = typeof shot?.params.camera2 === 'string' && scene.cameras.some((c) => c.id === shot.params.camera2) ? String(shot.params.camera2) : undefined;
+  if (shot && second && !(trData && trData.type !== 'cut' && t < shot.start + trDur)) {
+    const kept = { ...boxes };
+    const other = drawInstances(cameraAt(scene, t, o.assets, o.aspect, second));
+    // Bubbles and effects keep following the main picture.
+    for (const k of Object.keys(boxes)) delete boxes[k];
+    Object.assign(boxes, kept);
+    const W = o.width;
+    const H = o.height;
+    const rect = (x: number, y: number, w: number, h: number) => `M${x} ${y}L${x + w} ${y}L${x + w} ${y + h}L${x} ${y + h}Z`;
+    if (shot.params.layout === 'pip') {
+      const s = 0.3;
+      const [x0, y0] = [W * (1 - s) - W * 0.04, H * (1 - s) - H * 0.05];
+      picture = [...picture, { k: 'rect', x: x0 - 4, y: y0 - 4, w: W * s + 8, h: H * s + 8, fill: { color: '#FFFFFF' } }, { k: 'group', clip: rect(x0, y0, W * s, H * s), items: [{ k: 'group', tf: [s, 0, 0, s, x0, y0], items: other }] }];
+    } else {
+      // Each half shows the centre of its camera's picture.
+      picture = [
+        { k: 'group', clip: rect(0, 0, W / 2, H), items: [{ k: 'group', tf: [1, 0, 0, 1, -W / 4, 0], items: picture }] },
+        { k: 'group', clip: rect(W / 2, 0, W / 2, H), items: [{ k: 'group', tf: [1, 0, 0, 1, W / 4, 0], items: other }] },
+        { k: 'rect', x: W / 2 - Math.max(2, W / 400), y: 0, w: Math.max(4, W / 200), h: H, fill: { color: '#FFFFFF' } },
+      ];
+    }
+  }
   items.push(...picture);
 
   // Effects attached to the screen, a stage point or a character, then atmosphere layers in front of the stage.
@@ -756,7 +843,21 @@ export function evaluateFrame(state: ProjectState, sceneId: string, tIn: number,
       const a = { ...d.atmosphere, ...(typeof c.params.color === 'string' ? { color: c.params.color } : {}) };
       const g = gradeMatrix(a, k);
       if (g) grade = g;
-      else items.push(...atmosphereItems(a, o.width, o.height, s, k, seed));
+      else if (a.layer === 'back') {
+        // Animated backgrounds go behind the characters: after the last thing drawn on the back plane.
+        const back = scene.stage.depthPlanes.find((p) => p.id === 'back') ?? scene.stage.depthPlanes.reduce((m, p) => (p.order < m.order ? p : m), scene.stage.depthPlanes[0]!);
+        const behind = new Set(scene.stage.depthPlanes.filter((p) => p.order <= back.order).map((p) => p.id));
+        const backIds = new Set(scene.instances.filter((i) => behind.has(i.depthPlane)).map((i) => i.id));
+        let at = 0;
+        items.forEach((it, idx) => {
+          if (it.k === 'group' && (it as GroupItem).id && backIds.has((it as GroupItem).id!)) at = idx + 1;
+        });
+        items.splice(at, 0, ...atmosphereItems(a, o.width, o.height, s, k, seed));
+      } else items.push(...atmosphereItems(a, o.width, o.height, s, k, seed));
+    } else if (d?.effect?.type === 'grade' && d.effect.matrix) {
+      // Treatments (split tone): a colour grade for the clip's span.
+      const g = gradeMatrix({ type: 'grade', matrix: d.effect.matrix }, k);
+      if (g) grade = g;
     } else if (d?.effect) {
       const e = { ...d.effect, ...(typeof c.params.color === 'string' ? { color: c.params.color } : {}), ...(typeof c.params.symbol === 'string' ? { symbol: c.params.symbol as never } : {}) };
       const at = c.params.attach;

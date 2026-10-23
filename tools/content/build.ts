@@ -12,6 +12,8 @@ import { headPart, HEAD_SHAPES } from './parts/head.js';
 import { browPart, earsPart, eyesPart, mouthPart, nosePart } from './parts/features.js';
 import { bodyPart, feetPart, handsPart, HAND_POSES } from './parts/body.js';
 import { hairPart } from './parts/hair.js';
+import { FACIAL_HAIR, FRINGE_STYLES, facialHairPart, fringePart } from './parts/facial-hair.js';
+import { OVERLAY_IDS, overlayPart } from './parts/overlays.js';
 import { bottomPart, shoePart, topPart } from './parts/wardrobe.js';
 import { BOTTOMS, DRESSES, OUTERS, SHOES, TOPS } from './catalog-specs.js';
 import { ACTIONS, EXPRESSIONS } from './performance-specs.js';
@@ -209,6 +211,8 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'mouth': return partBuilt(mouthPart(s), { capabilities: ['rig.biped@1', 'mouthshapes.9'] });
     case 'ears': return partBuilt(earsPart(s), { anchors: { earring: 'ear' } });
     case 'hair': return partBuilt(hairPart(s), { capabilities: ['rig.biped@1', 'hat-compatible'] });
+    case 'fringe': return FRINGE_STYLES.includes(s) ? partBuilt(fringePart(s)) : undefined;
+    case 'facial-hair': return FACIAL_HAIR.includes(s) ? partBuilt(facialHairPart(s), { capabilities: ['rig.biped@1', 'mouthshapes.9'] }) : undefined;
     case 'feet': return partBuilt(feetPart(s));
     case 'top': return TOPS[s] ? partBuilt(topPart(TOPS[s]!)) : undefined;
     case 'outer': return OUTERS[s] ? partBuilt(topPart(OUTERS[s]!)) : undefined;
@@ -217,6 +221,7 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'identity': return IDENTITY[s] ? partBuilt(identityPart(s)) : undefined;
     case 'acc': return ACCESSORIES[s] ? partBuilt(accessoryPart(s)) : undefined;
     case 'skin-detail': return SKIN_DETAILS[s] ? partBuilt(skinDetailPart(s)) : undefined;
+    case 'overlay': return OVERLAY_IDS.includes(s) ? partBuilt(overlayPart(s)) : undefined;
     case 'makeup': return MAKEUP[s] ? partBuilt(makeupPart(s)) : undefined;
     case 'shoe': return SHOES[s] ? partBuilt(shoePart(SHOES[s]!)) : undefined;
     case 'hand': return HAND_POSES[s] ? { data: { handPose: s, set: 'base.hands@1' }, families: ['flat', 'illustrated'], views: ALL_VIEWS, dependencies: ['base.hands@1'], capabilities: ['rig.biped@1'] } : undefined;

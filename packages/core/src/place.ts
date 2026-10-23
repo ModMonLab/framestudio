@@ -74,12 +74,14 @@ export function clipCommand(state: ProjectState, sceneId: string, ref: string, m
   const dur = o.dur !== undefined ? o.dur * S : undefined;
   switch (m.kind) {
     case 'act':
+    case 'overlay':
     case 'exp': {
       if (!o.who) throw new FrameError('USAGE', `Say which character performs ${m.name} (--who)`);
       const inst = scene.instances.find((i) => i.id === o.who || i.name === o.who);
       if (!inst?.character) throw new FrameError('NOT_FOUND', `Character ${o.who} not found in the scene`);
-      const track = trackFor(scene, inst.id, m.kind === 'exp' ? 'face' : 'acting');
-      if (!track) throw new FrameError('VALIDATION_FAILED', `${inst.name} has no ${m.kind === 'exp' ? 'face' : 'acting'} track`);
+      const lane = m.kind === 'act' ? 'acting' : 'face';
+      const track = trackFor(scene, inst.id, lane);
+      if (!track) throw new FrameError('VALIDATION_FAILED', `${inst.name} has no ${lane} track`);
       return { name: 'clip.add', params: { scene: sceneId, track: track.id, start, end: end(dur ?? 2 * S), asset: ref, blendIn: 4800, blendOut: 4800 } };
     }
     case 'atmo':

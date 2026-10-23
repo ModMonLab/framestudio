@@ -383,7 +383,7 @@ for (const [group, verb, what] of [['act', 'add', 'an action'], ['face', 'add', 
     run: async (ctx) => {
       const { state, sceneId, lib } = await sceneOf(ctx);
       const { ref, m } = manifestOf(lib, String(ctx.args.asset));
-      const want = group === 'act' ? ['act'] : group === 'face' ? ['exp'] : group === 'fx' ? ['fx', 'atmo', 'cam'] : ['music', 'amb', 'sfx', 'cue'];
+      const want = group === 'act' ? ['act'] : group === 'face' ? ['exp', 'overlay'] : group === 'fx' ? ['fx', 'atmo', 'cam'] : ['music', 'amb', 'sfx', 'cue'];
       if (!want.includes(m.kind)) throw new FrameError('USAGE', `${ref} is a ${m.kind}, not ${what}`);
       const who = ctx.args.who ? findInstance(state, sceneId, String(ctx.args.who)).id : undefined;
       const attach = ctx.args.attach ? findInstance(state, sceneId, String(ctx.args.attach)).id : undefined;
