@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { FolderOpen, HelpCircle, Moon, MoreHorizontal, Pin, PinOff, Settings, Sun } from 'lucide-react';
 import type { Problem } from '@frame/schema';
-import { AppBar, Button, Dialog, EmptyState, IconButton, MenuButton, Panel, SearchField, Select, TextField, useTheme, useToasts } from '@frame/ui';
+import { AppBar, Button, Dialog, EmptyState, IconButton, MenuButton, Panel, SearchField, Select, TextField, useTheme, useToasts, t as tt } from '@frame/ui';
 import { api, ApiError, type RecentProject } from '../lib/api.js';
 import { FirstRun } from './Onboarding.js';
 
@@ -73,27 +73,27 @@ export function Home() {
   return (
     <div className="fr-root st-app">
       <AppBar right={<>
-        <IconButton label="Help" icon={<HelpCircle size={16} />} onClick={() => (location.hash = '#/help')} />
-        <IconButton label="Settings" icon={<Settings size={16} />} onClick={() => (location.hash = '#/settings')} />
+        <IconButton label={tt('Help')} icon={<HelpCircle size={16} />} onClick={() => (location.hash = '#/help')} />
+        <IconButton label={tt('Settings')} icon={<Settings size={16} />} onClick={() => (location.hash = '#/settings')} />
         <IconButton label={resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} icon={resolved === 'dark' ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')} />
       </>} />
       <main className="st-home">
-        <h1 className="fr-sr">Frame projects</h1>
+        <h1 className="fr-sr">{tt('Frame projects')}</h1>
         <div className="st-home-col">
-          <Panel title="Open a project" label="Open a project" help="#/help/projects">
+          <Panel title={tt('Open a project')} label={tt('Open a project')} help="#/help/projects">
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {server === 'down' && <p className="fr-error-text" role="alert">The Frame Server is not reachable. Start it with <code className="fr-mono">frame server start</code>.</p>}
+              {server === 'down' && <p className="fr-error-text" role="alert">{tt('The Frame Server is not reachable. Start it with')} <code className="fr-mono">{tt('frame server start')}</code>.</p>}
               <form onSubmit={(e) => { e.preventDefault(); if (path.trim()) void openPath(path); }} style={{ display: 'flex', gap: 8 }}>
                 <div style={{ flex: 1 }}>
-                  <TextField label="Project folder" placeholder="/path/to/MyShow.frame" value={path} onChange={setPath} icon={<FolderOpen size={14} />} />
+                  <TextField label={tt('Project folder')} placeholder={tt('/path/to/MyShow.frame')} value={path} onChange={setPath} icon={<FolderOpen size={14} />} />
                 </div>
-                <Button variant="primary" type="submit" loading={busy} disabled={!path.trim() || server !== 'ok'} disabledReason={server !== 'ok' ? 'The server is not reachable' : 'Enter a project folder'}>Open</Button>
+                <Button variant="primary" type="submit" loading={busy} disabled={!path.trim() || server !== 'ok'} disabledReason={server !== 'ok' ? 'The server is not reachable' : 'Enter a project folder'}>{tt('Open')}</Button>
               </form>
-              <p className="fr-hint">Or create one below (also <code className="fr-mono">frame init MyShow.frame</code>).</p>
+              <p className="fr-hint">{tt('Or create one below (also')} <code className="fr-mono">{tt('frame init MyShow.frame')}</code>).</p>
               {error && (
                 <div role="alert" className="fr-error-text">
                   {error.message}{error.hint ? ` ${error.hint}` : ''}
-                  {error.message.includes('older format') && <> <Button variant="ghost" onClick={() => void openPath(path, true)}>Upgrade and open</Button></>}
+                  {error.message.includes('older format') && <> <Button variant="ghost" onClick={() => void openPath(path, true)}>{tt('Upgrade and open')}</Button></>}
                   {error.problems && <ProblemList problems={error.problems} />}
                 </div>
               )}
@@ -106,10 +106,10 @@ export function Home() {
       {server === 'ok' && <FirstRun templates={templates} onTemplate={setTemplate} />}
       {report && (
         <Dialog title={`${report.name} opened with problems`} open onClose={() => setReport(undefined)} footer={<>
-          <Button onClick={() => setReport(undefined)}>Close</Button>
-          <Button variant="primary" onClick={() => go(report.id)}>Open anyway</Button>
+          <Button onClick={() => setReport(undefined)}>{tt('Close')}</Button>
+          <Button variant="primary" onClick={() => go(report.id)}>{tt('Open anyway')}</Button>
         </>}>
-          <p>Some files in <span className="fr-mono">{report.root}</span> could not be read. The rest of the project opens; the Problems list in the Studio keeps these.</p>
+          <p>{tt('Some files in')} <span className="fr-mono">{report.root}</span>  {tt('could not be read. The rest of the project opens; the Problems list in the Studio keeps these.')}</p>
           <ProblemList problems={report.problems} />
         </Dialog>
       )}
@@ -119,9 +119,9 @@ export function Home() {
 
 function ProblemList({ problems }: { problems: Problem[] }) {
   return (
-    <ul className="st-home-problems" aria-label="Validation report">
+    <ul className="st-home-problems" aria-label={tt('Validation report')}>
       {problems.slice(0, 30).map((p, i) => <li key={i}><span className="fr-mono">{p.code}</span> {p.message}</li>)}
-      {problems.length > 30 && <li className="fr-faint">…and {problems.length - 30} more</li>}
+      {problems.length > 30 && <li className="fr-faint">{tt('…and')} {problems.length - 30}  {tt('more')}</li>}
     </ul>
   );
 }
@@ -199,23 +199,23 @@ function ProjectBrowser({ server, open, onOpen, onUseTemplate }: { server: strin
   );
   return (
     <div className="st-home-col st-home-col--wide">
-      <Panel title="Projects" label="Projects" help="#/help/projects">
+      <Panel title={tt('Projects')} label={tt('Projects')} help="#/help/projects">
         <div className="st-home-tools">
-          <div style={{ flex: 1 }}><SearchField label="Search projects" placeholder="Search projects" value={q} onChange={setQ} /></div>
-          <div style={{ width: 150 }}><Select label="Sort" value={sort} onChange={(v) => setSort(v as 'recent' | 'name')} options={[{ value: 'recent', label: 'Last opened' }, { value: 'name', label: 'Name' }]} /></div>
+          <div style={{ flex: 1 }}><SearchField label={tt('Search projects')} placeholder={tt('Search projects')} value={q} onChange={setQ} /></div>
+          <div style={{ width: 150 }}><Select label={tt('Sort')} value={sort} onChange={(v) => setSort(v as 'recent' | 'name')} options={[{ value: 'recent', label: 'Last opened' }, { value: 'name', label: 'Name' }]} /></div>
         </div>
-        {items.length === 0 ? <EmptyState title="No projects yet">Projects you open or create appear here.</EmptyState>
-          : shown.length === 0 ? <EmptyState title="No matches">No project name or folder contains “{q}”.</EmptyState>
+        {items.length === 0 ? <EmptyState title={tt('No projects yet')}>{tt('Projects you open or create appear here.')}</EmptyState>
+          : shown.length === 0 ? <EmptyState title={tt('No matches')}>{tt('No project name or folder contains “')}{q}”.</EmptyState>
           : <>
-            {pinned.length > 0 && <><h2 className="st-home-h">Pinned</h2><ul className="st-pcards" aria-label="Pinned projects">{pinned.map(card)}</ul></>}
-            {rest.length > 0 && <>{pinned.length > 0 && <h2 className="st-home-h">Recent</h2>}<ul className="st-pcards" aria-label="Recent projects">{rest.map(card)}</ul></>}
+            {pinned.length > 0 && <><h2 className="st-home-h">{tt('Pinned')}</h2><ul className="st-pcards" aria-label={tt('Pinned projects')}>{pinned.map(card)}</ul></>}
+            {rest.length > 0 && <>{pinned.length > 0 && <h2 className="st-home-h">{tt('Recent')}</h2>}<ul className="st-pcards" aria-label={tt('Recent projects')}>{rest.map(card)}</ul></>}
           </>}
       </Panel>
       {templates.length > 0 && (
-        <Panel title="Templates" label="Templates" help="#/help/start">
+        <Panel title={tt('Templates')} label={tt('Templates')} help="#/help/start">
           <ul className="st-home-templates">
             {templates.map((t) => (
-              <li key={t.ref}><span>{t.name}</span><Button variant="ghost" onClick={() => { onUseTemplate(t.ref); document.querySelector<HTMLInputElement>('[aria-label="Folder"]')?.focus(); }}>Use</Button></li>
+              <li key={t.ref}><span>{t.name}</span><Button variant="ghost" onClick={() => { onUseTemplate(t.ref); document.querySelector<HTMLInputElement>('[aria-label="Folder"]')?.focus(); }}>{tt('Use')}</Button></li>
             ))}
           </ul>
         </Panel>
@@ -223,10 +223,10 @@ function ProjectBrowser({ server, open, onOpen, onUseTemplate }: { server: strin
       {dup && <DuplicateDialog p={dup} onClose={() => setDup(undefined)} onDone={(r) => { setDup(undefined); void refresh(); toasts.show({ tone: 'success', message: `Duplicated as ${r.name}.` }); }} />}
       {del && (
         <Dialog title={`Delete ${del.name}?`} open onClose={() => setDel(undefined)} footer={<>
-          <Button onClick={() => setDel(undefined)}>Cancel</Button>
-          <Button variant="danger" onClick={() => { const p = del; setDel(undefined); void act(() => api.recentTrash(p.root), `${p.name} moved to the trash.`); }}>Move to trash</Button>
+          <Button onClick={() => setDel(undefined)}>{tt('Cancel')}</Button>
+          <Button variant="danger" onClick={() => { const p = del; setDel(undefined); void act(() => api.recentTrash(p.root), `${p.name} moved to the trash.`); }}>{tt('Move to trash')}</Button>
         </>}>
-          <p>The folder <span className="fr-mono">{del.root}</span> moves to the trash. You can restore it from there.</p>
+          <p>{tt('The folder')} <span className="fr-mono">{del.root}</span>  {tt('moves to the trash. You can restore it from there.')}</p>
         </Dialog>
       )}
     </div>
@@ -251,13 +251,13 @@ function DuplicateDialog({ p, onClose, onDone }: { p: RecentProject; onClose: ()
   };
   return (
     <Dialog title={`Duplicate ${p.name}`} open onClose={onClose} footer={<>
-      <Button onClick={onClose}>Cancel</Button>
-      <Button variant="primary" loading={busy} disabled={!to.trim()} disabledReason="Choose a folder" onClick={() => void run()}>Duplicate</Button>
+      <Button onClick={onClose}>{tt('Cancel')}</Button>
+      <Button variant="primary" loading={busy} disabled={!to.trim()} disabledReason={tt('Choose a folder')} onClick={() => void run()}>{tt('Duplicate')}</Button>
     </>}>
       <div className="st-form st-form--flush">
-        <TextField label="New folder" value={to} onChange={setTo} />
-        <TextField label="New name" value={name} onChange={setName} />
-        <p className="fr-hint">The copy gets its own project id, so both can be open at once.</p>
+        <TextField label={tt('New folder')} value={to} onChange={setTo} />
+        <TextField label={tt('New name')} value={name} onChange={setName} />
+        <p className="fr-hint">{tt('The copy gets its own project id, so both can be open at once.')}</p>
         {error && <p role="alert" className="fr-error-text">{error}</p>}
       </div>
     </Dialog>
@@ -297,22 +297,22 @@ function NewProject({ disabled, onCreated, template, setTemplate }: { disabled: 
     }
   };
   return (
-    <Panel title="New project" label="New project" help="#/help/start">
+    <Panel title={tt('New project')} label={tt('New project')} help="#/help/start">
       <form style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }} onSubmit={(e) => { e.preventDefault(); if (folder.trim()) void create(); }}>
-        <TextField label="Folder" placeholder="/path/to/NewShow.frame" value={folder} onChange={setFolder} icon={<FolderOpen size={14} />} />
-        <TextField label="Name" placeholder="Defaults to the folder name" value={name} onChange={setName} />
+        <TextField label={tt('Folder')} placeholder={tt('/path/to/NewShow.frame')} value={folder} onChange={setFolder} icon={<FolderOpen size={14} />} />
+        <TextField label={tt('Name')} placeholder={tt('Defaults to the folder name')} value={name} onChange={setName} />
         <div className="st-grid2">
-          <Select label="Style" value={family} onChange={(v) => setFamily(v as 'flat' | 'illustrated')} options={[{ value: 'flat', label: 'Flat' }, { value: 'illustrated', label: 'Illustrated' }]} />
-          <Select label="Frame rate" value={fps} onChange={setFps} options={[{ value: '24', label: '24 fps' }, { value: '25', label: '25 fps' }, { value: '30', label: '30 fps' }]} />
+          <Select label={tt('Style')} value={family} onChange={(v) => setFamily(v as 'flat' | 'illustrated')} options={[{ value: 'flat', label: 'Flat' }, { value: 'illustrated', label: 'Illustrated' }]} />
+          <Select label={tt('Frame rate')} value={fps} onChange={setFps} options={[{ value: '24', label: '24 fps' }, { value: '25', label: '25 fps' }, { value: '30', label: '30 fps' }]} />
         </div>
-        <Select label="Start from" value={template} onChange={setTemplate} options={[{ value: 'empty', label: 'Empty project' }, { value: 'package', label: 'Project package (.frameproj)…' }, ...templates]} />
+        <Select label={tt('Start from')} value={template} onChange={setTemplate} options={[{ value: 'empty', label: 'Empty project' }, { value: 'package', label: 'Project package (.frameproj)…' }, ...templates]} />
         {template === 'package' && (
           <label className="st-file">
-            <span>Package</span>
-            <input type="file" accept=".frameproj" aria-label="Project package" onChange={(e) => setPkg(e.target.files?.[0])} />
+            <span>{tt('Package')}</span>
+            <input type="file" accept=".frameproj" aria-label={tt('Project package')} onChange={(e) => setPkg(e.target.files?.[0])} />
           </label>
         )}
-        <div><Button variant="primary" type="submit" loading={busy} disabled={disabled || !folder.trim()} disabledReason={disabled ? 'The server is not reachable' : 'Choose a folder for the project'}>Create project</Button></div>
+        <div><Button variant="primary" type="submit" loading={busy} disabled={disabled || !folder.trim()} disabledReason={disabled ? 'The server is not reachable' : 'Choose a folder for the project'}>{tt('Create project')}</Button></div>
         {error && <p role="alert" className="fr-error-text">{error}</p>}
       </form>
     </Panel>

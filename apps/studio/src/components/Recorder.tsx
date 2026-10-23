@@ -4,7 +4,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { Mic, Play, Square } from 'lucide-react';
-import { Button, Select, SliderRow, StatusBadge } from '@frame/ui';
+import { Button, Select, SliderRow, StatusBadge, t as tt } from '@frame/ui';
 
 export interface Recording { wav: Uint8Array; durationS: number; number: number; noiseFloorDb: number }
 
@@ -178,27 +178,27 @@ export function Recorder({ onUse, useLabel = 'Use this recording', minSeconds = 
 
   return (
     <div className="st-recorder">
-      <Select label="Microphone" value={device} placeholder={devices.length ? 'Choose' : 'Default microphone'} options={devices} disabled={phase !== 'idle' && phase !== 'review'} disabledReason="Stop recording first" onChange={setDevice} />
-      <div className="st-rec-meter" role="meter" aria-label="Input level" aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Number.isFinite(level) ? Math.round(level) : -60}>
+      <Select label={tt('Microphone')} value={device} placeholder={devices.length ? 'Choose' : 'Default microphone'} options={devices} disabled={phase !== 'idle' && phase !== 'review'} disabledReason={tt('Stop recording first')} onChange={setDevice} />
+      <div className="st-rec-meter" role="meter" aria-label={tt('Input level')} aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Number.isFinite(level) ? Math.round(level) : -60}>
         <div style={{ width: `${Math.max(0, Math.min(100, ((level + 60) / 60) * 100))}%` }} className={level > -3 ? 'st-rec-hot' : ''} />
       </div>
       <div className="st-row">
         {phase === 'recording'
-          ? <Button variant="primary" icon={<Square size={14} />} onClick={() => void stop()}>Stop</Button>
-          : <Button variant="primary" icon={<Mic size={14} />} disabled={phase === 'checking' || phase === 'countin'} disabledReason="Getting ready…" onClick={() => void start()}>{number ? 'Record again' : 'Record'}</Button>}
-        {phase === 'checking' && <StatusBadge tone="info">Checking the room… stay quiet</StatusBadge>}
+          ? <Button variant="primary" icon={<Square size={14} />} onClick={() => void stop()}>{tt('Stop')}</Button>
+          : <Button variant="primary" icon={<Mic size={14} />} disabled={phase === 'checking' || phase === 'countin'} disabledReason={tt('Getting ready…')} onClick={() => void start()}>{number ? 'Record again' : 'Record'}</Button>}
+        {phase === 'checking' && <StatusBadge tone="info">{tt('Checking the room… stay quiet')}</StatusBadge>}
         {phase === 'countin' && <StatusBadge tone="warning">{count}</StatusBadge>}
-        {phase === 'recording' && <StatusBadge tone="danger">Recording {number + 1}</StatusBadge>}
-        {noise !== undefined && <span className={noise > -45 ? 'fr-error-text' : 'fr-faint'}>Noise floor {noise} dBFS{noise > -45 ? ' — a quieter room will sound better' : ''}</span>}
+        {phase === 'recording' && <StatusBadge tone="danger">{tt('Recording')} {number + 1}</StatusBadge>}
+        {noise !== undefined && <span className={noise > -45 ? 'fr-error-text' : 'fr-faint'}>{tt('Noise floor')} {noise}  {tt('dBFS')}{noise > -45 ? ' — a quieter room will sound better' : ''}</span>}
       </div>
       {error && <p role="alert" className="fr-error-text">{error}</p>}
       {phase === 'review' && audio && (
         <div className="st-field-col">
-          <span className="fr-label">Recording {number} · {total.toFixed(1)} s · trimmed to {len.toFixed(1)} s</span>
-          <SliderRow label="Trim start" value={trim[0]} min={0} max={total} step={0.01} defaultValue={autoTrim(audio.data, audio.rate)[0]} format={(v) => `${v.toFixed(2)} s`} onChange={(v) => setTrim(([, b]) => [Math.min(v, b - 0.05), b])} />
-          <SliderRow label="Trim end" value={trim[1]} min={0} max={total} step={0.01} defaultValue={autoTrim(audio.data, audio.rate)[1]} format={(v) => `${v.toFixed(2)} s`} onChange={(v) => setTrim(([a]) => [a, Math.max(v, a + 0.05)])} />
+          <span className="fr-label">{tt('Recording')} {number} · {total.toFixed(1)}  {tt('s · trimmed to')} {len.toFixed(1)} s</span>
+          <SliderRow label={tt('Trim start')} value={trim[0]} min={0} max={total} step={0.01} defaultValue={autoTrim(audio.data, audio.rate)[0]} format={(v) => `${v.toFixed(2)} s`} onChange={(v) => setTrim(([, b]) => [Math.min(v, b - 0.05), b])} />
+          <SliderRow label={tt('Trim end')} value={trim[1]} min={0} max={total} step={0.01} defaultValue={autoTrim(audio.data, audio.rate)[1]} format={(v) => `${v.toFixed(2)} s`} onChange={(v) => setTrim(([a]) => [a, Math.max(v, a + 0.05)])} />
           <div className="st-row">
-            <Button icon={<Play size={14} />} onClick={preview}>Play trimmed</Button>
+            <Button icon={<Play size={14} />} onClick={preview}>{tt('Play trimmed')}</Button>
             <Button variant="primary" disabled={len < minSeconds} disabledReason={`Needs at least ${minSeconds} s`} onClick={() => { const d = trimmed()!; onUse({ wav: encodeWav16(d, audio.rate), durationS: d.length / audio.rate, number, noiseFloorDb: noise ?? -Infinity }); }}>{useLabel}</Button>
           </div>
         </div>

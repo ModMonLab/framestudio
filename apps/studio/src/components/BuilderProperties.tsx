@@ -7,7 +7,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Play, Shuffle, Square } from 'lucide-react';
 import type { CharacterData, LookData } from '@frame/core';
 import type { AssetManifest } from '@frame/schema';
-import { Button, Chip, EmptyState, IconButton, RadioList, Section, Segmented, Select, SliderRow, StatusBadge, SwatchGrid, TextArea, TextField, TileGrid, ToggleRow, type EditPhase } from '@frame/ui';
+import { Button, Chip, EmptyState, IconButton, RadioList, Section, Segmented, Select, SliderRow, StatusBadge, SwatchGrid, TextArea, TextField, TileGrid, ToggleRow, type EditPhase, t as tt } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { ARMS, BODY_DEFAULTS, GARMENT_SLOTS, LEGS, TORSO, newLookId, type Draft, type RandomiseKeep } from '../lib/builder.js';
 
@@ -77,15 +77,15 @@ function KV({ k, v }: { k: string; v: ReactNode }) {
 function PartPicker({ c, kind, partKey, label, optional, tiles }: { c: PropsContext; kind: string; partKey: string; label: string; optional?: boolean; tiles?: boolean }) {
   const items = useKind(kind, c.pid);
   const value = c.draft.data.parts[partKey] ?? '';
-  if (!items) return <Note>Loading {label.toLowerCase()}…</Note>;
+  if (!items) return <Note>{tt('Loading')} {label.toLowerCase()}…</Note>;
   const set = (v: string) => c.edit((d) => {
     if (v === '') delete d.data.parts[partKey];
     else d.data.parts[partKey] = v;
   });
-  if (!items.length && !optional) return <EmptyState title={`No ${label.toLowerCase()} in the library`}>Import or create one in the part editor.</EmptyState>;
-  if (!items.length) return <><RadioList label={label} items={[{ value: '', label: 'None' }]} value="" onChange={set} /><Note>The library has no {label.toLowerCase()} yet.</Note></>;
+  if (!items.length && !optional) return <EmptyState title={`No ${label.toLowerCase()} in the library`}>{tt('Import or create one in the part editor.')}</EmptyState>;
+  if (!items.length) return <><RadioList label={label} items={[{ value: '', label: 'None' }]} value="" onChange={set} /><Note>{tt('The library has no')} {label.toLowerCase()}  {tt('yet.')}</Note></>;
   const opts = [...(optional ? [{ value: '', label: 'None' }] : []), ...items.map((i) => ({ value: i.ref, label: i.name, ...(i.group ? { meta: i.group } : {}) }))];
-  const editLink = value ? <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(c.pid)}/part/${encodeURIComponent(value)}`)}>Edit this part…</Button> : null;
+  const editLink = value ? <Button onClick={() => (location.hash = `#/p/${encodeURIComponent(c.pid)}/part/${encodeURIComponent(value)}`)}>{tt('Edit this part…')}</Button> : null;
   if (tiles && items.every((i) => i.preview)) {
     return <><TileGrid label={label} value={value} onChange={set} tiles={opts.map((o) => ({ value: o.value, label: o.label, preview: o.value ? <img src={thumb(c.pid, o.value, c.family)} alt="" width={64} height={64} loading="lazy" /> : <span className="fr-faint">—</span> }))} />{editLink}</>;
   }
@@ -128,7 +128,7 @@ function BodySliders({ c, rows }: { c: PropsContext; rows: [string, string, [str
 function SkinTones({ c }: { c: PropsContext }) {
   const items = useKind('skin', c.pid);
   const swatches = (items ?? []).map((i) => ({ value: ((c.manifest(i.ref)?.data as { skinTone?: { base: string } } | undefined)?.skinTone?.base ?? '#000000').toUpperCase(), label: i.name })).filter((s) => s.value !== '#000000');
-  return <SwatchGrid label="Skin tone" value={(c.draft.data.colors.skin ?? '#000000').toUpperCase()} swatches={swatches} onChange={(v, phase) => c.edit((d) => { d.data.colors.skin = v; }, phase)} />;
+  return <SwatchGrid label={tt('Skin tone')} value={(c.draft.data.colors.skin ?? '#000000').toUpperCase()} swatches={swatches} onChange={(v, phase) => c.edit((d) => { d.data.colors.skin = v; }, phase)} />;
 }
 
 function Details({ c }: { c: PropsContext }) {
@@ -136,7 +136,7 @@ function Details({ c }: { c: PropsContext }) {
   const b = useKind('makeup', c.pid);
   if (!a || !b) return null;
   const items = [...a, ...b];
-  if (!items.length) return <Note>The library has no skin details or makeup yet; characters that list them show the gap in the rig check below.</Note>;
+  if (!items.length) return <Note>{tt('The library has no skin details or makeup yet; characters that list them show the gap in the rig check below.')}</Note>;
   const on = new Set(c.draft.data.details ?? []);
   return <>{items.map((i) => <ToggleRow key={i.ref} label={i.name} checked={on.has(i.ref)} onChange={(v) => c.edit((d) => { const s = new Set(d.data.details ?? []); if (v) s.add(i.ref); else s.delete(i.ref); d.data.details = [...s]; })} />)}</>;
 }
@@ -144,7 +144,7 @@ function Details({ c }: { c: PropsContext }) {
 function Garments({ c, kind, label }: { c: PropsContext; kind: string; label: string }) {
   const items = useKind(kind, c.pid);
   const look = c.look;
-  if (!look) return <Note>Create a look first.</Note>;
+  if (!look) return <Note>{tt('Create a look first.')}</Note>;
   if (!items) return null;
   const kindOf = (ref: string) => c.manifest(ref)?.kind ?? ref.slice(0, ref.indexOf('.'));
   const current = look.garments.find((g) => kindOf(g) === kind) ?? '';
@@ -163,12 +163,12 @@ function Garments({ c, kind, label }: { c: PropsContext; kind: string; label: st
   });
   return (
     <>
-      {items.length ? <RadioList label={label} value={current} onChange={set} items={[{ value: '', label: 'None' }, ...items.map((i) => ({ value: i.ref, label: i.name, ...(i.group ? { meta: i.group } : {}) }))]} /> : <Note>The library has no {label.toLowerCase()} yet.</Note>}
+      {items.length ? <RadioList label={label} value={current} onChange={set} items={[{ value: '', label: 'None' }, ...items.map((i) => ({ value: i.ref, label: i.name, ...(i.group ? { meta: i.group } : {}) }))]} /> : <Note>{tt('The library has no')} {label.toLowerCase()}  {tt('yet.')}</Note>}
       {current && Object.entries(opts).map(([k, values]) => (
         <Segmented key={k} label={`${label}: ${OPTION_LABELS[k] ?? k}`} value={look.options?.[current]?.[k] ?? values[0]!} onChange={(v) => setOpt(k, v)} options={values.map((v) => ({ value: v, label: v[0]!.toUpperCase() + v.slice(1) }))} />
       ))}
       {current && (c.manifest(current)?.data as { patternable?: boolean } | undefined)?.patternable && <PatternPicker c={c} garment={current} label={label} />}
-      {current && <div className="st-field-col"><span className="fr-label">Colour {colour && <span className="fr-faint fr-mono">{colour.toUpperCase()}</span>}</span><SwatchGrid label={`${label} colour`} value={(colour ?? '#808080').toUpperCase()} swatches={GARMENT_SWATCHES} onChange={(v, phase) => c.edit((d) => { d.data.looks.find((x) => x.id === look.id)!.colors[slot] = v; }, phase)} /></div>}
+      {current && <div className="st-field-col"><span className="fr-label">{tt('Colour')} {colour && <span className="fr-faint fr-mono">{colour.toUpperCase()}</span>}</span><SwatchGrid label={`${label} colour`} value={(colour ?? '#808080').toUpperCase()} swatches={GARMENT_SWATCHES} onChange={(v, phase) => c.edit((d) => { d.data.looks.find((x) => x.id === look.id)!.colors[slot] = v; }, phase)} /></div>}
     </>
   );
 }
@@ -192,10 +192,10 @@ function PatternPicker({ c, garment, label }: { c: PropsContext; garment: string
     <div className="st-field-col">
       <Select label={`${label} pattern`} value={cur?.pattern ?? ''} onChange={(v) => set(v ? { pattern: v } : null)} options={[{ value: '', label: 'Plain' }, ...patterns.filter((p) => !p.tags?.includes('plain') && !p.tags?.includes('image')).map((p) => ({ value: p.ref, label: p.name }))]} />
       {cur && <>
-        <SliderRow label="Pattern scale" value={cur.scale ?? 1} min={0.4} max={3} step={0.1} defaultValue={1} format={(v) => `${v.toFixed(1)}×`} onChange={(v, phase) => set({ scale: v }, phase)} />
-        <SliderRow label="Pattern rotation" value={cur.rotation ?? 0} min={-90} max={90} step={5} defaultValue={0} format={(v) => `${Math.round(v)}°`} onChange={(v, phase) => set({ rotation: v }, phase)} />
+        <SliderRow label={tt('Pattern scale')} value={cur.scale ?? 1} min={0.4} max={3} step={0.1} defaultValue={1} format={(v) => `${v.toFixed(1)}×`} onChange={(v, phase) => set({ scale: v }, phase)} />
+        <SliderRow label={tt('Pattern rotation')} value={cur.rotation ?? 0} min={-90} max={90} step={5} defaultValue={0} format={(v) => `${Math.round(v)}°`} onChange={(v, phase) => set({ rotation: v }, phase)} />
         {slots.map((slot, i) => (
-          <div key={slot} className="st-field-col"><span className="fr-label">Pattern colour {i + 1}</span>
+          <div key={slot} className="st-field-col"><span className="fr-label">{tt('Pattern colour')} {i + 1}</span>
             <SwatchGrid label={`Pattern colour ${i + 1}`} value={(cur.colors?.[i] ?? pdata!.defaults.colors[slot] ?? '#FFFFFF').toUpperCase()} swatches={GARMENT_SWATCHES} onChange={(v, phase) => {
               const colors = slots.map((s2, j) => cur.colors?.[j] ?? pdata!.defaults.colors[s2] ?? '#FFFFFF');
               colors[i] = v;
@@ -242,12 +242,12 @@ function Looks({ c }: { c: PropsContext }) {
   };
   return (
     <>
-      <RadioList label="Looks" value={look?.id} onChange={c.setLook} items={looks.map((l) => ({ value: l.id, label: l.name, meta: `${l.id === c.draft.data.defaultLook ? 'Default · ' : ''}${l.garments.length} item${l.garments.length === 1 ? '' : 's'}` }))} />
+      <RadioList label={tt('Looks')} value={look?.id} onChange={c.setLook} items={looks.map((l) => ({ value: l.id, label: l.name, meta: `${l.id === c.draft.data.defaultLook ? 'Default · ' : ''}${l.garments.length} item${l.garments.length === 1 ? '' : 's'}` }))} />
       <div className="st-buttons">
-        <Button onClick={() => add()}>New look</Button>
-        {presets && presets.length > 0 && <span className="st-tb-select"><Select label="Add a preset look" placeholder="From a preset…" value={undefined} onChange={addPreset} options={presets.map((x) => ({ value: x.ref, label: x.name }))} /></span>}
-        <Button onClick={() => look && add(look)} disabled={!look} disabledReason="Choose a look">Duplicate</Button>
-        <Button onClick={() => look && c.edit((d) => { d.data.defaultLook = look.id; })} disabled={!look || look.id === c.draft.data.defaultLook} disabledReason={look ? 'Already the default look' : 'Choose a look'}>Set as default</Button>
+        <Button onClick={() => add()}>{tt('New look')}</Button>
+        {presets && presets.length > 0 && <span className="st-tb-select"><Select label={tt('Add a preset look')} placeholder={tt('From a preset…')} value={undefined} onChange={addPreset} options={presets.map((x) => ({ value: x.ref, label: x.name }))} /></span>}
+        <Button onClick={() => look && add(look)} disabled={!look} disabledReason={tt('Choose a look')}>{tt('Duplicate')}</Button>
+        <Button onClick={() => look && c.edit((d) => { d.data.defaultLook = look.id; })} disabled={!look || look.id === c.draft.data.defaultLook} disabledReason={look ? 'Already the default look' : 'Choose a look'}>{tt('Set as default')}</Button>
         <Button
           onClick={() => {
             if (!look) return;
@@ -260,10 +260,10 @@ function Looks({ c }: { c: PropsContext }) {
           }}
           disabled={!look || looks.length < 2}
           disabledReason={looks.length < 2 ? 'A character keeps at least one look' : 'Choose a look'}
-        >Delete</Button>
+        >{tt('Delete')}</Button>
       </div>
-      {look && <TextField label="Look name" value={name} onChange={setName} onBlur={() => name.trim() && name !== look.name && c.edit((d) => { d.data.looks.find((l) => l.id === look.id)!.name = name.trim(); })} />}
-      <Note>A look is a named outfit. Scenes choose a look; the character stays the same person (FR-CHR-09).</Note>
+      {look && <TextField label={tt('Look name')} value={name} onChange={setName} onBlur={() => name.trim() && name !== look.name && c.edit((d) => { d.data.looks.find((l) => l.id === look.id)!.name = name.trim(); })} />}
+      <Note>{tt('A look is a named outfit. Scenes choose a look; the character stays the same person (FR-CHR-09).')}</Note>
     </>
   );
 }
@@ -289,25 +289,25 @@ function Voice({ c }: { c: PropsContext }) {
   };
   return (
     <>
-      {items && items.length > 0 ? <RadioList label="Voice asset" value={v ?? ''} onChange={(x) => c.edit((d) => { d.data.voice = x; })} items={items.map((i) => ({ value: i.ref, label: i.name, meta: i.ref.split('@')[1] ? `v${i.ref.split('@')[1]}` : '' }))} /> : items ? <Note>No voices yet. Design one from the workspace (Voice designer).</Note> : null}
+      {items && items.length > 0 ? <RadioList label={tt('Voice asset')} value={v ?? ''} onChange={(x) => c.edit((d) => { d.data.voice = x; })} items={items.map((i) => ({ value: i.ref, label: i.name, meta: i.ref.split('@')[1] ? `v${i.ref.split('@')[1]}` : '' }))} /> : items ? <Note>{tt('No voices yet. Design one from the workspace (Voice designer).')}</Note> : null}
       {m && (
         <>
           <KV k="Method" v={data?.method === 'design' ? 'Designed from a description' : data?.method === 'clone' ? 'Cloned (with consent)' : data?.method ?? '—'} />
           <KV k="Language" v={data?.language ?? '—'} />
           {data?.description && <KV k="Description" v={data.description} />}
-          <span className="fr-label">Emotional range</span>
-          <div className="st-takes" role="list" aria-label="Emotional range references">
+          <span className="fr-label">{tt('Emotional range')}</span>
+          <div className="st-takes" role="list" aria-label={tt('Emotional range references')}>
             {(data?.references ?? []).map((r) => (
               <div key={r.emotion + r.media.hash} role="listitem" className="st-take">
                 <IconButton label={`${playing === r.media.hash ? 'Stop' : 'Play'} ${r.emotion}`} icon={playing === r.media.hash ? <Square size={14} /> : <Play size={14} />} onClick={() => play(r.media.hash)} />
                 <span>{r.emotion[0]!.toUpperCase() + r.emotion.slice(1)}</span>
-                {r.fixture && <StatusBadge tone="warning">Fixture · not real speech</StatusBadge>}
+                {r.fixture && <StatusBadge tone="warning">{tt('Fixture · not real speech')}</StatusBadge>}
               </div>
             ))}
           </div>
         </>
       )}
-      {!v && items?.length ? <Note>No voice assigned; lines for this character use the voice chosen per scene.</Note> : null}
+      {!v && items?.length ? <Note>{tt('No voice assigned; lines for this character use the voice chosen per scene.')}</Note> : null}
     </>
   );
 }
@@ -318,16 +318,16 @@ function Performance({ c }: { c: PropsContext }) {
   const sig = new Set(p.signatureActions);
   return (
     <>
-      <Sec k="perf.defaults" title="Defaults" c={c}>
-        <SliderRow label="Idle energy" endLabels={['Still', 'Fidgety']} value={p.idleEnergy} defaultValue={50} onChange={(v, phase) => c.edit((d) => { d.data.performance.idleEnergy = v; }, phase)} />
-        <SliderRow label="Gesture size" endLabels={['Small', 'Expansive']} value={p.gestureSize} defaultValue={50} onChange={(v, phase) => c.edit((d) => { d.data.performance.gestureSize = v; }, phase)} />
-        <SliderRow label="Expression strength" endLabels={['Subtle', 'Cartoonish']} value={p.expressionStrength} defaultValue={60} onChange={(v, phase) => c.edit((d) => { d.data.performance.expressionStrength = v; }, phase)} />
+      <Sec k="perf.defaults" title={tt('Defaults')} c={c}>
+        <SliderRow label={tt('Idle energy')} endLabels={['Still', 'Fidgety']} value={p.idleEnergy} defaultValue={50} onChange={(v, phase) => c.edit((d) => { d.data.performance.idleEnergy = v; }, phase)} />
+        <SliderRow label={tt('Gesture size')} endLabels={['Small', 'Expansive']} value={p.gestureSize} defaultValue={50} onChange={(v, phase) => c.edit((d) => { d.data.performance.gestureSize = v; }, phase)} />
+        <SliderRow label={tt('Expression strength')} endLabels={['Subtle', 'Cartoonish']} value={p.expressionStrength} defaultValue={60} onChange={(v, phase) => c.edit((d) => { d.data.performance.expressionStrength = v; }, phase)} />
       </Sec>
-      <Sec k="perf.signature" title="Signature actions" summary={String(sig.size)} c={c}>
-        <div className="st-chips" role="group" aria-label="Signature actions">
+      <Sec k="perf.signature" title={tt('Signature actions')} summary={String(sig.size)} c={c}>
+        <div className="st-chips" role="group" aria-label={tt('Signature actions')}>
           {(acts ?? []).map((a) => <Chip key={a.ref} selected={sig.has(a.ref)} onClick={() => c.edit((d) => { const s = new Set(d.data.performance.signatureActions); if (s.has(a.ref)) s.delete(a.ref); else s.add(a.ref); d.data.performance.signatureActions = [...s]; })}>{a.name}</Chip>)}
         </div>
-        <Note>Idles and talking gestures prefer these actions; every generated clip stays editable on the timeline.</Note>
+        <Note>{tt('Idles and talking gestures prefer these actions; every generated clip stays editable on the timeline.')}</Note>
       </Sec>
     </>
   );
@@ -340,29 +340,29 @@ export function BuilderProperties({ node, c }: { node: string; c: PropsContext }
     case 'identity':
       return (
         <>
-          <Sec k="id.details" title="Details" c={c}>
-            <TextField label="Name" value={c.draft.name} onChange={(v) => c.edit((x) => { x.name = v; }, 'preview')} onBlur={() => c.edit(() => undefined)} />
-            <TextField label="Role in the story" value={d.role ?? ''} onChange={(v) => c.edit((x) => { x.data.role = v; }, 'preview')} onBlur={() => c.edit(() => undefined)} />
-            <TextArea label="Notes" value={d.notes ?? ''} onChange={(v) => c.edit((x) => { x.data.notes = v; }, 'preview')} />
+          <Sec k="id.details" title={tt('Details')} c={c}>
+            <TextField label={tt('Name')} value={c.draft.name} onChange={(v) => c.edit((x) => { x.name = v; }, 'preview')} onBlur={() => c.edit(() => undefined)} />
+            <TextField label={tt('Role in the story')} value={d.role ?? ''} onChange={(v) => c.edit((x) => { x.data.role = v; }, 'preview')} onBlur={() => c.edit(() => undefined)} />
+            <TextArea label={tt('Notes')} value={d.notes ?? ''} onChange={(v) => c.edit((x) => { x.data.notes = v; }, 'preview')} />
           </Sec>
-          <Sec k="id.describe" title="Start from a description" c={c}>
-            <Button disabled disabledReason="Needs a configured language model (Settings → Assistance); none is configured, so describe the character with the sections below">Describe a character…</Button>
+          <Sec k="id.describe" title={tt('Start from a description')} c={c}>
+            <Button disabled disabledReason={tt('Needs a configured language model (Settings → Assistance); none is configured, so describe the character with the sections below')}>{tt('Describe a character…')}</Button>
           </Sec>
           {c.randomise && (
-            <Sec k="id.random" title="Randomise" c={c}>
-              <ToggleRow label="Keep life stage" checked={c.randomise.keep.lifeStage} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, lifeStage: v })} />
-              <ToggleRow label="Keep build" checked={c.randomise.keep.body} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, body: v })} />
-              <ToggleRow label="Keep colours" description="Skin and hair colour" checked={c.randomise.keep.palette} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, palette: v })} />
+            <Sec k="id.random" title={tt('Randomise')} c={c}>
+              <ToggleRow label={tt('Keep life stage')} checked={c.randomise.keep.lifeStage} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, lifeStage: v })} />
+              <ToggleRow label={tt('Keep build')} checked={c.randomise.keep.body} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, body: v })} />
+              <ToggleRow label={tt('Keep colours')} description={tt('Skin and hair colour')} checked={c.randomise.keep.palette} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, palette: v })} />
               <ToggleRow label={`Only parts drawn for ${c.family === 'illustrated' ? 'Illustrated' : 'Flat'}`} checked={c.randomise.keep.family} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, family: v })} />
-              <Button icon={<Shuffle size={14} />} onClick={c.randomise.run}>Randomise</Button>
-              <Note>Varies parts and whatever is not kept; name, looks and voice stay. Undo restores the previous character.</Note>
+              <Button icon={<Shuffle size={14} />} onClick={c.randomise.run}>{tt('Randomise')}</Button>
+              <Note>{tt('Varies parts and whatever is not kept; name, looks and voice stay. Undo restores the previous character.')}</Note>
             </Sec>
           )}
-          <Sec k="id.stage" title="Life stage" summary={c.manifest(d.lifeStage)?.name} c={c}>
+          <Sec k="id.stage" title={tt('Life stage')} summary={c.manifest(d.lifeStage)?.name} c={c}>
             <LifeStage c={c} />
-            <Note>Life stage sets head-to-body proportions; fine-tune them under Body.</Note>
+            <Note>{tt('Life stage sets head-to-body proportions; fine-tune them under Body.')}</Note>
           </Sec>
-          <Sec k="id.versions" title="Versions" summary={c.versionInfo.current} c={c}>
+          <Sec k="id.versions" title={tt('Versions')} summary={c.versionInfo.current} c={c}>
             <KV k="Editing" v={c.versionInfo.current} />
             <KV k="Used in" v={c.versionInfo.usedIn} />
             <Note>{c.versionInfo.library ? 'This is a library character. Saving creates a new character of your own; the library version never changes.' : `Saving creates ${c.versionInfo.next}. Scenes using the current version keep it until you update them.`}</Note>
@@ -371,85 +371,85 @@ export function BuilderProperties({ node, c }: { node: string; c: PropsContext }
       );
     case 'body':
     case 'body.base':
-      return <Sec k="body.base" title="Build" summary={c.manifest(d.bodyBase)?.name} c={c}><BodyBase c={c} /></Sec>;
+      return <Sec k="body.base" title={tt('Build')} summary={c.manifest(d.bodyBase)?.name} c={c}><BodyBase c={c} /></Sec>;
     case 'body.torso':
-      return <Sec k="body.torso" title="Upper body, waist and hips" c={c}><BodySliders c={c} rows={TORSO} /></Sec>;
+      return <Sec k="body.torso" title={tt('Upper body, waist and hips')} c={c}><BodySliders c={c} rows={TORSO} /></Sec>;
     case 'body.arms':
       return (
         <>
-          <Sec k="body.arms" title="Arms" c={c}><BodySliders c={c} rows={ARMS} /></Sec>
-          <Sec k="body.hands" title="Hands" summary={c.manifest(d.parts.hands ?? '')?.name} c={c}><KV k="Hand set" v={c.manifest(d.parts.hands ?? '')?.name ?? '—'} /><Note>The hand set draws every hand pose (Catalog A15) in all views.</Note></Sec>
+          <Sec k="body.arms" title={tt('Arms')} c={c}><BodySliders c={c} rows={ARMS} /></Sec>
+          <Sec k="body.hands" title={tt('Hands')} summary={c.manifest(d.parts.hands ?? '')?.name} c={c}><KV k="Hand set" v={c.manifest(d.parts.hands ?? '')?.name ?? '—'} /><Note>{tt('The hand set draws every hand pose (Catalog A15) in all views.')}</Note></Sec>
         </>
       );
     case 'body.legs':
       return (
         <>
-          <Sec k="body.legs" title="Legs" c={c}><BodySliders c={c} rows={LEGS} /></Sec>
-          <Sec k="body.feet" title="Feet" summary={c.manifest(d.parts.feet ?? '')?.name} c={c}><PartPicker c={c} kind="feet" partKey="feet" label="Feet" /></Sec>
+          <Sec k="body.legs" title={tt('Legs')} c={c}><BodySliders c={c} rows={LEGS} /></Sec>
+          <Sec k="body.feet" title={tt('Feet')} summary={c.manifest(d.parts.feet ?? '')?.name} c={c}><PartPicker c={c} kind="feet" partKey="feet" label={tt('Feet')} /></Sec>
         </>
       );
     case 'head':
     case 'head.shape':
       return (
         <>
-          <Sec k="head.shape" title="Face shape" summary={c.manifest(d.parts.head ?? '')?.name} c={c}><PartPicker c={c} kind="head" partKey="head" label="Face shape" tiles /></Sec>
-          <Sec k="head.struct" title="Facial structure" c={c}><Controls c={c} kind="face-ctl" only="all" /></Sec>
+          <Sec k="head.shape" title={tt('Face shape')} summary={c.manifest(d.parts.head ?? '')?.name} c={c}><PartPicker c={c} kind="head" partKey="head" label={tt('Face shape')} tiles /></Sec>
+          <Sec k="head.struct" title={tt('Facial structure')} c={c}><Controls c={c} kind="face-ctl" only="all" /></Sec>
         </>
       );
     case 'head.eyes':
       return (
         <>
-          <Sec k="head.eyes" title="Eye shape" summary={c.manifest(d.parts.eyes ?? '')?.name} c={c}><PartPicker c={c} kind="eyes" partKey="eyes" label="Eyes" tiles /></Sec>
-          <Sec k="head.eyectl" title="Size, spacing and colour" c={c}><Controls c={c} kind="eye-ctl" only="all" /></Sec>
+          <Sec k="head.eyes" title={tt('Eye shape')} summary={c.manifest(d.parts.eyes ?? '')?.name} c={c}><PartPicker c={c} kind="eyes" partKey="eyes" label={tt('Eyes')} tiles /></Sec>
+          <Sec k="head.eyectl" title={tt('Size, spacing and colour')} c={c}><Controls c={c} kind="eye-ctl" only="all" /></Sec>
         </>
       );
     case 'head.brows':
-      return <Sec k="head.brows" title="Eyebrows" summary={c.manifest(d.parts.brows ?? '')?.name} c={c}><PartPicker c={c} kind="brow" partKey="brows" label="Eyebrows" tiles /></Sec>;
+      return <Sec k="head.brows" title={tt('Eyebrows')} summary={c.manifest(d.parts.brows ?? '')?.name} c={c}><PartPicker c={c} kind="brow" partKey="brows" label={tt('Eyebrows')} tiles /></Sec>;
     case 'head.nose':
-      return <Sec k="head.nose" title="Nose" summary={c.manifest(d.parts.nose ?? '')?.name} c={c}><PartPicker c={c} kind="nose" partKey="nose" label="Nose" tiles /></Sec>;
+      return <Sec k="head.nose" title={tt('Nose')} summary={c.manifest(d.parts.nose ?? '')?.name} c={c}><PartPicker c={c} kind="nose" partKey="nose" label={tt('Nose')} tiles /></Sec>;
     case 'head.mouth':
       return (
         <>
-          <Sec k="head.mouth" title="Mouth" summary={c.manifest(d.parts.mouth ?? '')?.name} c={c}><PartPicker c={c} kind="mouth" partKey="mouth" label="Mouth" tiles /></Sec>
-          <Sec k="head.visemes" title="Speech shapes" summary="9 shapes" c={c}><Note>Every mouth draws all nine speech shapes in each view, so lip sync works with any choice. Use “Test lip sync” below the preview.</Note></Sec>
+          <Sec k="head.mouth" title={tt('Mouth')} summary={c.manifest(d.parts.mouth ?? '')?.name} c={c}><PartPicker c={c} kind="mouth" partKey="mouth" label={tt('Mouth')} tiles /></Sec>
+          <Sec k="head.visemes" title={tt('Speech shapes')} summary={tt('9 shapes')} c={c}><Note>{tt('Every mouth draws all nine speech shapes in each view, so lip sync works with any choice. Use “Test lip sync” below the preview.')}</Note></Sec>
         </>
       );
     case 'head.ears':
-      return <Sec k="head.ears" title="Ears" summary={c.manifest(d.parts.ears ?? '')?.name} c={c}><PartPicker c={c} kind="ears" partKey="ears" label="Ears" tiles /></Sec>;
+      return <Sec k="head.ears" title={tt('Ears')} summary={c.manifest(d.parts.ears ?? '')?.name} c={c}><PartPicker c={c} kind="ears" partKey="ears" label={tt('Ears')} tiles /></Sec>;
     case 'head.skin':
       return (
         <>
-          <Sec k="head.skin" title="Skin tone" summary={(d.colors.skin ?? '').toUpperCase()} c={c}><SkinTones c={c} /></Sec>
-          <Sec k="head.details" title="Details and makeup" c={c}><Details c={c} /></Sec>
+          <Sec k="head.skin" title={tt('Skin tone')} summary={(d.colors.skin ?? '').toUpperCase()} c={c}><SkinTones c={c} /></Sec>
+          <Sec k="head.details" title={tt('Details and makeup')} c={c}><Details c={c} /></Sec>
         </>
       );
     case 'hair':
     case 'hair.style':
       return (
         <>
-          <Sec k="hair.style" title="Hairstyle" summary={c.manifest(d.parts.hair ?? '')?.name} c={c}><PartPicker c={c} kind="hair" partKey="hair" label="Hairstyle" tiles /></Sec>
-          <Sec k="hair.fringe" title="Fringe" summary={c.manifest(d.parts.fringe ?? '')?.name ?? 'None'} c={c}><PartPicker c={c} kind="fringe" partKey="fringe" label="Fringe" optional /></Sec>
-          <Sec k="hair.shape" title="Shape and texture" c={c}><Controls c={c} kind="hair-ctl" only="slider" /><Controls c={c} kind="hair-ctl" only="enum" /></Sec>
+          <Sec k="hair.style" title={tt('Hairstyle')} summary={c.manifest(d.parts.hair ?? '')?.name} c={c}><PartPicker c={c} kind="hair" partKey="hair" label={tt('Hairstyle')} tiles /></Sec>
+          <Sec k="hair.fringe" title={tt('Fringe')} summary={c.manifest(d.parts.fringe ?? '')?.name ?? 'None'} c={c}><PartPicker c={c} kind="fringe" partKey="fringe" label={tt('Fringe')} optional /></Sec>
+          <Sec k="hair.shape" title={tt('Shape and texture')} c={c}><Controls c={c} kind="hair-ctl" only="slider" /><Controls c={c} kind="hair-ctl" only="enum" /></Sec>
         </>
       );
     case 'hair.colour':
-      return <Sec k="hair.colour" title="Hair colour" c={c}><Controls c={c} kind="hair-ctl" only="color" /></Sec>;
+      return <Sec k="hair.colour" title={tt('Hair colour')} c={c}><Controls c={c} kind="hair-ctl" only="color" /></Sec>;
     case 'hair.facial':
-      return <Sec k="hair.facial" title="Facial hair" summary={c.manifest(d.parts.facialHair ?? '')?.name ?? 'None'} c={c}><PartPicker c={c} kind="facial-hair" partKey="facialHair" label="Facial hair" optional /></Sec>;
+      return <Sec k="hair.facial" title={tt('Facial hair')} summary={c.manifest(d.parts.facialHair ?? '')?.name ?? 'None'} c={c}><PartPicker c={c} kind="facial-hair" partKey="facialHair" label={tt('Facial hair')} optional /></Sec>;
     case 'wardrobe':
     case 'wardrobe.looks':
-      return <Sec k="wardrobe.looks" title="Saved looks" summary={c.look?.name} c={c}><Looks c={c} /></Sec>;
+      return <Sec k="wardrobe.looks" title={tt('Saved looks')} summary={c.look?.name} c={c}><Looks c={c} /></Sec>;
     case 'accessories':
       return <Sec k="acc" title={`Worn items${c.look ? ` · ${c.look.name}` : ''}`} c={c}><Accessories c={c} /></Sec>;
     case 'voice':
     case 'voice.asset':
-      return <Sec k="voice.asset" title="Voice asset" summary={d.voice ? c.manifest(d.voice)?.name : 'None'} c={c}><Voice c={c} /></Sec>;
+      return <Sec k="voice.asset" title={tt('Voice asset')} summary={d.voice ? c.manifest(d.voice)?.name : 'None'} c={c}><Voice c={c} /></Sec>;
     case 'performance':
       return <Performance c={c} />;
     default: {
       const g = GARMENT_SLOTS.find(([k]) => node === `wardrobe.${k}`);
       if (g) return <Sec k={node} title={`${g[1]}${c.look ? ` · ${c.look.name}` : ''}`} c={c}><Garments c={c} kind={g[0]} label={g[1]} /></Sec>;
-      return <EmptyState title="Choose a part">Select a part on the left.</EmptyState>;
+      return <EmptyState title={tt('Choose a part')}>{tt('Select a part on the left.')}</EmptyState>;
     }
   }
 }
@@ -457,22 +457,22 @@ export function BuilderProperties({ node, c }: { node: string; c: PropsContext }
 function LifeStage({ c }: { c: PropsContext }) {
   const items = useKind('stage', c.pid);
   if (!items) return null;
-  return <RadioList label="Life stage" value={c.draft.data.lifeStage} onChange={(v) => c.edit((d) => { d.data.lifeStage = v; })} items={items.map((i) => ({ value: i.ref, label: i.name }))} />;
+  return <RadioList label={tt('Life stage')} value={c.draft.data.lifeStage} onChange={(v) => c.edit((d) => { d.data.lifeStage = v; })} items={items.map((i) => ({ value: i.ref, label: i.name }))} />;
 }
 
 function BodyBase({ c }: { c: PropsContext }) {
   const items = useKind('body', c.pid);
   if (!items) return null;
   // Choosing a build resets the fine-tuning sliders to that build's values.
-  return <RadioList label="Build" value={c.draft.data.bodyBase} onChange={(v) => c.edit((d) => { d.data.bodyBase = v; d.data.body = {}; })} items={items.map((i) => ({ value: i.ref, label: i.name }))} />;
+  return <RadioList label={tt('Build')} value={c.draft.data.bodyBase} onChange={(v) => c.edit((d) => { d.data.bodyBase = v; d.data.body = {}; })} items={items.map((i) => ({ value: i.ref, label: i.name }))} />;
 }
 
 function Accessories({ c }: { c: PropsContext }) {
   const items = useKind('acc', c.pid);
   const look = c.look;
   if (!items) return null;
-  if (!look) return <Note>Create a look first.</Note>;
-  if (!items.length) return <Note>The library has no accessories yet (Catalog C1); worn items will appear here.</Note>;
+  if (!look) return <Note>{tt('Create a look first.')}</Note>;
+  if (!items.length) return <Note>{tt('The library has no accessories yet (Catalog C1); worn items will appear here.')}</Note>;
   const on = new Set(look.accessories);
   return <>{items.map((i) => <ToggleRow key={i.ref} label={i.name} {...(i.group ? { description: i.group } : {})} checked={on.has(i.ref)} onChange={(v) => c.edit((d) => { const l = d.data.looks.find((x) => x.id === look.id)!; const s = new Set(l.accessories); if (v) s.add(i.ref); else s.delete(i.ref); l.accessories = [...s]; })} />)}</>;
 }

@@ -5,7 +5,7 @@
  */
 import { useRef, useState } from 'react';
 import { Upload } from 'lucide-react';
-import { Button, Dialog, RadioList, TextArea, TextField, ToggleRow, useToasts } from '@frame/ui';
+import { Button, Dialog, RadioList, TextArea, TextField, ToggleRow, useToasts, t as tt } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { Recorder } from './Recorder.js';
@@ -63,28 +63,28 @@ export function CloneDialog({ scene, instance, onClose }: { scene?: string; inst
   };
 
   return (
-    <Dialog title="Clone a voice" open onClose={onClose} wide footer={<>
-      <Button onClick={onClose}>Cancel</Button>
-      <Button variant="primary" loading={busy} disabled={!ready} disabledReason={reason} onClick={() => void clone()}>Clone voice</Button>
+    <Dialog title={tt('Clone a voice')} open onClose={onClose} wide footer={<>
+      <Button onClick={onClose}>{tt('Cancel')}</Button>
+      <Button variant="primary" loading={busy} disabled={!ready} disabledReason={reason} onClick={() => void clone()}>{tt('Clone voice')}</Button>
     </>}>
       <div className="st-form st-form--flush">
-        <TextField label="Voice name" value={name} onChange={setName} />
-        <h3 className="st-dialog-h">1 · The speaker</h3>
-        <p className="fr-hint">Record or upload at least 3 seconds of clear speech; 10–30 seconds gives the closest likeness.</p>
+        <TextField label={tt('Voice name')} value={name} onChange={setName} />
+        <h3 className="st-dialog-h">{tt('1 · The speaker')}</h3>
+        <p className="fr-hint">{tt('Record or upload at least 3 seconds of clear speech; 10–30 seconds gives the closest likeness.')}</p>
         <Recorder minSeconds={3} useLabel="Use this recording" onUse={(r) => void store(r.wav, 'wav', r.durationS, `Recording ${r.number}`)} />
         <div className="st-row">
-          <Button icon={<Upload size={14} />} onClick={() => fileRef.current?.click()}>Upload a recording…</Button>
-          {media && <span className="fr-faint">Using {media.from}{media.durationS ? ` · ${media.durationS.toFixed(1)} s` : ''}</span>}
+          <Button icon={<Upload size={14} />} onClick={() => fileRef.current?.click()}>{tt('Upload a recording…')}</Button>
+          {media && <span className="fr-faint">{tt('Using')} {media.from}{media.durationS ? ` · ${media.durationS.toFixed(1)} s` : ''}</span>}
         </div>
-        <input ref={fileRef} type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,.webm,audio/*" hidden aria-label="Upload a recording" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void fromFile(f); }} />
-        <TextArea label="What is said in the recording" value={transcript} onChange={setTranscript} rows={3} placeholder="Leave empty to transcribe it on the voice worker" />
-        <h3 className="st-dialog-h">2 · Consent (required)</h3>
-        <RadioList label="Consent" value={statement} onChange={(v) => setStatement(v as 'own-voice' | 'documented-consent')} items={[
+        <input ref={fileRef} type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,.webm,audio/*" hidden aria-label={tt('Upload a recording')} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void fromFile(f); }} />
+        <TextArea label={tt('What is said in the recording')} value={transcript} onChange={setTranscript} rows={3} placeholder={tt('Leave empty to transcribe it on the voice worker')} />
+        <h3 className="st-dialog-h">{tt('2 · Consent (required)')}</h3>
+        <RadioList label={tt('Consent')} value={statement} onChange={(v) => setStatement(v as 'own-voice' | 'documented-consent')} items={[
           { value: 'own-voice', label: 'This is my own voice' },
           { value: 'documented-consent', label: 'I have the speaker’s documented consent to clone their voice' },
         ]} />
-        <TextField label="Speaker's name" value={speaker} onChange={setSpeaker} />
-        <ToggleRow label="I confirm the statement above is true" description="It is stored with the voice, with the speaker's name and today's date." checked={confirmed} onChange={setConfirmed} />
+        <TextField label={tt('Speaker\'s name')} value={speaker} onChange={setSpeaker} />
+        <ToggleRow label={tt('I confirm the statement above is true')} description={tt('It is stored with the voice, with the speaker\'s name and today\'s date.')} checked={confirmed} onChange={setConfirmed} />
         {instance && instName && <ToggleRow label={`Use for ${instName}`} checked={assign} onChange={setAssign} />}
       </div>
     </Dialog>

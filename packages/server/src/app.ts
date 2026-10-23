@@ -10,7 +10,7 @@ import websocket from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
 import { CLIPBOARD_FORMAT, pasteCommands, type ClipboardData, kitLookCommands, type TimeOfDay, setCommands, setFromScene, type SetData, ProjectSession, actionFitsProp, recipeFromClips, templateFromScene, templateFromScenes, parseScript, scriptImportCommands, scriptRows, scriptText, soundCueCommands, type ActionData, assetUsages, checkCharacter, compareStates, compatibility, partManifest, type CompatTarget, type PartSaveRequest, rigArtwork, rigProp, rigSet, suggestPlane, suggestPropTarget, SET_PLANES, SET_PLANE_LABELS, suggestTarget, RIG_TARGETS, RIG_TARGET_LABELS, type RigLayer, type RigTarget, buildCharacter, characterVersionCommands, describeCommands, randomId, evaluateFrame, type CharacterData, type CharacterSpec, previewable, previewFrame, previewSetup, validateProject, type ProjectState } from '@frame/core';
 import { libraryFor, loadStyles } from '@frame/assets/node';
-import { createNodeRenderer, type NodeRenderer } from '@frame/render/node';
+import { createNodeRenderer, createRasterPool, poolSize, type NodeRenderer, type RasterPool } from '@frame/render/node';
 import { rigCheck, type PartData } from '@frame/rig';
 import {
   decodeAudioFile, encodeWav, normalisePeak, OpenProject, renderExport, rmsEnvelope, exportAssetsFromProject, exportProjectFromOpen, importAssetsIntoProject, importProjectPackage, manifestHash,
@@ -47,6 +47,11 @@ export const SERVER_VERSION = '0.1.0';
 /** Bump when thumbnail framing or rendering changes so cached thumbnails are rebuilt. */
 const THUMB_VERSION = 4; // 4: worn props on the character, props in their default state
 
+/** A URL with any `token` query value replaced, for logs. */
+export function redactToken(url: string): string {
+  return url.replace(/([?&]token=)[^&#]*/gi, '$1[redacted]');
+}
+
 export interface ServerOptions {
   contentDir: string;
   /** Built Studio (apps/studio/dist); served at / when present. */
@@ -61,6 +66,10 @@ export interface ServerOptions {
   watchMs?: number;
   debounceMs?: number;
   logger?: boolean;
+  /** Threads that rasterise export frames (default: the machine's cores less two; 0 renders on the main thread). */
+  renderThreads?: number;
+  /** Where request logs go when `logger` is on (default stdout). */
+  logStream?: NodeJS.WritableStream;
   /** User library folder (FR-AST-01). */
   userDir?: string;
   /** Derived-data cache (thumbnails); defaults to <userDir>/../cache. */
@@ -92,7 +101,11 @@ export interface FrameServer {
 }
 
 export async function createServer(o: ServerOptions): Promise<FrameServer> {
-  const app = Fastify({ logger: o.logger ?? false, bodyLimit: 512 * 1024 * 1024 });
+  // Request logs never carry tokens (NFR-09): the token query parameter is redacted and headers are not logged.
+  const logger = o.logger
+    ? { ...(o.logStream ? { stream: o.logStream } : {}), serializers: { req: (r: { method: string; url: string; hostname?: string }) => ({ method: r.method, url: redactToken(r.url), host: r.hostname }) } }
+    : false;
+  const app = Fastify({ logger, bodyLimit: 512 * 1024 * 1024 });
   // Locks are computed against bundled + user sources at every save (FR-DAT-06).
   const lockLookup = () => {
     const lib = libraryFor({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}) });
@@ -131,6 +144,10 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
     return undefined;
   };
   const getRenderer = () => (renderer ??= createNodeRenderer({ fontsDir: path.join(o.contentDir, 'fonts'), images }));
+  // Export threads (NFR-05), started with the first export and shared by later ones.
+  let pool: Promise<RasterPool | undefined> | undefined;
+  const threads = o.renderThreads ?? poolSize();
+  const getPool = () => (pool ??= threads > 0 ? createRasterPool({ fontsDir: path.join(o.contentDir, 'fonts'), size: threads, images }) : Promise.resolve(undefined));
   const library = (p?: HubProject) => libraryFor({ contentDir: o.contentDir, ...(o.userDir ? { userDir: o.userDir } : {}), projectAssets: Object.fromEntries(Object.entries(p?.open.state.assets ?? {}).map(([ref, m]) => [`assets/local/${ref}.json`, m])) });
 
   /* ---------------------------------------------------------------- security */
@@ -1312,7 +1329,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         state, revision, scenes, ...(b.range ? { range: b.range } : {}), preset, presetId: presetRef, width, height,
         ...(aspect ? { aspect } : {}), ...(b.quality ? { quality: b.quality } : {}), ...(b.motionBlur ? { motionBlur: b.motionBlur } : {}),
         burnInCaptions: b.captions ?? (state.project.captions.enabled && state.project.captions.burnIn),
-        out, assets: { manifest: (r) => lib.manifest(r) }, assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), styles, renderer: await getRenderer(),
+        out, assets: { manifest: (r) => lib.manifest(r) }, assetExists: (r) => lib.has(r), mediaExists: (h) => p.open.store.verifyMedia(h), styles, renderer: await getRenderer(), ...await getPool().then((x) => (x ? { pool: x } : {})),
         resolveAudio: (src) => (src.kind === 'media' ? p.open.store.findMedia(src.hash) ?? bundledMediaFile(o.contentDir, src.hash) : undefined),
         signal: ctx.signal,
         onProgress: (pr) => ctx.progress(pr.phase === 'Rendering' && pr.frames ? (pr.frame ?? 0) / pr.frames * 0.9 : pr.phase === 'Completed' ? 1 : ctx.signal.aborted ? 0 : 0.95, pr.phase === 'Rendering' ? `Rendering frame ${pr.frame} of ${pr.frames} · ${(pr.fps ?? 0).toFixed(0)} fps` : pr.phase),
@@ -1748,6 +1765,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
       hub.closeAll();
       await app.close();
       (await renderer)?.dispose();
+      await (await pool)?.close();
     },
   };
 }

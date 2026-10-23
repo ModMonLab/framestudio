@@ -11,7 +11,7 @@ import {
   type AssetResolver, type AudioPlan, type AudioSource, type ProjectState,
 } from '@frame/core';
 import type { FamilyStyle } from '@frame/rig';
-import type { NodeRenderer } from '@frame/render/node';
+import type { NodeRenderer, RasterPool } from '@frame/render/node';
 import type { Item } from '@frame/render';
 import { FrameError, type Problem, type StyleFamily } from '@frame/schema';
 import { encodeWav, master, mixPlan, MIX_RATE, type PcmAudio } from './audio.js';
@@ -70,6 +70,8 @@ export interface RenderOptions {
   mediaExists?: (hash: string) => boolean;
   styles: Record<StyleFamily, FamilyStyle>;
   renderer: NodeRenderer;
+  /** Worker threads that rasterise frames in parallel (NFR-05); frames are written in order. Unused with motion blur. */
+  pool?: RasterPool;
   resolveAudio: (src: AudioSource) => string | undefined;
   /**
    * Motion blur (FR-RND-09): each frame averages `samples` sub-frames spread over `shutter` (fraction of a frame,
@@ -328,10 +330,23 @@ export async function renderExport(o: RenderOptions): Promise<RenderReport> {
       const onAbort = () => child.kill('SIGKILL');
       o.signal?.addEventListener('abort', onAbort);
       try {
+        // With a raster pool the main thread evaluates ahead while the pool's threads draw; results stay in order.
+        const pool = blur ? undefined : o.pool;
+        const ahead = new Map<number, Promise<Uint8Array>>();
+        let queued = 0;
         for (let i = 0; i < frameTimes.length; i++) {
           if (i % 4 === 0) await new Promise((r) => setImmediate(r));
           if (o.signal?.aborted) break;
-          const rgba = pixelsAt(i);
+          let rgba: Uint8Array;
+          if (pool) {
+            while (queued < frameTimes.length && queued < i + pool.size * 2) {
+              const p = pool.rgba(frameAt(queued));
+              p.catch(() => undefined);
+              ahead.set(queued++, p);
+            }
+            rgba = await ahead.get(i)!;
+            ahead.delete(i);
+          } else rgba = pixelsAt(i);
           if (!child.stdin.write(rgba)) await Promise.race([new Promise<void>((res) => child.stdin.once('drain', res)), exited]);
           progress({ phase: 'Rendering', frame: i + 1, frames: frameTimes.length, fps: (i + 1) / Math.max(1e-6, now() - tr) });
         }

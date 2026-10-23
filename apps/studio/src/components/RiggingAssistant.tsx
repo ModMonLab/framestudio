@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { evaluateFrame, type ProjectState } from '@frame/core';
 import type { AssetManifest, Clip, Instance, Scene, View } from '@frame/schema';
-import { Button, Chip, Dialog, EmptyState, Select, StatusBadge, TextField, useToasts } from '@frame/ui';
+import { Button, Chip, Dialog, EmptyState, Select, StatusBadge, TextField, useToasts, t as tt } from '@frame/ui';
 import type { Renderer } from '@frame/render';
 import { api } from '../lib/api.js';
 import { blit, getRenderer, getStyles } from '../lib/preview.js';
@@ -192,38 +192,38 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
       wide
       footer={<>
         <span className="fr-faint st-grow">{kind === 'prop' && object ? `${object.states?.length ? `States: ${object.states.join(', ')}` : 'No states'}` : kind === 'set' && object ? `${object.pieces?.length ?? 0} set pieces` : kind === 'character' && built ? `${built.views.map((v) => VIEW_LABEL[v]).join(', ')} drawn · ${built.mouthShapes.length} of 9 mouth shapes · ${built.check.actions.compatible} compatible actions` : ''}</span>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="primary" loading={busy} onClick={() => void save()} disabled={!ready || !name.trim()} disabledReason={!name.trim() ? `Name the ${noun}` : 'Fix the problems listed first'}>Save {noun}</Button>
+        <Button onClick={onClose}>{tt('Cancel')}</Button>
+        <Button variant="primary" loading={busy} onClick={() => void save()} disabled={!ready || !name.trim()} disabledReason={!name.trim() ? `Name the ${noun}` : 'Fix the problems listed first'}>{tt('Save')} {noun}</Button>
       </>}
     >
       {error && <p role="alert" className="st-error">{error}</p>}
-      {!read && !error && <p className="fr-faint">Reading layers…</p>}
+      {!read && !error && <p className="fr-faint">{tt('Reading layers…')}</p>}
       {read && (
         <div className="st-rig">
           <div className="st-rig__layers">
-            <div className="st-row" role="group" aria-label="What the artwork is">
+            <div className="st-row" role="group" aria-label={tt('What the artwork is')}>
               {(['character', 'prop', 'set'] as RigKind[]).map((k) => <Chip key={k} selected={kind === k} onClick={() => setKind(k)}>{KIND_LABEL[k]}</Chip>)}
             </div>
             <div className="st-row">
               <TextField label={`${noun[0]!.toUpperCase()}${noun.slice(1)} name`} value={name} onChange={setName} />
-              {kind === 'prop' && <TextField label="Height on stage (px)" placeholder={String(Math.round(read.height))} value={height} onChange={setHeight} />}
+              {kind === 'prop' && <TextField label={tt('Height on stage (px)')} placeholder={String(Math.round(read.height))} value={height} onChange={setHeight} />}
             </div>
             {kind === 'prop' && (
               <div className="st-row">
-                <TextField label="New state" placeholder="e.g. open" value={newState} onChange={setNewState} onKeyDown={(e) => { if (e.key === 'Enter') addState(); }} />
-                <Button onClick={addState} disabled={!newState.trim()} disabledReason="Name the state">Add state</Button>
+                <TextField label={tt('New state')} placeholder={tt('e.g. open')} value={newState} onChange={setNewState} onKeyDown={(e) => { if (e.key === 'Enter') addState(); }} />
+                <Button onClick={addState} disabled={!newState.trim()} disabledReason={tt('Name the state')}>{tt('Add state')}</Button>
               </div>
             )}
-            <TextField label="Your rights to the artwork" value={rights} onChange={setRights} />
+            <TextField label={tt('Your rights to the artwork')} value={rights} onChange={setRights} />
             {read.warnings.length > 0 && <ul className="st-problems">{read.warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
             {byView.map(([view, layers]) => (
               <section key={view} aria-label={`${VIEW_LABEL[view as View]} layers`}>
-                <h3 className="st-h3">{kind === 'character' ? VIEW_LABEL[view as View] : 'Layers'} <span className="fr-faint">· {layers.length} layers</span></h3>
+                <h3 className="st-h3">{kind === 'character' ? VIEW_LABEL[view as View] : 'Layers'} <span className="fr-faint">· {layers.length}  {tt('layers')}</span></h3>
                 <ul className="st-rig__list">
                   {layers.map((l) => (
                     <li key={l.id} className="st-rig__row">
-                      <span className="st-rig__thumb" aria-hidden>{l.media ? <img src={api.mediaUrl(pid, l.media)} alt="" /> : <span className="fr-faint">SVG</span>}</span>
-                      <span className="st-rig__name" title={l.group ? `${l.group}/${l.name}` : l.name}>{l.name}{l.hidden && <span className="fr-faint"> · hidden</span>}</span>
+                      <span className="st-rig__thumb" aria-hidden>{l.media ? <img src={api.mediaUrl(pid, l.media)} alt="" /> : <span className="fr-faint">{tt('SVG')}</span>}</span>
+                      <span className="st-rig__name" title={l.group ? `${l.group}/${l.name}` : l.name}>{l.name}{l.hidden && <span className="fr-faint">  {tt('· hidden')}</span>}</span>
                       <span className="st-rig__target"><Select label={`${kind === 'set' ? 'Depth plane' : kind === 'prop' ? 'State' : 'Rig target'} for ${l.name}`} value={mapping[l.id]} onChange={(v) => setMapping((m) => ({ ...m, [l.id]: v }))} options={targetOptions} /></span>
                       {kind === 'character' && JOINTED.test(mapping[l.id] ?? '') && <Button onClick={() => setPivotFor(l.id)} aria-label={`Set the joint of ${l.name}`}>{pivots[l.id] ? 'Joint set' : 'Joint…'}</Button>}
                     </li>
@@ -240,7 +240,7 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
                     <canvas ref={(el) => { canvases.current[i] = el; }} role="img" aria-label={object.kind === 'set' ? `${name} set` : `${name}${st === 'default' ? '' : `, ${st}`}`} />
                     <figcaption>{object.kind === 'set' ? 'Set' : st === 'default' ? 'As drawn' : st}</figcaption>
                   </figure>
-                )) : <EmptyState title="Preview">Map at least one layer to see the {noun}.</EmptyState>}
+                )) : <EmptyState title={tt('Preview')}>{tt('Map at least one layer to see the')} {noun}.</EmptyState>}
               </div>
             ) : (<>
             <div className="st-rig__previews">
@@ -249,27 +249,27 @@ export function RiggingAssistant({ file, onClose }: { file: File | undefined; on
                   <canvas ref={(el) => { canvases.current[i] = el; }} role="img" aria-label={`${name}, ${VIEW_LABEL[v]} view`} />
                   <figcaption>{VIEW_LABEL[v]}</figcaption>
                 </figure>
-              )) ?? <EmptyState title="Preview">Map at least a head layer to see the rigged character.</EmptyState>}
+              )) ?? <EmptyState title={tt('Preview')}>{tt('Map at least a head layer to see the rigged character.')}</EmptyState>}
             </div>
             <div className="st-row">
-              <span className="fr-faint">Test</span>
-              <Chip selected={!gesture} onClick={() => setGesture('')}>Rest</Chip>
-              <span className="st-tb-select"><Select label="Test gesture" placeholder="Gesture" value={gesture || undefined} onChange={setGesture} options={(acts ?? []).map((a) => ({ value: a.ref, label: a.name }))} /></span>
+              <span className="fr-faint">{tt('Test')}</span>
+              <Chip selected={!gesture} onClick={() => setGesture('')}>{tt('Rest')}</Chip>
+              <span className="st-tb-select"><Select label={tt('Test gesture')} placeholder={tt('Gesture')} value={gesture || undefined} onChange={setGesture} options={(acts ?? []).map((a) => ({ value: a.ref, label: a.name }))} /></span>
             </div>
             <div className="st-field-col">
-              <span className="fr-label">Missing mouth shapes</span>
-              <Select label="Library mouth" placeholder="Use the drawn mouth shapes" value={libMouth || undefined} onChange={setLibMouth} options={[{ value: '', label: 'Use the drawn mouth shapes' }, ...(mouths ?? []).map((m) => ({ value: m.ref, label: `Library: ${m.name}` }))]} />
-              <p className="fr-hint">Speech needs all nine mouth shapes (mouth_A … mouth_H, mouth_X) in every drawn view, or a library mouth.</p>
+              <span className="fr-label">{tt('Missing mouth shapes')}</span>
+              <Select label={tt('Library mouth')} placeholder={tt('Use the drawn mouth shapes')} value={libMouth || undefined} onChange={setLibMouth} options={[{ value: '', label: 'Use the drawn mouth shapes' }, ...(mouths ?? []).map((m) => ({ value: m.ref, label: `Library: ${m.name}` }))]} />
+              <p className="fr-hint">{tt('Speech needs all nine mouth shapes (mouth_A … mouth_H, mouth_X) in every drawn view, or a library mouth.')}</p>
             </div>
             <div className="st-field-col">
-              <span className="fr-label">Hand poses</span>
-              <Select label="Library hands" placeholder="Use the drawn hands" value={libHands || undefined} onChange={setLibHands} options={[{ value: '', label: 'Use the drawn hands' }, ...handSets.map((m) => ({ value: m.ref, label: `Library: ${m.name}` }))]} />
-              <p className="fr-hint">Drawn hands keep the pose they are drawn in; a library hand set gives pointing, fists and every other hand pose.</p>
+              <span className="fr-label">{tt('Hand poses')}</span>
+              <Select label={tt('Library hands')} placeholder={tt('Use the drawn hands')} value={libHands || undefined} onChange={setLibHands} options={[{ value: '', label: 'Use the drawn hands' }, ...handSets.map((m) => ({ value: m.ref, label: `Library: ${m.name}` }))]} />
+              <p className="fr-hint">{tt('Drawn hands keep the pose they are drawn in; a library hand set gives pointing, fists and every other hand pose.')}</p>
             </div>
             </>)}
             <div aria-live="polite">
-              {(kind === 'character' ? built : object) && (errors.length ? <StatusBadge tone="danger">Rig check: {errors.length} problem(s)</StatusBadge> : <StatusBadge tone="success">Rig check passed</StatusBadge>)}
-              {problems.length > 0 && <ul className="st-problems" aria-label="Rig check problems">{problems.map((x, i) => <li key={i}><StatusBadge tone={x.severity === 'error' ? 'danger' : 'warning'}>{x.severity === 'error' ? 'Error' : 'Warning'}</StatusBadge> {x.message}</li>)}</ul>}
+              {(kind === 'character' ? built : object) && (errors.length ? <StatusBadge tone="danger">{tt('Rig check:')} {errors.length}  {tt('problem(s)')}</StatusBadge> : <StatusBadge tone="success">{tt('Rig check passed')}</StatusBadge>)}
+              {problems.length > 0 && <ul className="st-problems" aria-label={tt('Rig check problems')}>{problems.map((x, i) => <li key={i}><StatusBadge tone={x.severity === 'error' ? 'danger' : 'warning'}>{x.severity === 'error' ? 'Error' : 'Warning'}</StatusBadge> {x.message}</li>)}</ul>}
             </div>
           </div>
         </div>
@@ -293,7 +293,7 @@ function JointEditor({ layer, pid, limb, value, onChange, onClose }: { layer: Re
   const set = (k: 'at' | 'end', p: [number, number]) => onChange({ at: k === 'at' ? p : at, ...(limb ? { end: k === 'end' ? p : end } : {}) });
   const num = (v: string, d: number) => (Number.isFinite(Number(v)) && v.trim() !== '' ? Number(v) : d);
   return (
-    <Dialog title={`Joint · ${layer.name}`} open onClose={onClose} footer={<><Button onClick={() => { onChange(undefined); onClose(); }}>Reset</Button><Button variant="primary" onClick={onClose}>Done</Button></>}>
+    <Dialog title={`Joint · ${layer.name}`} open onClose={onClose} footer={<><Button onClick={() => { onChange(undefined); onClose(); }}>{tt('Reset')}</Button><Button variant="primary" onClick={onClose}>{tt('Done')}</Button></>}>
       <div className="st-row" style={{ alignItems: 'flex-start' }}>
         <svg width={w * scale} height={h * scale} viewBox={`${x} ${y} ${w} ${h}`} className="st-joint" role="img" aria-label={`${layer.name} with its joint${limb ? 's' : ''}`}
           onClick={(e) => {
@@ -306,10 +306,10 @@ function JointEditor({ layer, pid, limb, value, onChange, onClose }: { layer: Re
           {limb && <><line x1={at[0]} y1={at[1]} x2={end[0]} y2={end[1]} stroke="var(--color-accent)" strokeWidth={1.5 / scale} /><circle cx={end[0]} cy={end[1]} r={4 / scale} fill="none" stroke="var(--color-accent)" strokeWidth={1.5 / scale} /></>}
         </svg>
         <div className="st-field-col">
-          <TextField label="Joint x" value={String(at[0])} onChange={(v) => set('at', [num(v, at[0]), at[1]])} />
-          <TextField label="Joint y" value={String(at[1])} onChange={(v) => set('at', [at[0], num(v, at[1])])} />
-          {limb && <TextField label="Far joint y" value={String(end[1])} onChange={(v) => set('end', [end[0], num(v, end[1])])} />}
-          <p className="fr-hint">Click to place the joint this layer turns around{limb ? '; Shift-click places the far joint (elbow, wrist, knee or ankle)' : ''}. Units are artwork pixels.</p>
+          <TextField label={tt('Joint x')} value={String(at[0])} onChange={(v) => set('at', [num(v, at[0]), at[1]])} />
+          <TextField label={tt('Joint y')} value={String(at[1])} onChange={(v) => set('at', [at[0], num(v, at[1])])} />
+          {limb && <TextField label={tt('Far joint y')} value={String(end[1])} onChange={(v) => set('end', [end[0], num(v, end[1])])} />}
+          <p className="fr-hint">{tt('Click to place the joint this layer turns around')}{limb ? '; Shift-click places the far joint (elbow, wrist, knee or ankle)' : ''}{tt('. Units are artwork pixels.')}</p>
         </div>
       </div>
     </Dialog>

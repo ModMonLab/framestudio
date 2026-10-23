@@ -1,6 +1,6 @@
 /** Voice worker status (FR-VOI-12): connected, busy, offline, misconfigured, with the fix. */
 import { useEffect, useState } from 'react';
-import { Popover, StatusBadge, useAnchor } from '@frame/ui';
+import { Popover, StatusBadge, useAnchor, t as tt } from '@frame/ui';
 import { api, type WorkerStatus } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -29,14 +29,14 @@ export function WorkerBadge() {
   const state = st ? (busy && st.state === 'connected' ? 'busy' : st.state) : undefined;
   return (
     <>
-      <button ref={anchor} type="button" className="st-badge-btn" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Voice worker status">
+      <button ref={anchor} type="button" className="st-badge-btn" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={tt('Voice worker status')}>
         <StatusBadge tone={state ? TONE[state] : 'neutral'}>{state ? `${LABEL[state]}${state === 'busy' ? ` · ${busy}` : ''}` : 'Voice worker…'}</StatusBadge>
       </button>
-      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} label="Voice worker" placement="bottom-end" width={320}>
+      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} label={tt('Voice worker')} placement="bottom-end" width={320}>
         <div className="st-form">
           <b>{state ? LABEL[state] : 'Checking…'}</b>
           {st?.url && <span className="fr-mono fr-faint">{st.url}</span>}
-          {st?.fixture && <p className="fr-hint">Fixture engine: audio is a test signal, not real speech.</p>}
+          {st?.fixture && <p className="fr-hint">{tt('Fixture engine: audio is a test signal, not real speech.')}</p>}
           {st?.capabilities && <p className="fr-faint">{st.capabilities.engines.map((e) => e.label).join(', ')}</p>}
           {st?.message && <p>{st.message}</p>}
           {st?.hint && <p className="fr-hint">{st.hint}</p>}

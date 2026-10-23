@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Frame, Scan } from 'lucide-react';
 import { AlignCenterHorizontal, AlignCenterVertical, AlignEndHorizontal, AlignEndVertical, AlignHorizontalDistributeCenter, AlignStartHorizontal, AlignStartVertical, AlignVerticalDistributeCenter, Minus, Plus } from 'lucide-react';
 import { alignCommands, boxLines, evaluateFrame, seatAnchors, seatCommands, snapDelta, type AlignMode, type EvaluatedFrame, type Guide } from '@frame/core';
-import { FloatingControl, IconButton, Segmented } from '@frame/ui';
+import { FloatingControl, IconButton, Segmented, t as tt } from '@frame/ui';
 import { blit, getRenderer, getStyles } from '../lib/preview.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -271,7 +271,7 @@ export function CanvasView() {
       <div className="st-stage" style={{ width: cssW, height: cssH }} onContextMenu={onContextMenu} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} role="img" aria-label={`Stage preview${ev ? `, camera ${ev.camera.name}` : ''}`}>
         <canvas ref={canvas} style={{ width: cssW, height: cssH, display: 'block' }} data-testid="stage-canvas" />
         {ev && <span className="st-shot">{ev.camera.name}</span>}
-        {playing && quality < 1 && <span className="st-quality">Preview quality</span>}
+        {playing && quality < 1 && <span className="st-quality">{tt('Preview quality')}</span>}
         {boxes.filter(([id]) => selIds.has(id)).map(([id, b]) => {
           const off = drag && selIds.has(drag.id) ? { x: drag.dx, y: drag.dy } : { x: 0, y: 0 };
           return <div key={id} className="st-sel" style={{ left: b.x * k + off.x, top: b.y * k + off.y, width: b.w * k, height: b.h * k }}><i /><i /><i /><i /></div>;
@@ -286,25 +286,25 @@ export function CanvasView() {
         {error && <div className="st-canvas-error" role="alert">{error}</div>}
       </div>
       {selIds.size >= 2 && sceneNow && ev && (
-        <FloatingControl label="Align" style={{ position: 'absolute', left: '50%', top: 10, transform: 'translateX(-50%)' }}>
+        <FloatingControl label={tt('Align')} style={{ position: 'absolute', left: '50%', top: 10, transform: 'translateX(-50%)' }}>
           {([['left', 'Align left', AlignStartVertical], ['centre', 'Align centres', AlignCenterVertical], ['right', 'Align right', AlignEndVertical], ['top', 'Align tops', AlignStartHorizontal], ['middle', 'Align middles', AlignCenterHorizontal], ['bottom', 'Align bottoms', AlignEndHorizontal], ['distribute-h', 'Distribute horizontally', AlignHorizontalDistributeCenter], ['distribute-v', 'Distribute vertically', AlignVerticalDistributeCenter]] as const).map(([mode, label, Icon]) => (
-            <IconButton key={mode} size="sm" label={label} icon={<Icon size={14} />} disabled={mode.startsWith('distribute') && selIds.size < 3} disabledReason="Select three or more objects" onClick={() => align(mode)} />
+            <IconButton key={mode} size="sm" label={label} icon={<Icon size={14} />} disabled={mode.startsWith('distribute') && selIds.size < 3} disabledReason={tt('Select three or more objects')} onClick={() => align(mode)} />
           ))}
         </FloatingControl>
       )}
-      <FloatingControl label="Style" style={{ position: 'absolute', left: 14, bottom: 12 }}>
-        <span className="fr-faint" style={{ padding: '0 6px' }}>Style</span>
-        <Segmented label="Preview style family" value={family ?? project.project.styleFamily} onChange={(v) => studio.set({ family: v === project.project.styleFamily ? undefined : v })} options={[{ value: 'flat', label: 'Flat' }, { value: 'illustrated', label: 'Illustrated' }]} />
+      <FloatingControl label={tt('Style')} style={{ position: 'absolute', left: 14, bottom: 12 }}>
+        <span className="fr-faint" style={{ padding: '0 6px' }}>{tt('Style')}</span>
+        <Segmented label={tt('Preview style family')} value={family ?? project.project.styleFamily} onChange={(v) => studio.set({ family: v === project.project.styleFamily ? undefined : v })} options={[{ value: 'flat', label: 'Flat' }, { value: 'illustrated', label: 'Illustrated' }]} />
       </FloatingControl>
-      <FloatingControl label="Framing" style={{ position: 'absolute', left: 14, top: 12 }}>
+      <FloatingControl label={tt('Framing')} style={{ position: 'absolute', left: 14, top: 12 }}>
         <IconButton size="sm" label={overview ? 'Back to the camera view' : 'Show the camera frame on the whole stage'} pressed={overview} icon={<Frame size={14} />} onClick={() => setOverview(!overview)} />
-        {ratios.length > 1 && <Segmented label="Preview aspect ratio" value={ratio} onChange={setPreviewAspect} options={ratios.map((r) => ({ value: r, label: r }))} />}
-        <IconButton size="sm" label={safe ? 'Hide safe areas' : 'Show safe areas'} pressed={safe} disabled={overview} disabledReason="Safe areas show in the camera view" icon={<Scan size={14} />} onClick={() => setSafe(!safe)} />
+        {ratios.length > 1 && <Segmented label={tt('Preview aspect ratio')} value={ratio} onChange={setPreviewAspect} options={ratios.map((r) => ({ value: r, label: r }))} />}
+        <IconButton size="sm" label={safe ? 'Hide safe areas' : 'Show safe areas'} pressed={safe} disabled={overview} disabledReason={tt('Safe areas show in the camera view')} icon={<Scan size={14} />} onClick={() => setSafe(!safe)} />
       </FloatingControl>
-      <FloatingControl label="Zoom" style={{ position: 'absolute', right: 14, bottom: 12 }}>
-        <IconButton size="sm" label="Zoom out" icon={<Minus size={14} />} onClick={() => setZoom(ZOOMS.filter((z) => z < scale - 1e-6).at(-1) ?? ZOOMS[0]!)} />
-        <button type="button" className="st-zoom" onClick={() => setZoom('fit')} title="Fit to window">{zoom === 'fit' ? 'Fit' : `${Math.round(scale * 100)}%`}</button>
-        <IconButton size="sm" label="Zoom in" icon={<Plus size={14} />} onClick={() => setZoom(ZOOMS.find((z) => z > scale + 1e-6) ?? ZOOMS.at(-1)!)} />
+      <FloatingControl label={tt('Zoom')} style={{ position: 'absolute', right: 14, bottom: 12 }}>
+        <IconButton size="sm" label={tt('Zoom out')} icon={<Minus size={14} />} onClick={() => setZoom(ZOOMS.filter((z) => z < scale - 1e-6).at(-1) ?? ZOOMS[0]!)} />
+        <button type="button" className="st-zoom" onClick={() => setZoom('fit')} title={tt('Fit to window')}>{zoom === 'fit' ? 'Fit' : `${Math.round(scale * 100)}%`}</button>
+        <IconButton size="sm" label={tt('Zoom in')} icon={<Plus size={14} />} onClick={() => setZoom(ZOOMS.find((z) => z > scale + 1e-6) ?? ZOOMS.at(-1)!)} />
       </FloatingControl>
       <ImportDialog file={dropped?.file} {...(dropped ? { position: dropped.position } : {})} onClose={() => setDropped(undefined)} />
     </div>
@@ -333,7 +333,7 @@ function SafeAreas({ ratio }: { ratio: string }) {
       <div className="st-safe-action" />
       <div className="st-safe-title" />
       {vertical && <div className="st-safe-ui" />}
-      <span className="st-safe-label">{ratio} · action 93 % · title 90 %{vertical ? ' · app UI' : ''}</span>
+      <span className="st-safe-label">{ratio}  {tt('· action 93 % · title 90 %')}{vertical ? ' · app UI' : ''}</span>
     </div>
   );
 }

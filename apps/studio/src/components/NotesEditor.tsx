@@ -5,7 +5,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Bold, Eye, Heading2, Italic, List, ListOrdered, Pencil } from 'lucide-react';
 import { parseNotes, type NoteBlock, type NoteSpan } from '@frame/core';
-import { IconButton } from '@frame/ui';
+import { IconButton, t as tt } from '@frame/ui';
 
 /** `offset` maps note heading levels to HTML levels (# → h(1 + offset)) so pages keep a valid outline. */
 export function NotesView({ value, empty = 'No notes yet.', offset = 2 }: { value: string; empty?: string; offset?: number }) {
@@ -63,11 +63,11 @@ export function NotesEditor({ label, value, onCommit, rows = 5, placeholder }: {
         <span className="st-notes-label">{label}</span>
         <span className="fr-spacer" />
         {!preview && <>
-          <IconButton size="sm" label="Heading" icon={<Heading2 size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => prefix(() => '## ')} />
-          <IconButton size="sm" label="Bulleted list" icon={<List size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => prefix(() => '- ')} />
-          <IconButton size="sm" label="Numbered list" icon={<ListOrdered size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => prefix((i) => `${i + 1}. `)} />
-          <IconButton size="sm" label="Bold" shortcut="Ctrl B" icon={<Bold size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => wrap('**')} />
-          <IconButton size="sm" label="Italic" shortcut="Ctrl I" icon={<Italic size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => wrap('*')} />
+          <IconButton size="sm" label={tt('Heading')} icon={<Heading2 size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => prefix(() => '## ')} />
+          <IconButton size="sm" label={tt('Bulleted list')} icon={<List size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => prefix(() => '- ')} />
+          <IconButton size="sm" label={tt('Numbered list')} icon={<ListOrdered size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => prefix((i) => `${i + 1}. `)} />
+          <IconButton size="sm" label={tt('Bold')} shortcut="Ctrl B" icon={<Bold size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => wrap('**')} />
+          <IconButton size="sm" label={tt('Italic')} shortcut="Ctrl I" icon={<Italic size={13} />} onMouseDown={(e) => e.preventDefault()} onClick={() => wrap('*')} />
         </>}
         <IconButton size="sm" label={preview ? 'Edit notes' : 'Preview notes'} icon={preview ? <Pencil size={13} /> : <Eye size={13} />} onClick={() => { commit(); setPreview(!preview); }} />
       </div>

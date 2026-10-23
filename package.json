@@ -23,7 +23,10 @@
     "catalog:coverage": "tsx tools/catalog/coverage.ts",
     "catalog:compat": "tsx tools/catalog/action-compat.ts",
     "docs:mcp": "tsx tools/docs/mcp-reference.ts",
-    "docs:formats": "tsx tools/docs/formats.ts"
+    "docs:formats": "tsx tools/docs/formats.ts",
+    "docs:licences": "tsx tools/docs/licences.ts",
+    "bench:perf": "tsx tools/bench/perf.ts",
+    "i18n:extract": "tsx tools/i18n/extract.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
@@ -50,7 +53,7 @@
     "tsx": "^4.23.15",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.72.0",
-    "vitest": "^3.2.7",
+    "vitest": "^4.1.12",
     "yaml": "^2.9.1",
     "@frame/mcp": "workspace:*",
     "ag-psd": "31.0.3"

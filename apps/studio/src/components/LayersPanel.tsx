@@ -1,7 +1,7 @@
 /** Layers (Design System §7.1): Episode → Scenes → Cast, Set, Cameras; selection shared with canvas and timeline. */
 import { useMemo, useState } from 'react';
 import { Box, Camera, Clapperboard, Film, Plus, User } from 'lucide-react';
-import { IconButton, Panel, SearchField, Tree, type TreeNode } from '@frame/ui';
+import { IconButton, Panel, SearchField, Tree, type TreeNode, t as tt } from '@frame/ui';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
 import { instanceMenu, useContextMenu } from './ContextMenu.js';
@@ -73,9 +73,9 @@ export function LayersPanel() {
   };
 
   return (
-    <Panel title="Layers" label="Layers" help="#/help/layers" actions={<IconButton size="sm" label="Add scene" icon={<Plus size={14} />} onClick={() => void addScene()} />} search={<SearchField label="Search layers" placeholder="Search layers" value={q} onChange={setQ} />} className="st-left">
+    <Panel title={tt('Layers')} label={tt('Layers')} help="#/help/layers" actions={<IconButton size="sm" label={tt('Add scene')} icon={<Plus size={14} />} onClick={() => void addScene()} />} search={<SearchField label={tt('Search layers')} placeholder={tt('Search layers')} value={q} onChange={setQ} />} className="st-left">
       <Tree
-        label="Layers"
+        label={tt('Layers')}
         nodes={nodes}
         expanded={expanded}
         onExpandedChange={setExpanded}
@@ -88,7 +88,7 @@ export function LayersPanel() {
           else if (kind === 'ep') void studio.exec([{ name: 'episode.rename', params: { id: rawId, name: label } }]);
         }}
         query={q}
-        emptyText="No matches"
+        emptyText={tt('No matches')}
         onContextMenu={(id, at) => {
           const [kind, rawId] = id.split(':');
           if (kind === 'ins' && id.split(':').length === 2) openMenu({ ...at, items: instanceMenu(studio, rawId!), label: 'Object actions' });

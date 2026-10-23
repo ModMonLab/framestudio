@@ -236,23 +236,23 @@ The Notes column starts with the requirement's short title from the SRS.
 | UI-05 | In progress | shared selection, undo labels, autosave badge, keyboard shortcuts, drag on canvas/timeline, context menus (canvas, layers, clips), library drag-and-drop to canvas and Face/Acting lanes | Selection, undo, autosave, keyboard, drag-and-drop and context-menu ru — Tree drag-and-drop reparenting pending |
 | UI-06 | In progress | disabledReason on buttons/menus/selects | Every visible control works or states its prerequisite |
 | UI-07 | In progress | apps/gallery/e2e (40 screenshots) | Visual regression tests cover every component state and both reference — Reference screens pending |
-| NFR-01 | Not started | — | Responsiveness |
-| NFR-02 | Not started | — | Preview performance |
+| NFR-01 | In progress | `pnpm bench:perf` → docs/acceptance/performance.md: edit → canvas p95 62 ms on the 4-core cloud container (target ≤ 100 ms) | Responsiveness — Studio measurement on the reference laptop (AC-14) pending |
+| NFR-02 | In progress | `pnpm bench:perf`: 17 fps at 960×540 on the 4-core cloud container, CPU only (was 8 fps before the direct raster surface and the full-frame blend fast path) | Preview performance — Below the 24 fps target here; reference-laptop run pending |
 | NFR-03 | In progress | golden frames; preview/CLI/export identity tests | Determinism — AC-15 20-frame run pending |
 | NFR-04 | Not started | — | A/V sync |
-| NFR-05 | Not started | — | Export speed |
+| NFR-05 | In progress | `pnpm bench:perf`: 1080p24 Flat 0.54×, Illustrated with effects 0.22× real time on 4 cores (was 0.10× / 0.07×); exports rasterise on worker threads (packages/render/src/pool.ts, cores − 2), progress and ETA shown | Export speed — Below target here; scales with cores; reference-laptop run pending |
 | NFR-06 | Not verified | benchmark command | Voice speed — Requires reference GPU |
 | NFR-07 | Not started | — | Capacity |
 | NFR-08 | Done | packages/io/test/crash.test.ts (≥1000 edits, SIGKILL) | Reliability |
-| NFR-09 | In progress | Package reader and SVG parser refuse unsafe content; tokens never stored in projects | Security — Security suite and dependency audit pending |
-| NFR-10 | Not started | — | Privacy |
+| NFR-09 | Done | package.test.ts (traversal, scripts, oversized, hash mismatch), SVG safety tests, packages/server/test/secrets.test.ts (tokens never in request logs — `token` query redacted —, API responses, project files or packages); `pnpm audit --audit-level high` in CI (0 known vulnerabilities after upgrading fast-xml-parser, fflate, fastify, MCP SDK, Vite and Vitest) | Security |
+| NFR-10 | In progress | packages/server/test/privacy.test.ts: a session (open, edit, frames, thumbnails, worker status, version, package, export, save) connects only to localhost and the configured worker and resolves no other names; no external URLs in Studio, UI or renderer sources; no telemetry | Privacy — Network audit during the owner's acceptance run on the reference machine pending |
 | NFR-11 | In progress | Vitest suites, golden harness, Playwright | Testability |
 | NFR-12 | In progress | gallery axe checks (WCAG 2.2 AA), decision 0007 | Accessibility |
 | NFR-13 | In progress | architecture.test.ts | Maintainability |
 | NFR-14 | Not started | — | Compatibility |
 | NFR-15 | In progress | CI run 12: typecheck, lint and tests green on ubuntu, macOS and Windows | Portability — Voice Worker on the reference GPU (WSL2/Docker) not verified |
-| NFR-16 | In progress | packages/ui/src/i18n.ts | Internationalisation-ready |
-| NFR-17 | Not started | — | Licensing |
+| NFR-16 | In progress | packages/ui/src/i18n.ts; all Studio JSX text and user-facing attributes go through tt() (gettext style); tools/i18n/extract.ts + tools/test/i18n.test.ts (no hard-coded strings; catalogue docs/i18n/studio.en.json, 760 messages) | Internationalisation-ready — Strings built in code (toasts, undo labels, conditional labels) are not extracted yet; RTL layout check pending |
+| NFR-17 | Done | `pnpm docs:licences` → docs/licences.md (366 JavaScript packages, fonts, content, worker models via services/voice-worker/LICENSES.md, ffmpeg note); tools/test/licences.test.ts fails on any licence outside the allowlist or a stale report | Licensing — owner review of the report |
 | NFR-18 | In progress | fixture labels in worker, voice assets, takes, reports, Studio | Transparency — AI-generated provenance on real takes pending |
 | AC-01 | Not started | — | Template to video |
 | AC-02 | In progress | tools/test/m2-acceptance.test.ts AC-02 (every builder section, 4 views × 2 families identical after .framechar into a fresh profile) | Build a character in both families — Owner run in the Studio and visual sign-off pending |
@@ -267,14 +267,14 @@ The Notes column starts with the requirement's short title from the SRS.
 | AC-11 | In progress | packages/server/test/versions.test.ts (two episodes, new version in one scene, reopen, snapshot restore) | Versions and reuse — Studio run of the full scenario pending |
 | AC-12 | In progress | rigging.test.ts (character, prop, set); Studio e2e “rigging assistant…”, “imports an SVG…”; import.test.ts | Import and rigging assistant — Hand-pose supply and a real artist PSD pending |
 | AC-13 | In progress | packages/mcp/test/mcp.test.ts “AC-13: an agent produces a 3-scene episode…” (MCP only: 2 characters, voices, takes, recipes, shots, music, dry runs, conflict resolved, frame and video); Studio e2e (agent-tagged clips, session revert) | Agent production — A run by a real agent from a written brief |
-| AC-14 | Not started | — | Performance |
+| AC-14 | In progress | tools/bench/perf.ts reference scene (4 characters, 30 props, night + heavy rain, captions); docs/acceptance/performance.md | Performance — Decided on the reference laptop; cloud results are indicative and below target for NFR-02/05 |
 | AC-15 | Not started | — | Determinism and sync |
 | AC-16 | In progress | crash.test.ts; store.test.ts disk-full retry | Reliability — External git merge pending |
 | AC-17 | Not verified | test_models.py OOM logic | Worker resilience — Requires reference GPU |
 | AC-18 | Not started | — | Design System compliance |
 | AC-19 | Not started | — | Catalog coverage |
 | AC-20 | In progress | package.test.ts; tools/test/m2-acceptance.test.ts AC-20 (new folder, no user library, identical frames) | Packages and portability — Second-machine (macOS/Linux) run pending |
-| AC-21 | In progress | package.test.ts malicious archives (traversal, scripts, undeclared, oversized, hash mismatch); SVG safety tests | Security and privacy — Network audit and token-in-logs checks pending |
+| AC-21 | In progress | package.test.ts malicious archives (traversal, scripts, undeclared, oversized, hash mismatch); SVG safety tests; privacy.test.ts network audit; secrets.test.ts tokens in logs and packages | Security and privacy — Owner run on the reference machine pending |
 | AC-22 | In progress | tools/test/m3-templates.test.ts: every P1 template applies, validates with no problems and evaluates in 16:9, 9:16 and 1:1; replace cast retargets | Templates — Owner run: open, play and export each template in the Studio. Bundled looks naming unbuilt accessories log missing assets (content gap) |
 | AC-23 | In progress | audio-captions.test.ts (karaoke, stacking, SRT/VTT); m3-text.test.ts (bubble tracks a walking character, safe areas in every ratio) | Captions and text — Owner check in the Studio |
 | AC-24 | Not verified | — | Fresh setup — Requires clean Windows 11 laptop (owner checklist §3) |

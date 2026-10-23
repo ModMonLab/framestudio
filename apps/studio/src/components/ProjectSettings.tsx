@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from 'react';
 import type { AgentPermissions, OutputSettings, StyleFamily } from '@frame/schema';
-import { Button, Dialog, Select, TextField, ToggleRow, useToasts } from '@frame/ui';
+import { Button, Dialog, Select, TextField, ToggleRow, useToasts, t as tt } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { NotesEditor } from './NotesEditor.js';
@@ -48,41 +48,41 @@ export function ProjectSettingsDialog({ onClose }: { onClose: () => void }) {
   const perm = (k: keyof AgentPermissions, v: boolean) => void studio.exec([{ name: 'project.setPermissions', params: { agent: { ...project.permissions.agent, [k]: v } } }], v ? 'Grant agent permission' : 'Revoke agent permission');
 
   return (
-    <Dialog title="Project settings" open onClose={onClose} wide footer={<Button variant="primary" onClick={onClose}>Done</Button>}>
+    <Dialog title={tt('Project settings')} open onClose={onClose} wide footer={<Button variant="primary" onClick={onClose}>{tt('Done')}</Button>}>
       <div className="st-form st-form--flush st-settings">
-        <fieldset className="st-settings-group"><legend>General</legend>
-          <TextField label="Project name" value={name} onChange={setName} onBlur={() => name.trim() && name !== project.name ? void set({ name: name.trim() }, `Rename project to ${name.trim()}`) : setName(project.name)} />
-          <NotesEditor label="Description" value={project.description} onCommit={(v) => void set({ description: v }, 'Edit project description')} placeholder="What the show is about, for collaborators and the script's title page" />
+        <fieldset className="st-settings-group"><legend>{tt('General')}</legend>
+          <TextField label={tt('Project name')} value={name} onChange={setName} onBlur={() => name.trim() && name !== project.name ? void set({ name: name.trim() }, `Rename project to ${name.trim()}`) : setName(project.name)} />
+          <NotesEditor label={tt('Description')} value={project.description} onCommit={(v) => void set({ description: v }, 'Edit project description')} placeholder={tt('What the show is about, for collaborators and the script\'s title page')} />
         </fieldset>
-        <fieldset className="st-settings-group"><legend>Picture</legend>
-          <Select label="Style family" value={project.styleFamily} options={[{ value: 'flat', label: 'Flat' }, { value: 'illustrated', label: 'Illustrated' }]} onChange={(v) => void setFamily(v as StyleFamily)} />
+        <fieldset className="st-settings-group"><legend>{tt('Picture')}</legend>
+          <Select label={tt('Style family')} value={project.styleFamily} options={[{ value: 'flat', label: 'Flat' }, { value: 'illustrated', label: 'Illustrated' }]} onChange={(v) => void setFamily(v as StyleFamily)} />
           {blockers && (
             <div role="alert" className="st-settings-alert">
-              <p><b>Can't switch to {blockers.family}.</b> These assets in the project have no {blockers.family} artwork:</p>
+              <p><b>{tt('Can\'t switch to')} {blockers.family}.</b>  {tt('These assets in the project have no')} {blockers.family}  {tt('artwork:')}</p>
               <ul>{blockers.list.slice(0, 12).map((b) => <li key={b.ref}>{b.name} <span className="fr-faint fr-mono">{b.ref}</span></li>)}</ul>
-              {blockers.list.length > 12 && <p className="fr-faint">…and {blockers.list.length - 12} more.</p>}
+              {blockers.list.length > 12 && <p className="fr-faint">{tt('…and')} {blockers.list.length - 12}  {tt('more.')}</p>}
             </div>
           )}
-          <Select label="Frame rate" value={String(project.frameRate)} options={['24', '25', '30'].map((v) => ({ value: v, label: `${v} fps` }))} onChange={(v) => void setFps(v)} />
-          <Select label="Default output" value={project.output.preset} options={outputs.length ? outputs : [{ value: project.output.preset, label: `${project.output.width}×${project.output.height}` }]} onChange={(v) => void setOutput(v)} />
-          <p className="fr-hint">{project.output.width}×{project.output.height} · previews {project.output.aspectRatios.join(', ')}</p>
+          <Select label={tt('Frame rate')} value={String(project.frameRate)} options={['24', '25', '30'].map((v) => ({ value: v, label: `${v} fps` }))} onChange={(v) => void setFps(v)} />
+          <Select label={tt('Default output')} value={project.output.preset} options={outputs.length ? outputs : [{ value: project.output.preset, label: `${project.output.width}×${project.output.height}` }]} onChange={(v) => void setOutput(v)} />
+          <p className="fr-hint">{project.output.width}×{project.output.height}  {tt('· previews')} {project.output.aspectRatios.join(', ')}</p>
         </fieldset>
-        <fieldset className="st-settings-group"><legend>Captions</legend>
-          <ToggleRow label="Captions on by default" checked={project.captions.enabled} onChange={(v) => void set({ captions: { ...project.captions, enabled: v } }, v ? 'Turn captions on' : 'Turn captions off')} />
-          <ToggleRow label="Speaker labels" checked={project.captions.speakerLabels} onChange={(v) => void set({ captions: { ...project.captions, speakerLabels: v } }, 'Change speaker labels')} />
-          <ToggleRow label="Burn captions into the picture" description="Off: captions export as SRT/VTT only" checked={project.captions.burnIn} onChange={(v) => void set({ captions: { ...project.captions, burnIn: v } }, 'Change caption burn-in')} />
+        <fieldset className="st-settings-group"><legend>{tt('Captions')}</legend>
+          <ToggleRow label={tt('Captions on by default')} checked={project.captions.enabled} onChange={(v) => void set({ captions: { ...project.captions, enabled: v } }, v ? 'Turn captions on' : 'Turn captions off')} />
+          <ToggleRow label={tt('Speaker labels')} checked={project.captions.speakerLabels} onChange={(v) => void set({ captions: { ...project.captions, speakerLabels: v } }, 'Change speaker labels')} />
+          <ToggleRow label={tt('Burn captions into the picture')} description={tt('Off: captions export as SRT/VTT only')} checked={project.captions.burnIn} onChange={(v) => void set({ captions: { ...project.captions, burnIn: v } }, 'Change caption burn-in')} />
         </fieldset>
-        <fieldset className="st-settings-group"><legend>Storage and voice</legend>
-          <TextField label="Voice worker endpoint" placeholder="Use the app default" value={worker} onChange={setWorker} onBlur={() => worker !== (project.voiceWorkerUrl ?? '') && void set({ voiceWorkerUrl: worker.trim() }, 'Change voice worker endpoint')} />
-          <p className="fr-hint">Tokens are never stored in the project; set them in app settings.</p>
-          <TextField label="Render folder" placeholder="renders/ inside the project" value={renderDir} onChange={setRenderDir} onBlur={() => renderDir !== (project.renderDir ?? '') && void set({ renderDir: renderDir.trim() }, 'Change render folder')} />
+        <fieldset className="st-settings-group"><legend>{tt('Storage and voice')}</legend>
+          <TextField label={tt('Voice worker endpoint')} placeholder={tt('Use the app default')} value={worker} onChange={setWorker} onBlur={() => worker !== (project.voiceWorkerUrl ?? '') && void set({ voiceWorkerUrl: worker.trim() }, 'Change voice worker endpoint')} />
+          <p className="fr-hint">{tt('Tokens are never stored in the project; set them in app settings.')}</p>
+          <TextField label={tt('Render folder')} placeholder={tt('renders/ inside the project')} value={renderDir} onChange={setRenderDir} onBlur={() => renderDir !== (project.renderDir ?? '') && void set({ renderDir: renderDir.trim() }, 'Change render folder')} />
         </fieldset>
-        <fieldset className="st-settings-group"><legend>Agent permissions</legend>
-          <p className="fr-hint">What AI agents connected over MCP or the CLI may do without asking. Only a person can change these.</p>
-          <ToggleRow label="Delete projects" checked={project.permissions.agent.deleteProjects} onChange={(v) => perm('deleteProjects', v)} />
-          <ToggleRow label="Delete voices" checked={project.permissions.agent.deleteVoices} onChange={(v) => perm('deleteVoices', v)} />
-          <ToggleRow label="Clone voices from recordings" checked={project.permissions.agent.cloneVoices} onChange={(v) => perm('cloneVoices', v)} />
-          <ToggleRow label="Expose the voice worker to other machines" checked={project.permissions.agent.exposeWorker} onChange={(v) => perm('exposeWorker', v)} />
+        <fieldset className="st-settings-group"><legend>{tt('Agent permissions')}</legend>
+          <p className="fr-hint">{tt('What AI agents connected over MCP or the CLI may do without asking. Only a person can change these.')}</p>
+          <ToggleRow label={tt('Delete projects')} checked={project.permissions.agent.deleteProjects} onChange={(v) => perm('deleteProjects', v)} />
+          <ToggleRow label={tt('Delete voices')} checked={project.permissions.agent.deleteVoices} onChange={(v) => perm('deleteVoices', v)} />
+          <ToggleRow label={tt('Clone voices from recordings')} checked={project.permissions.agent.cloneVoices} onChange={(v) => perm('cloneVoices', v)} />
+          <ToggleRow label={tt('Expose the voice worker to other machines')} checked={project.permissions.agent.exposeWorker} onChange={(v) => perm('exposeWorker', v)} />
         </fieldset>
       </div>
     </Dialog>

@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Bot, History, Terminal, User } from 'lucide-react';
-import { Button, EmptyState, Popover, StatusBadge, useAnchor, useToasts } from '@frame/ui';
+import { Button, EmptyState, Popover, StatusBadge, useAnchor, useToasts, t as tt } from '@frame/ui';
 import { api, type HistoryEntry } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -71,29 +71,29 @@ export function ActivityButton() {
   return (
     <>
       <button ref={anchor} type="button" className="st-badge-btn" aria-expanded={open} aria-label={`Activity${active ? `: ${active} agent session${active > 1 ? 's' : ''}` : ''}`} onClick={() => setOpen(!open)}>
-        <StatusBadge tone={active ? 'info' : 'neutral'}><History size={12} aria-hidden /> Activity{active ? ` · ${active} agent` : ''}</StatusBadge>
+        <StatusBadge tone={active ? 'info' : 'neutral'}><History size={12} aria-hidden />  {tt('Activity')}{active ? ` · ${active} agent` : ''}</StatusBadge>
       </button>
-      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} label="Activity" placement="bottom-end" width={420}>
+      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} label={tt('Activity')} placement="bottom-end" width={420}>
         {history.length === 0 ? (
-          <EmptyState icon={<History size={24} />} title="No changes yet">Edits from the Studio, the CLI and agents appear here.</EmptyState>
+          <EmptyState icon={<History size={24} />} title={tt('No changes yet')}>{tt('Edits from the Studio, the CLI and agents appear here.')}</EmptyState>
         ) : (
           <div className="st-activity">
-            {sessions.length > 0 && <h3>Agent sessions</h3>}
+            {sessions.length > 0 && <h3>{tt('Agent sessions')}</h3>}
             {sessions.map((s) => (
               <div key={s.source} className="st-activity__session">
                 <Bot size={16} aria-hidden />
                 <div>
-                  <div>Agent {s.id}</div>
-                  <div className="fr-faint">{s.steps.length} change{s.steps.length > 1 ? 's' : ''} · {[...new Set(s.steps.flatMap((h) => h.commands.map((c) => c.name)))].slice(0, 4).join(', ')}{s.reverted ? ' · reverted' : ''}</div>
+                  <div>{tt('Agent')} {s.id}</div>
+                  <div className="fr-faint">{s.steps.length}  {tt('change')}{s.steps.length > 1 ? 's' : ''} · {[...new Set(s.steps.flatMap((h) => h.commands.map((c) => c.name)))].slice(0, 4).join(', ')}{s.reverted ? ' · reverted' : ''}</div>
                 </div>
-                <Button disabled={s.reverted} disabledReason="Already reverted" loading={busy === s.source} onClick={() => void revert(s)}>Revert session</Button>
+                <Button disabled={s.reverted} disabledReason={tt('Already reverted')} loading={busy === s.source} onClick={() => void revert(s)}>{tt('Revert session')}</Button>
               </div>
             ))}
-            <h3>Recent changes</h3>
-            <ul className="st-activity" aria-label="Recent changes">
+            <h3>{tt('Recent changes')}</h3>
+            <ul className="st-activity" aria-label={tt('Recent changes')}>
               {recent.map((h) => (
                 <li key={h.revision} className="st-activity__row">
-                  {h.source.startsWith('agent:') ? <Bot size={13} aria-label="Agent" /> : h.source === 'cli' ? <Terminal size={13} aria-label="CLI" /> : <User size={13} aria-label="Person" />}
+                  {h.source.startsWith('agent:') ? <Bot size={13} aria-label={tt('Agent')} /> : h.source === 'cli' ? <Terminal size={13} aria-label={tt('CLI')} /> : <User size={13} aria-label={tt('Person')} />}
                   <span>{h.label} <span className="fr-faint">· {who(h.source)}</span></span>
                   <span className="fr-faint">{time(h.at)}</span>
                 </li>

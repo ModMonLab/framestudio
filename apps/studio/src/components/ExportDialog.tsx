@@ -4,7 +4,7 @@
  * batch. Validates first (blocking problems with Show links) and runs as jobs.
  */
 import { useEffect, useState } from 'react';
-import { Button, Dialog, NumberField, Section, Segmented, Select, ToggleRow, useToasts } from '@frame/ui';
+import { Button, Dialog, NumberField, Section, Segmented, Select, ToggleRow, useToasts, t as tt } from '@frame/ui';
 import type { Problem } from '@frame/schema';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
@@ -110,13 +110,13 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
 
   const otherRatios = out.aspectRatios.slice(1);
   return (
-    <Dialog title="Export" open={open} onClose={onClose} wide footer={<>
-      <Button onClick={onClose}>Cancel</Button>
+    <Dialog title={tt('Export')} open={open} onClose={onClose} wide footer={<>
+      <Button onClick={onClose}>{tt('Cancel')}</Button>
       <Button variant="primary" loading={busy} disabled={problems === undefined || blocking.length > 0 || rangeInvalid} disabledReason={problems === undefined ? 'Checking the project…' : rangeInvalid ? 'Choose a valid range' : 'Fix the problems listed above first'} onClick={() => void start()}>{ratios.length ? `Export ${ratios.length + 1}` : 'Export'}</Button>
     </>}>
       <div className="st-form">
-        <Select label="Preset" value={preset} options={presets.map((p) => ({ value: p.ref, label: p.name }))} onChange={setPreset} />
-        <Select label="Range" value={range} onChange={(v) => setRange(v as Range)} options={[
+        <Select label={tt('Preset')} value={preset} options={presets.map((p) => ({ value: p.ref, label: p.name }))} onChange={setPreset} />
+        <Select label={tt('Range')} value={range} onChange={(v) => setRange(v as Range)} options={[
           { value: 'scene', label: `Scene · ${scene?.name ?? ''}` },
           { value: 'episode', label: `Episode · ${episode ? project.episodes[episode]?.name : ''}` },
           { value: 'loop', label: 'Loop range (I/O)', disabled: !scene?.loop, disabledReason: 'Set a loop with I and O first' },
@@ -124,30 +124,30 @@ export function ExportDialog({ open, onClose }: { open: boolean; onClose: () => 
           { value: 'selection', label: 'Selected clips', disabled: !selClips.length, disabledReason: 'Select clips on the timeline first' },
         ]} />
         {range === 'markers' && <div className="st-grid2">
-          <Select label="From marker" value={markerA} placeholder="Choose" options={markers.map((m) => ({ value: m.id, label: m.name }))} onChange={setMarkerA} />
-          <Select label="To marker" value={markerB} placeholder="Choose" options={markers.map((m) => ({ value: m.id, label: m.name }))} onChange={setMarkerB} />
+          <Select label={tt('From marker')} value={markerA} placeholder={tt('Choose')} options={markers.map((m) => ({ value: m.id, label: m.name }))} onChange={setMarkerA} />
+          <Select label={tt('To marker')} value={markerB} placeholder={tt('Choose')} options={markers.map((m) => ({ value: m.id, label: m.name }))} onChange={setMarkerB} />
         </div>}
-        <ToggleRow label="Burn in captions" description="Uses the project caption style." checked={captions} onChange={setCaptions} />
-        <ToggleRow label="Subtitle files" description="Writes SRT and WebVTT next to the video." checked={subs} onChange={setSubs} />
-        <ToggleRow label="Audio stems" description="Dialogue, music, ambience and SFX as separate WAV files." checked={stems} onChange={setStems} />
-        {otherRatios.length > 0 && <div className="st-field-col"><span className="fr-label">Also export in</span>
+        <ToggleRow label={tt('Burn in captions')} description={tt('Uses the project caption style.')} checked={captions} onChange={setCaptions} />
+        <ToggleRow label={tt('Subtitle files')} description={tt('Writes SRT and WebVTT next to the video.')} checked={subs} onChange={setSubs} />
+        <ToggleRow label={tt('Audio stems')} description={tt('Dialogue, music, ambience and SFX as separate WAV files.')} checked={stems} onChange={setStems} />
+        {otherRatios.length > 0 && <div className="st-field-col"><span className="fr-label">{tt('Also export in')}</span>
           {otherRatios.map((ar) => <ToggleRow key={ar} label={ar} checked={ratios.includes(ar)} onChange={(v) => setRatios((r) => (v ? [...r, ar] : r.filter((x) => x !== ar)))} />)}
         </div>}
-        <Section title="More settings" open={advanced} onToggle={setAdvanced}>
-          <ToggleRow label="Custom size" checked={custom} onChange={setCustom} />
+        <Section title={tt('More settings')} open={advanced} onToggle={setAdvanced}>
+          <ToggleRow label={tt('Custom size')} checked={custom} onChange={setCustom} />
           {custom && <div className="st-grid2">
-            <NumberField label="Width" prefix="W" unit=" px" precision={0} step={2} min={16} max={7680} value={size.w} onChange={(v, ph) => ph === 'commit' && setSize((s) => ({ ...s, w: Math.round(v / 2) * 2 }))} />
-            <NumberField label="Height" prefix="H" unit=" px" precision={0} step={2} min={16} max={4320} value={size.h} onChange={(v, ph) => ph === 'commit' && setSize((s) => ({ ...s, h: Math.round(v / 2) * 2 }))} />
+            <NumberField label={tt('Width')} prefix="W" unit=" px" precision={0} step={2} min={16} max={7680} value={size.w} onChange={(v, ph) => ph === 'commit' && setSize((s) => ({ ...s, w: Math.round(v / 2) * 2 }))} />
+            <NumberField label={tt('Height')} prefix="H" unit=" px" precision={0} step={2} min={16} max={4320} value={size.h} onChange={(v, ph) => ph === 'commit' && setSize((s) => ({ ...s, h: Math.round(v / 2) * 2 }))} />
           </div>}
-          <Select label="Frame rate" value={fps} onChange={setFps} options={['24', '25', '30'].map((v) => ({ value: v, label: `${v} fps${Number(v) === project.project.frameRate ? ' (project)' : ''}` }))} />
-          <Segmented label="Quality" value={quality} onChange={setQuality} options={Object.entries(QUALITY).map(([value, q]) => ({ value, label: q.label }))} />
-          <Select label="Loudness" value={loudness} onChange={setLoudness} options={[{ value: 'preset', label: 'From the preset' }, { value: '-14', label: '−14 LUFS (social video)' }, { value: '-16', label: '−16 LUFS (podcast)' }, { value: '-23', label: '−23 LUFS (broadcast)' }, { value: 'off', label: 'Do not normalise' }]} />
-          <ToggleRow label="Motion blur" description="Averages 8 sub-frames per frame; slower to render." checked={blur} onChange={setBlur} />
+          <Select label={tt('Frame rate')} value={fps} onChange={setFps} options={['24', '25', '30'].map((v) => ({ value: v, label: `${v} fps${Number(v) === project.project.frameRate ? ' (project)' : ''}` }))} />
+          <Segmented label={tt('Quality')} value={quality} onChange={setQuality} options={Object.entries(QUALITY).map(([value, q]) => ({ value, label: q.label }))} />
+          <Select label={tt('Loudness')} value={loudness} onChange={setLoudness} options={[{ value: 'preset', label: 'From the preset' }, { value: '-14', label: '−14 LUFS (social video)' }, { value: '-16', label: '−16 LUFS (podcast)' }, { value: '-23', label: '−23 LUFS (broadcast)' }, { value: 'off', label: 'Do not normalise' }]} />
+          <ToggleRow label={tt('Motion blur')} description={tt('Averages 8 sub-frames per frame; slower to render.')} checked={blur} onChange={setBlur} />
         </Section>
-        {problems === undefined ? <p className="fr-faint">Checking the project…</p> : problems.length === 0 ? <p className="fr-hint">Ready to export.</p> : (
+        {problems === undefined ? <p className="fr-faint">{tt('Checking the project…')}</p> : problems.length === 0 ? <p className="fr-hint">{tt('Ready to export.')}</p> : (
           <div role="alert">
             <p className="fr-error-text">{blocking.length ? 'These problems block export:' : 'Warnings:'}</p>
-            <ul className="st-problems">{problems.map((p, i) => <li key={i}>{p.message}{(p.target || p.scene) && <> <Button variant="ghost" onClick={() => show(p)}>Show</Button></>}</li>)}</ul>
+            <ul className="st-problems">{problems.map((p, i) => <li key={i}>{p.message}{(p.target || p.scene) && <> <Button variant="ghost" onClick={() => show(p)}>{tt('Show')}</Button></>}</li>)}</ul>
           </div>
         )}
       </div>

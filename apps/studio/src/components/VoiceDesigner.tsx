@@ -1,7 +1,7 @@
 /** Voice designer (FR-VOI-02): description + test line → candidates on the worker → audition → save as a voice. */
 import { useEffect, useRef, useState } from 'react';
 import { Pause, Play } from 'lucide-react';
-import { Button, Dialog, IconButton, Progress, Select, StatusBadge, TextArea, TextField, ToggleRow, useToasts } from '@frame/ui';
+import { Button, Dialog, IconButton, Progress, Select, StatusBadge, TextArea, TextField, ToggleRow, useToasts, t as tt } from '@frame/ui';
 import { api, type WorkerStatus } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -83,39 +83,39 @@ export function VoiceDesigner({ open, instance, onClose }: { open: boolean; inst
   const chosen = picked !== undefined ? candidates[picked] : undefined;
 
   return (
-    <Dialog title="Design a voice" open={open} onClose={onClose} wide footer={<>
-      <Button onClick={onClose}>Cancel</Button>
-      <Button variant="primary" loading={saving} disabled={!chosen || !name.trim() || (chosen?.durationS ?? 0) < minRef} disabledReason={!chosen ? 'Choose a candidate' : !name.trim() ? 'Name the voice' : `This candidate is shorter than ${minRef} s; use a longer test line`} onClick={() => void save()}>Save voice</Button>
+    <Dialog title={tt('Design a voice')} open={open} onClose={onClose} wide footer={<>
+      <Button onClick={onClose}>{tt('Cancel')}</Button>
+      <Button variant="primary" loading={saving} disabled={!chosen || !name.trim() || (chosen?.durationS ?? 0) < minRef} disabledReason={!chosen ? 'Choose a candidate' : !name.trim() ? 'Name the voice' : `This candidate is shorter than ${minRef} s; use a longer test line`} onClick={() => void save()}>{tt('Save voice')}</Button>
     </>}>
       <div className="st-form">
         {!workerOk && <p role="alert" className="fr-error-text">{worker?.message ?? 'The voice worker is not connected.'} {worker?.hint ?? ''}</p>}
-        <TextArea label="Description" value={description} onChange={setDescription} rows={3} placeholder="Age, timbre, accent, energy and character notes, e.g. warm radio host in her thirties, relaxed pace" />
-        <TextArea label="Test line" value={line} onChange={setLine} rows={2} />
+        <TextArea label={tt('Description')} value={description} onChange={setDescription} rows={3} placeholder={tt('Age, timbre, accent, energy and character notes, e.g. warm radio host in her thirties, relaxed pace')} />
+        <TextArea label={tt('Test line')} value={line} onChange={setLine} rows={2} />
         <div className="st-row">
-          <Select label="Candidates" value={count} options={['2', '4', '6'].map((n) => ({ value: n, label: `${n} candidates` }))} onChange={setCount} />
+          <Select label={tt('Candidates')} value={count} options={['2', '4', '6'].map((n) => ({ value: n, label: `${n} candidates` }))} onChange={setCount} />
           <Button variant="primary" disabled={!workerOk || description.trim().length < 3 || !line.trim()} disabledReason={!workerOk ? 'The voice worker is not connected' : 'Describe the voice and enter a test line'} loading={job?.state === 'running' || job?.state === 'queued'} onClick={() => void generate()}>{candidates.length ? 'Generate again' : 'Generate candidates'}</Button>
         </div>
         {job && (job.state === 'running' || job.state === 'queued') && <Progress value={job.progress} label={job.message || 'Designing voice'} />}
         {job?.state === 'failed' && <p className="fr-error-text" role="alert">{job.error?.message}</p>}
         {candidates.length > 0 && (
-          <ul className="st-takes" aria-label="Candidates">
+          <ul className="st-takes" aria-label={tt('Candidates')}>
             {candidates.map((c, i) => <CandidateRow key={c.media.hash} pid={pid} c={c} index={i} picked={picked === i} onPick={() => setPicked(i)} />)}
           </ul>
         )}
-        {candidates.some((c) => c.fixture) && <p className="fr-hint">These candidates come from the fixture worker: test signals, not real speech.</p>}
+        {candidates.some((c) => c.fixture) && <p className="fr-hint">{tt('These candidates come from the fixture worker: test signals, not real speech.')}</p>}
         {chosen && (
           <div className="st-grid2">
-            {currentManifest && <Select label="Save as" value={saveAs} options={[{ value: 'new', label: 'A new voice' }, { value: 'version', label: `Version ${newest + 1} of ${currentManifest.name}` }]} onChange={(v) => {
+            {currentManifest && <Select label={tt('Save as')} value={saveAs} options={[{ value: 'new', label: 'A new voice' }, { value: 'version', label: `Version ${newest + 1} of ${currentManifest.name}` }]} onChange={(v) => {
               setSaveAs(v as 'new' | 'version');
               if (v === 'version') setName(currentManifest.name);
             }} />}
-            <TextField label="Voice name" value={name} onChange={setName} placeholder="Voice name" />
-            <Select label="Assign to" value={assign} options={[{ value: '', label: 'Nobody yet' }, ...chars.map((c) => ({ value: c.id, label: c.name }))]} onChange={setAssign} />
+            <TextField label={tt('Voice name')} value={name} onChange={setName} placeholder={tt('Voice name')} />
+            <Select label={tt('Assign to')} value={assign} options={[{ value: '', label: 'Nobody yet' }, ...chars.map((c) => ({ value: c.id, label: c.name }))]} onChange={setAssign} />
           </div>
         )}
         {chosen && saveAs === 'version' && currentManifest && <>
-          <ToggleRow label={`Use the new version for every character that uses ${currentManifest.name}`} description="Existing takes are kept; regenerate lines to hear the new version." checked={updateUsers} onChange={setUpdateUsers} />
-          {(currentManifest.data as { references: { emotion: string }[] }).references.some((r) => r.emotion !== 'neutral') && <p className="fr-hint">Emotion references belong to the old neutral reference and are not carried over; render the emotional range again for the new version.</p>}
+          <ToggleRow label={`Use the new version for every character that uses ${currentManifest.name}`} description={tt('Existing takes are kept; regenerate lines to hear the new version.')} checked={updateUsers} onChange={setUpdateUsers} />
+          {(currentManifest.data as { references: { emotion: string }[] }).references.some((r) => r.emotion !== 'neutral') && <p className="fr-hint">{tt('Emotion references belong to the old neutral reference and are not carried over; render the emotional range again for the new version.')}</p>}
         </>}
       </div>
     </Dialog>
@@ -140,11 +140,11 @@ function CandidateRow({ pid, c, index, picked, onPick }: { pid: string; c: Candi
   return (
     <li className={`st-take ${picked ? 'st-take--chosen' : ''}`}>
       <IconButton size="sm" label={playing ? `Stop candidate ${index + 1}` : `Play candidate ${index + 1}`} icon={playing ? <Pause size={13} /> : <Play size={13} />} onClick={toggle} />
-      <span>Candidate {index + 1}</span>
+      <span>{tt('Candidate')} {index + 1}</span>
       <span className="fr-faint">{c.durationS.toFixed(1)} s{c.seed !== null ? ` · seed ${c.seed}` : ''}</span>
-      {c.fixture && <StatusBadge tone="neutral" title="Fixture audio — not real speech">Fixture</StatusBadge>}
+      {c.fixture && <StatusBadge tone="neutral" title={tt('Fixture audio — not real speech')}>{tt('Fixture')}</StatusBadge>}
       <span className="fr-spacer" />
-      {picked ? <StatusBadge tone="success">Chosen</StatusBadge> : <Button variant="ghost" onClick={onPick}>Choose</Button>}
+      {picked ? <StatusBadge tone="success">{tt('Chosen')}</StatusBadge> : <Button variant="ghost" onClick={onPick}>{tt('Choose')}</Button>}
     </li>
   );
 }

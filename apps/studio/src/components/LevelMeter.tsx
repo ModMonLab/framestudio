@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { meterPeaks } from '../lib/playback.js';
+import { t as tt } from '@frame/ui';
 
 const FLOOR = -60;
 const pct = (db: number) => Math.max(0, Math.min(100, ((db - FLOOR) / -FLOOR) * 100));
@@ -36,14 +37,14 @@ export function LevelMeter({ playing }: { playing: boolean }) {
   }, [playing]);
   const fmt = (d: number) => (Number.isFinite(d) ? `${d.toFixed(1)} dBFS` : 'silent');
   return (
-    <div className="st-meter" role="meter" aria-label="Output level" aria-valuemin={FLOOR} aria-valuemax={0} aria-valuenow={Number.isFinite(Math.max(...lv)) ? Math.round(Math.max(...lv)) : FLOOR} aria-valuetext={`Left ${fmt(lv[0])}, right ${fmt(lv[1])}, peak ${fmt(Math.max(...hold))}`} title={`Peak ${fmt(Math.max(...hold))}`}>
+    <div className="st-meter" role="meter" aria-label={tt('Output level')} aria-valuemin={FLOOR} aria-valuemax={0} aria-valuenow={Number.isFinite(Math.max(...lv)) ? Math.round(Math.max(...lv)) : FLOOR} aria-valuetext={`Left ${fmt(lv[0])}, right ${fmt(lv[1])}, peak ${fmt(Math.max(...hold))}`} title={`Peak ${fmt(Math.max(...hold))}`}>
       {[0, 1].map((i) => (
         <div key={i} className="st-meter-bar">
           <div className={`st-meter-fill ${lv[i]! > -6 ? 'st-meter-fill--hot' : ''}`} style={{ width: `${pct(lv[i]!)}%` }} />
           {Number.isFinite(hold[i]) && <div className="st-meter-hold" style={{ left: `${pct(hold[i]!)}%` }} />}
         </div>
       ))}
-      {clipped && <button type="button" className="st-meter-clip" onClick={() => setClipped(false)} title="The mix reached 0 dBFS; lower a gain. Click to reset.">CLIP</button>}
+      {clipped && <button type="button" className="st-meter-clip" onClick={() => setClipped(false)} title={tt('The mix reached 0 dBFS; lower a gain. Click to reset.')}>{tt('CLIP')}</button>}
     </div>
   );
 }

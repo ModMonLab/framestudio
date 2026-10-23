@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import type { Problem } from '@frame/schema';
 import type { Command } from '@frame/schema';
-import { Button, EmptyState, Popover, StatusBadge, useAnchor, useToasts } from '@frame/ui';
+import { Button, EmptyState, Popover, StatusBadge, useAnchor, useToasts, t as tt } from '@frame/ui';
 import { api } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -74,9 +74,9 @@ export function ProblemsButton() {
   };
   const row = (p: Problem, i: number) => (
     <li key={i} className="st-problem">
-      {p.severity === 'error' ? <XCircle size={14} className="st-sev st-sev--error" aria-label="Error" /> : <AlertTriangle size={14} className="st-sev st-sev--warning" aria-label="Warning" />}
-      <span className="st-problem__msg">{p.message}{p.blocksExport ? <span className="fr-faint"> · blocks export</span> : null}</span>
-      {(p.target || p.scene) && <Button variant="ghost" onClick={() => go(p)}>Go to</Button>}
+      {p.severity === 'error' ? <XCircle size={14} className="st-sev st-sev--error" aria-label={tt('Error')} /> : <AlertTriangle size={14} className="st-sev st-sev--warning" aria-label={tt('Warning')} />}
+      <span className="st-problem__msg">{p.message}{p.blocksExport ? <span className="fr-faint">  {tt('· blocks export')}</span> : null}</span>
+      {(p.target || p.scene) && <Button variant="ghost" onClick={() => go(p)}>{tt('Go to')}</Button>}
       {p.fix?.command !== undefined && <Button variant="ghost" onClick={() => void fix(p)}>{p.fix.label}</Button>}
     </li>
   );
@@ -86,17 +86,17 @@ export function ProblemsButton() {
       <button ref={anchor} type="button" className="st-badge-btn" aria-expanded={open} aria-label={`Problems: ${label}`} onClick={() => setOpen(!open)}>
         <StatusBadge tone={errors ? 'danger' : warnings ? 'warning' : 'success'}>{label}</StatusBadge>
       </button>
-      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} label="Problems" placement="bottom-end" width={380}>
+      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} label={tt('Problems')} placement="bottom-end" width={380}>
         {problems.length === 0 ? (
-          <EmptyState icon={<CheckCircle2 size={24} />} title="No problems">The project is ready to export.</EmptyState>
+          <EmptyState icon={<CheckCircle2 size={24} />} title={tt('No problems')}>{tt('The project is ready to export.')}</EmptyState>
         ) : (
           <div className="st-problem-groups">
-            {errors > 0 && <><h3 className="st-problem-h">Errors ({errors})</h3><ul className="st-problem-list" aria-label="Errors">{problems.filter((p) => p.severity === 'error').map(row)}</ul></>}
-            {warnings > 0 && <><h3 className="st-problem-h">Warnings ({warnings})</h3><ul className="st-problem-list" aria-label="Warnings">{problems.filter((p) => p.severity !== 'error').map(row)}</ul></>}
+            {errors > 0 && <><h3 className="st-problem-h">{tt('Errors (')}{errors})</h3><ul className="st-problem-list" aria-label={tt('Errors')}>{problems.filter((p) => p.severity === 'error').map(row)}</ul></>}
+            {warnings > 0 && <><h3 className="st-problem-h">{tt('Warnings (')}{warnings})</h3><ul className="st-problem-list" aria-label={tt('Warnings')}>{problems.filter((p) => p.severity !== 'error').map(row)}</ul></>}
           </div>
         )}
       </Popover>
-      <input ref={relinkInput} type="file" hidden aria-label="Choose the missing media file" onChange={(e) => { void onRelink(e.target.files?.[0]); e.target.value = ''; }} />
+      <input ref={relinkInput} type="file" hidden aria-label={tt('Choose the missing media file')} onChange={(e) => { void onRelink(e.target.files?.[0]); e.target.value = ''; }} />
     </>
   );
 }

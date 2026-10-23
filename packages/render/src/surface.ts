@@ -18,26 +18,32 @@ export function createRenderer(ck: CanvasKit, fonts: FontSource[], images?: Imag
   const info = (w: number, h: number) => ({ width: w, height: h, colorType: ck.ColorType.RGBA_8888, alphaType: ck.AlphaType.Unpremul, colorSpace: ck.ColorSpace.SRGB });
   // One reusable surface and one readback buffer per frame size: video export renders thousands of same-size frames,
   // and allocating 8 MB per frame fragments the WebAssembly heap until readback fails.
-  let cached: { w: number; h: number; surface: NonNullable<ReturnType<CanvasKit['MakeSurface']>>; buf: ReturnType<CanvasKit['Malloc']> } | undefined;
+  // The surface draws straight into an 8-bit premultiplied sRGB buffer: CanvasKit's default MakeSurface blends far more
+  // slowly on the CPU (a translucent full-frame fill took ~25× longer), which made atmosphere and fades expensive.
+  let cached: { w: number; h: number; surface: NonNullable<ReturnType<CanvasKit['MakeRasterDirectSurface']>>; pixels: ReturnType<CanvasKit['Malloc']> } | undefined;
   const surfaceFor = (w: number, h: number) => {
     if (cached && cached.w === w && cached.h === h) return cached;
     release();
-    const surface = ck.MakeSurface(w, h);
-    if (!surface) throw new Error(`Could not create a ${w}×${h} raster surface`);
-    cached = { w, h, surface, buf: ck.Malloc(Uint8Array, w * h * 4) };
+    const pixels = ck.Malloc(Uint8Array, w * h * 4);
+    const surface = ck.MakeRasterDirectSurface({ width: w, height: h, colorType: ck.ColorType.RGBA_8888, alphaType: ck.AlphaType.Premul, colorSpace: ck.ColorSpace.SRGB }, pixels, w * 4);
+    if (!surface) {
+      ck.Free(pixels);
+      throw new Error(`Could not create a ${w}×${h} raster surface`);
+    }
+    cached = { w, h, surface, pixels };
     return cached;
   };
   const release = () => {
     if (!cached) return;
     cached.surface.delete();
-    ck.Free(cached.buf);
+    ck.Free(cached.pixels);
     cached = undefined;
   };
   const draw = (frame: Frame) => {
     const c = surfaceFor(frame.width, frame.height);
     const canvas = c.surface.getCanvas();
     const n = canvas.save();
-    raster.draw(canvas, frame);
+    raster.draw(canvas, frame, { flush: () => c.surface.flush(), pixels: () => c.pixels.toTypedArray() as Uint8Array });
     canvas.restoreToCount(n);
     return c;
   };
@@ -46,10 +52,19 @@ export function createRenderer(ck: CanvasKit, fonts: FontSource[], images?: Imag
     raster,
     rgba: (frame) => {
       const c = draw(frame);
-      const out = c.surface.getCanvas().readPixels(0, 0, info(frame.width, frame.height), c.buf, frame.width * 4);
-      if (!out) throw new Error(`Reading back a ${frame.width}×${frame.height} frame failed`);
-      // Copy out of the WebAssembly heap: the buffer is reused for the next frame.
-      return c.buf.toTypedArray().slice() as Uint8Array;
+      c.surface.flush();
+      // Copy the premultiplied pixels out of the WebAssembly heap (the buffer is reused for the next frame) and
+      // unpremultiply the translucent ones; opaque pixels, nearly all of a frame, are already final.
+      const px = c.pixels.toTypedArray().slice() as Uint8Array;
+      for (let i = 3; i < px.length; i += 4) {
+        const a = px[i]!;
+        if (a === 255 || a === 0) continue;
+        const k = 255 / a;
+        px[i - 3] = Math.min(255, Math.round(px[i - 3]! * k));
+        px[i - 2] = Math.min(255, Math.round(px[i - 2]! * k));
+        px[i - 1] = Math.min(255, Math.round(px[i - 1]! * k));
+      }
+      return px;
     },
     png: (frame) => {
       const c = draw(frame);

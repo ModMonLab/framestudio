@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Download, FileText, Upload } from 'lucide-react';
 import { formatTimecode, lineTakeState } from '@frame/core';
 import type { Clip, Scene } from '@frame/schema';
-import { Button, Dialog, Select, TextArea, useToasts } from '@frame/ui';
+import { Button, Dialog, Select, TextArea, useToasts, t as tt } from '@frame/ui';
 import { api, type WorkerStatus } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
 import { useCtx } from './Workspace.js';
@@ -51,25 +51,25 @@ export function ScriptView() {
   };
 
   return (
-    <section className="st-timeline st-script" aria-label="Script">
-      <div className="st-tl-toolbar" role="toolbar" aria-label="Script">
+    <section className="st-timeline st-script" aria-label={tt('Script')}>
+      <div className="st-tl-toolbar" role="toolbar" aria-label={tt('Script')}>
         <FileText size={15} aria-hidden />
-        <b>Script</b>
-        <span className="fr-faint">{all.length} lines · {missing.length} need takes</span>
+        <b>{tt('Script')}</b>
+        <span className="fr-faint">{all.length}  {tt('lines ·')} {missing.length}  {tt('need takes')}</span>
         <span className="fr-spacer" />
-        <Button icon={<Upload size={13} />} disabled={!sceneId} disabledReason="Open a scene first" onClick={() => setImporting(true)}>Import script…</Button>
-        <Button icon={<Download size={13} />} onClick={() => download('fountain')}>Fountain</Button>
-        <Button icon={<Download size={13} />} onClick={() => download('text')}>Text</Button>
-        <Button disabled={!missing.length || worker?.state !== 'connected'} disabledReason={!missing.length ? 'Every line has a take' : 'Connect the voice worker'} onClick={() => void generate()}>Generate missing takes</Button>
-        <Button disabled={!unused.length} disabledReason="No unused takes" onClick={() => void studio.exec([{ name: 'take.remove', params: { ids: unused.map((t) => t.id) } }], `Clean up ${unused.length} takes`)}>Clean up {unused.length || ''} unused takes</Button>
-        <Button onClick={() => studio.set({ scriptView: false })}>Back to timeline</Button>
+        <Button icon={<Upload size={13} />} disabled={!sceneId} disabledReason={tt('Open a scene first')} onClick={() => setImporting(true)}>{tt('Import script…')}</Button>
+        <Button icon={<Download size={13} />} onClick={() => download('fountain')}>{tt('Fountain')}</Button>
+        <Button icon={<Download size={13} />} onClick={() => download('text')}>{tt('Text')}</Button>
+        <Button disabled={!missing.length || worker?.state !== 'connected'} disabledReason={!missing.length ? 'Every line has a take' : 'Connect the voice worker'} onClick={() => void generate()}>{tt('Generate missing takes')}</Button>
+        <Button disabled={!unused.length} disabledReason={tt('No unused takes')} onClick={() => void studio.exec([{ name: 'take.remove', params: { ids: unused.map((t) => t.id) } }], `Clean up ${unused.length} takes`)}>{tt('Clean up')} {unused.length || ''}  {tt('unused takes')}</Button>
+        <Button onClick={() => studio.set({ scriptView: false })}>{tt('Back to timeline')}</Button>
       </div>
       <div className="st-script-body">
-        {all.length === 0 && <p className="fr-hint" style={{ padding: 16 }}>No lines yet. Import a script, or add lines from a character's Audio tab.</p>}
+        {all.length === 0 && <p className="fr-hint" style={{ padding: 16 }}>{tt('No lines yet. Import a script, or add lines from a character\'s Audio tab.')}</p>}
         {scenes.map((sc) => lines(sc).length ? (
           <table key={sc.id} className="st-script-table">
             <caption><button type="button" className="st-link" onClick={() => studio.set({ scene: sc.id, scriptView: false })}>{sc.name}</button></caption>
-            <thead><tr><th scope="col">Time</th><th scope="col">Speaker</th><th scope="col">Line</th><th scope="col">Delivery</th><th scope="col">Take</th></tr></thead>
+            <thead><tr><th scope="col">{tt('Time')}</th><th scope="col">{tt('Speaker')}</th><th scope="col">{tt('Line')}</th><th scope="col">{tt('Delivery')}</th><th scope="col">{tt('Take')}</th></tr></thead>
             <tbody>{lines(sc).map((c) => <Row key={c.id} sc={sc} c={c} emotions={emotions} />)}</tbody>
           </table>
         ) : null)}
@@ -125,12 +125,12 @@ function ImportDialog({ scene, onClose }: { scene: string; onClose: () => void }
   };
   return (
     <Dialog title={`Import script into ${name}`} open onClose={onClose} footer={<>
-      <Button onClick={onClose}>Cancel</Button>
-      <Button variant="primary" loading={busy} disabled={!text.trim()} disabledReason="Paste a script" onClick={() => void run()}>Add lines</Button>
+      <Button onClick={onClose}>{tt('Cancel')}</Button>
+      <Button variant="primary" loading={busy} disabled={!text.trim()} disabledReason={tt('Paste a script')} onClick={() => void run()}>{tt('Add lines')}</Button>
     </>}>
       <div className="st-form st-form--flush">
-        <TextArea label="Script" value={text} onChange={setText} rows={12} placeholder={'MAYA: Welcome back.\nLEO (excited): Great to be here!'} />
-        <p className="fr-hint">One line per speaker as “NAME: line”, or Fountain. Speakers match this scene’s characters by name; lines follow the scene’s last line with estimated lengths until takes exist.</p>
+        <TextArea label={tt('Script')} value={text} onChange={setText} rows={12} placeholder={'MAYA: Welcome back.\nLEO (excited): Great to be here!'} />
+        <p className="fr-hint">{tt('One line per speaker as “NAME: line”, or Fountain. Speakers match this scene’s characters by name; lines follow the scene’s last line with estimated lengths until takes exist.')}</p>
       </div>
     </Dialog>
   );

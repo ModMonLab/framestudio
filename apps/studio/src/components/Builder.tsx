@@ -10,8 +10,7 @@ import { evaluateFrame, type CharacterData, type ProjectState } from '@frame/cor
 import type { Alignment, AssetManifest, Clip, Instance, Scene, Take, View } from '@frame/schema';
 import {
   AppBar, Breadcrumb, Button, Chip, Dialog, EmptyState, IconButton, Panel, RadioList, SearchField, Segmented, Select, StatusBadge, Toolbar, ToolbarSeparator,
-  Tree, useTheme, useToasts, VSep, type EditPhase, type TreeNode,
-} from '@frame/ui';
+  Tree, useTheme, useToasts, VSep, type EditPhase, type TreeNode, t as tt } from '@frame/ui';
 import type { Renderer } from '@frame/render';
 import { blit, getRenderer, getStyles } from '../lib/preview.js';
 import { api, type CharacterCheckResult } from '../lib/api.js';
@@ -254,7 +253,7 @@ export function Builder({ scene: sceneId, instance }: { scene: string; instance:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const nodes = useMemo(() => (draft ? partsTree(draft, lookId, resolve, changed, (r) => assets.isMissing(r)) : []), [draft, lookId, resolve, changed, assets, assetVersion]);
 
-  if (!scene || !inst || inst.kind !== 'character') return <div className="fr-root st-app st-center"><p>This character is not in the scene.</p><Button onClick={() => history.back()}>Back</Button></div>;
+  if (!scene || !inst || inst.kind !== 'character') return <div className="fr-root st-app st-center"><p>{tt('This character is not in the scene.')}</p><Button onClick={() => history.back()}>{tt('Back')}</Button></div>;
   const back = () => {
     if (dirty && !window.confirm('Leave the builder? Your unsaved changes to this character will be lost.')) return;
     location.hash = `#/p/${encodeURIComponent(pid)}`;
@@ -314,93 +313,93 @@ export function Builder({ scene: sceneId, instance }: { scene: string; instance:
     <div className="fr-root st-app st-builder">
       <AppBar
         left={<>
-          <IconButton label="Back to the workspace" icon={<ArrowLeft size={16} />} onClick={back} />
+          <IconButton label={tt('Back to the workspace')} icon={<ArrowLeft size={16} />} onClick={back} />
           <VSep />
           <Breadcrumb items={[{ label: 'Cast', onClick: back }, { label: draft?.name ?? inst.name }]} />
           <StatusBadge tone={dirty ? 'warning' : 'neutral'}>{library ? 'Library' : `v${versionN}`}{dirty ? ' · edited' : ''}</StatusBadge>
         </>}
         right={<>
-          <span className="fr-faint">Preview style</span>
-          <Segmented label="Preview style family" value={family} onChange={setFamily} options={[{ value: 'flat', label: 'Flat' }, { value: 'illustrated', label: 'Illustrated' }]} />
+          <span className="fr-faint">{tt('Preview style')}</span>
+          <Segmented label={tt('Preview style family')} value={family} onChange={setFamily} options={[{ value: 'flat', label: 'Flat' }, { value: 'illustrated', label: 'Illustrated' }]} />
           <IconButton label={resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} icon={resolved === 'dark' ? <Sun size={16} /> : <Moon size={16} />} onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')} />
           <VSep />
-          <IconButton label="Undo" shortcut="Ctrl+Z" icon={<Undo2 size={16} />} onClick={doUndo} disabled={!undo.length} disabledReason="Nothing to undo" />
-          <IconButton label="Redo" shortcut="Ctrl+Shift+Z" icon={<Redo2 size={16} />} onClick={doRedo} disabled={!redo.length} disabledReason="Nothing to redo" />
-          <Button icon={<Download size={14} />} onClick={() => editing && (location.href = api.packageExportUrl(pid, 'framechar', [editing]))} disabled={dirty || library} disabledReason={library ? 'Library characters ship with Frame; save your own version to export it' : 'Save the version first; exports contain saved versions only'}>Export…</Button>
+          <IconButton label={tt('Undo')} shortcut="Ctrl+Z" icon={<Undo2 size={16} />} onClick={doUndo} disabled={!undo.length} disabledReason={tt('Nothing to undo')} />
+          <IconButton label={tt('Redo')} shortcut="Ctrl+Shift+Z" icon={<Redo2 size={16} />} onClick={doRedo} disabled={!redo.length} disabledReason={tt('Nothing to redo')} />
+          <Button icon={<Download size={14} />} onClick={() => editing && (location.href = api.packageExportUrl(pid, 'framechar', [editing]))} disabled={dirty || library} disabledReason={library ? 'Library characters ship with Frame; save your own version to export it' : 'Save the version first; exports contain saved versions only'}>{tt('Export…')}</Button>
           <Button variant="primary" onClick={() => { setScope('instance'); setSaveOpen(true); }} disabled={!dirty || !check?.ok} disabledReason={!dirty ? 'No changes to save' : 'Fix the rig check problems first'}>{library ? 'Save as new character' : `Save version ${versionN + 1}`}</Button>
         </>}
       />
       <div className="st-main">
-        <Panel title="Parts" label="Parts" help="#/help/builder" search={<SearchField label="Search parts and settings" placeholder="Search parts and settings" value={q} onChange={setQ} />} className="st-left">
-          <Tree label="Character parts" nodes={nodes} expanded={expanded} onExpandedChange={setExpanded} selected={node} onSelect={(id) => setNode(id)} query={q} emptyText={`Nothing matches “${q}”.`} />
+        <Panel title={tt('Parts')} label={tt('Parts')} help="#/help/builder" search={<SearchField label={tt('Search parts and settings')} placeholder={tt('Search parts and settings')} value={q} onChange={setQ} />} className="st-left">
+          <Tree label={tt('Character parts')} nodes={nodes} expanded={expanded} onExpandedChange={setExpanded} selected={node} onSelect={(id) => setNode(id)} query={q} emptyText={`Nothing matches “${q}”.`} />
           <div className="st-panel-foot st-rigcheck">
             {check ? (
-              <button type="button" className="st-linkish" onClick={() => setCheckOpen(true)} aria-label="Rig check details">
+              <button type="button" className="st-linkish" onClick={() => setCheckOpen(true)} aria-label={tt('Rig check details')}>
                 <StatusBadge tone={check.ok ? (check.problems.length ? 'warning' : 'success') : 'danger'}>{check.ok ? 'Rig check passed' : `Rig check: ${check.problems.filter((p) => p.severity === 'error').length} problem(s)`}</StatusBadge>
-                <span className="fr-faint">{check.views.length} views · {check.families.length} styles · {check.mouthShapes} mouth shapes · {check.actions.compatible} compatible actions</span>
+                <span className="fr-faint">{check.views.length}  {tt('views ·')} {check.families.length}  {tt('styles ·')} {check.mouthShapes}  {tt('mouth shapes ·')} {check.actions.compatible}  {tt('compatible actions')}</span>
               </button>
-            ) : <span className="fr-faint">Checking…</span>}
+            ) : <span className="fr-faint">{tt('Checking…')}</span>}
           </div>
         </Panel>
         <div className="st-center-col">
-          <Toolbar label="Preview controls">
-            <span className="fr-faint">View</span>
-            <Segmented label="View direction" value={view} onChange={(v) => { setView(v); setSheet(false); }} options={VIEWS} />
+          <Toolbar label={tt('Preview controls')}>
+            <span className="fr-faint">{tt('View')}</span>
+            <Segmented label={tt('View direction')} value={view} onChange={(v) => { setView(v); setSheet(false); }} options={VIEWS} />
             <ToolbarSeparator />
-            <span className="fr-faint">Frame</span>
-            <Segmented label="Framing" value={frame} onChange={setFrame} options={[{ value: 'full', label: 'Full body' }, { value: 'upper', label: 'Upper' }, { value: 'face', label: 'Face' }]} />
+            <span className="fr-faint">{tt('Frame')}</span>
+            <Segmented label={tt('Framing')} value={frame} onChange={setFrame} options={[{ value: 'full', label: 'Full body' }, { value: 'upper', label: 'Upper' }, { value: 'face', label: 'Face' }]} />
             <ToolbarSeparator />
-            <Chip selected={sheet} onClick={() => { setSheet(!sheet); setCompare(false); }}>Turnaround sheet</Chip>
-            <Chip selected={compare} onClick={() => { setCompare(!compare); setSheet(false); }} disabled={!dirty} title={dirty ? 'Saved version next to your changes' : 'No changes to compare yet'}>Compare</Chip>
+            <Chip selected={sheet} onClick={() => { setSheet(!sheet); setCompare(false); }}>{tt('Turnaround sheet')}</Chip>
+            <Chip selected={compare} onClick={() => { setCompare(!compare); setSheet(false); }} disabled={!dirty} title={dirty ? 'Saved version next to your changes' : 'No changes to compare yet'}>{tt('Compare')}</Chip>
             <ToolbarSeparator />
-            {look && draft && draft.data.looks.length > 1 && <span className="st-tb-select"><Select label="Preview look" value={look.id} onChange={setLookId} options={draft.data.looks.map((l) => ({ value: l.id, label: l.name }))} /></span>}
-            <IconButton label="Randomise parts, build and colours" icon={<Shuffle size={16} />} onClick={doRandomise} disabled={!draft} disabledReason="Loading" />
+            {look && draft && draft.data.looks.length > 1 && <span className="st-tb-select"><Select label={tt('Preview look')} value={look.id} onChange={setLookId} options={draft.data.looks.map((l) => ({ value: l.id, label: l.name }))} /></span>}
+            <IconButton label={tt('Randomise parts, build and colours')} icon={<Shuffle size={16} />} onClick={doRandomise} disabled={!draft} disabledReason={tt('Loading')} />
           </Toolbar>
           <div className={`st-builder-canvas ${sheet ? 'st-builder-canvas--sheet' : ''}`}>
-            {!draft ? <EmptyState title="Loading the character…" /> : slots.map((slot, i) => (
+            {!draft ? <EmptyState title={tt('Loading the character…')} /> : slots.map((slot, i) => (
               <figure key={slot.key} className="st-builder-view">
                 <canvas ref={(el) => { canvases.current[i] = el; }} aria-label={`${draft.name}, ${SHEET_LABEL[slot.view]} view${slot.caption && !sheet ? `, ${slot.caption.toLowerCase()}` : ''}`} role="img" />
                 {slot.caption && <figcaption>{slot.caption}</figcaption>}
               </figure>
             ))}
             <span className="st-shot">{family === 'flat' ? 'Flat style' : 'Illustrated style'}</span>
-            {lipT !== null && <span className="st-quality" aria-live="polite">mouth · {MOUTH_NAMES[mouth ?? 'X'] ?? 'rest'} (test pattern)</span>}
+            {lipT !== null && <span className="st-quality" aria-live="polite">{tt('mouth ·')} {MOUTH_NAMES[mouth ?? 'X'] ?? 'rest'}  {tt('(test pattern)')}</span>}
           </div>
-          <Toolbar label="Performance test" className="st-testbar">
+          <Toolbar label={tt('Performance test')} className="st-testbar">
             <Button onClick={() => (lipT === null ? setLipT(0) : setLipT(null))}>{lipT === null ? 'Test lip sync' : 'Stop lip sync test'}</Button>
             <ToolbarSeparator />
-            <span className="fr-faint">Expression</span>
-            <Segmented label="Test expression" value={quickExp.some((e) => e.ref === expression) || !expression ? expression : 'other'} onChange={(v) => v !== 'other' && setExpression(v)} options={[{ value: '', label: 'Neutral' }, ...quickExp.map((e) => ({ value: e.ref, label: e.name })), ...(expression && !quickExp.some((e) => e.ref === expression) ? [{ value: 'other', label: exps?.find((e) => e.ref === expression)?.name ?? 'Other' }] : [])]} />
-            <span className="st-tb-select st-tb-select--more"><Select label="Any expression" placeholder="More" value={undefined} onChange={setExpression} options={(exps ?? []).map((e) => ({ value: e.ref, label: e.name }))} /></span>
+            <span className="fr-faint">{tt('Expression')}</span>
+            <Segmented label={tt('Test expression')} value={quickExp.some((e) => e.ref === expression) || !expression ? expression : 'other'} onChange={(v) => v !== 'other' && setExpression(v)} options={[{ value: '', label: 'Neutral' }, ...quickExp.map((e) => ({ value: e.ref, label: e.name })), ...(expression && !quickExp.some((e) => e.ref === expression) ? [{ value: 'other', label: exps?.find((e) => e.ref === expression)?.name ?? 'Other' }] : [])]} />
+            <span className="st-tb-select st-tb-select--more"><Select label={tt('Any expression')} placeholder={tt('More')} value={undefined} onChange={setExpression} options={(exps ?? []).map((e) => ({ value: e.ref, label: e.name }))} /></span>
             <ToolbarSeparator />
-            <span className="fr-faint">Gesture</span>
-            <Segmented label="Test gesture" value={quickAct.some((a) => a.ref === gesture) || !gesture ? gesture : 'other'} onChange={(v) => v !== 'other' && setGesture(v)} options={[{ value: '', label: 'Rest' }, ...quickAct.map((a) => ({ value: a.ref, label: a.name })), ...(gesture && !quickAct.some((a) => a.ref === gesture) ? [{ value: 'other', label: acts?.find((a) => a.ref === gesture)?.name ?? 'Other' }] : [])]} />
-            <span className="st-tb-select st-tb-select--more"><Select label="Any gesture" placeholder="More" value={undefined} onChange={setGesture} options={(acts ?? []).map((a) => ({ value: a.ref, label: a.name }))} /></span>
+            <span className="fr-faint">{tt('Gesture')}</span>
+            <Segmented label={tt('Test gesture')} value={quickAct.some((a) => a.ref === gesture) || !gesture ? gesture : 'other'} onChange={(v) => v !== 'other' && setGesture(v)} options={[{ value: '', label: 'Rest' }, ...quickAct.map((a) => ({ value: a.ref, label: a.name })), ...(gesture && !quickAct.some((a) => a.ref === gesture) ? [{ value: 'other', label: acts?.find((a) => a.ref === gesture)?.name ?? 'Other' }] : [])]} />
+            <span className="st-tb-select st-tb-select--more"><Select label={tt('Any gesture')} placeholder={tt('More')} value={undefined} onChange={setGesture} options={(acts ?? []).map((a) => ({ value: a.ref, label: a.name }))} /></span>
           </Toolbar>
         </div>
-        <Panel title={nodeRow?.label ?? 'Identity'} label="Properties" help="#/help/builder" className="st-right">
+        <Panel title={nodeRow?.label ?? 'Identity'} label={tt('Properties')} help="#/help/builder" className="st-right">
           <div className="st-crumb fr-faint">{parentRow ? `${draft?.name ?? ''} / ${parentRow.label}` : draft?.name}</div>
-          <div className="st-props">{ctx ? <BuilderProperties node={node === 'char' ? 'identity' : node} c={ctx} /> : <EmptyState title="Loading…" />}</div>
+          <div className="st-props">{ctx ? <BuilderProperties node={node === 'char' ? 'identity' : node} c={ctx} /> : <EmptyState title={tt('Loading…')} />}</div>
         </Panel>
       </div>
       <Dialog
         title={library ? 'Save as a new character' : `Save version ${versionN + 1}`}
         open={saveOpen}
         onClose={() => setSaveOpen(false)}
-        footer={<><Button onClick={() => setSaveOpen(false)}>Cancel</Button><Button variant="primary" loading={saving} onClick={() => void save()}>{library ? 'Save character' : 'Save version'}</Button></>}
+        footer={<><Button onClick={() => setSaveOpen(false)}>{tt('Cancel')}</Button><Button variant="primary" loading={saving} onClick={() => void save()}>{library ? 'Save character' : 'Save version'}</Button></>}
       >
         <p>{library ? `${draft?.name} comes from the library and never changes. Saving creates a character of your own in this project.` : `Version ${versionN} stays as it is. Choose where version ${versionN + 1} is used now; everything else keeps version ${versionN} until you update it.`}</p>
-        <RadioList label="Use the new version in" value={scope} onChange={setScope} items={[
+        <RadioList label={tt('Use the new version in')} value={scope} onChange={setScope} items={[
           { value: 'instance', label: `Only ${inst.name} in this scene` },
           { value: 'scene', label: 'Every use in this scene' },
           ...(library ? [] : [{ value: 'project' as const, label: 'Everywhere in this project' }]),
           { value: 'none', label: 'Nowhere yet', meta: 'Update scenes later' },
         ]} />
       </Dialog>
-      <Dialog title="Rig check" open={checkOpen} onClose={() => setCheckOpen(false)} footer={<Button onClick={() => setCheckOpen(false)}>Close</Button>}>
+      <Dialog title={tt('Rig check')} open={checkOpen} onClose={() => setCheckOpen(false)} footer={<Button onClick={() => setCheckOpen(false)}>{tt('Close')}</Button>}>
         {check && <>
-          <p>Views: {check.views.map(nice).join(', ') || 'none'} · Styles: {check.families.map(nice).join(', ') || 'none'} · Mouth shapes: {check.mouthShapes} of 9 · Actions: {check.actions.compatible} of {check.actions.total} compatible</p>
-          {check.problems.length ? <ul className="st-problems">{check.problems.map((p, i) => <li key={i}><StatusBadge tone={p.severity === 'error' ? 'danger' : 'warning'}>{p.severity === 'error' ? 'Error' : 'Warning'}</StatusBadge> {p.message}</li>)}</ul> : <p>No problems: every part follows the part contract in all views and both styles.</p>}
+          <p>{tt('Views:')} {check.views.map(nice).join(', ') || 'none'}  {tt('· Styles:')} {check.families.map(nice).join(', ') || 'none'}  {tt('· Mouth shapes:')} {check.mouthShapes}  {tt('of 9 · Actions:')} {check.actions.compatible}  {tt('of')} {check.actions.total}  {tt('compatible')}</p>
+          {check.problems.length ? <ul className="st-problems">{check.problems.map((p, i) => <li key={i}><StatusBadge tone={p.severity === 'error' ? 'danger' : 'warning'}>{p.severity === 'error' ? 'Error' : 'Warning'}</StatusBadge> {p.message}</li>)}</ul> : <p>{tt('No problems: every part follows the part contract in all views and both styles.')}</p>}
         </>}
       </Dialog>
     </div>

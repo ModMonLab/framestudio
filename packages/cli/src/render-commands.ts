@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { evaluateFrame, parseTime, type ProjectState } from '@frame/core';
 import { bundledLibrary, libraryFor, loadStyles } from '@frame/assets/node';
-import { createNodeRenderer } from '@frame/render/node';
+import { createNodeRenderer, createRasterPool, poolSize } from '@frame/render/node';
 import { FrameError, type AssetManifest } from '@frame/schema';
 import { bundledMediaFile, renderExport, writeFileAtomic, type OutputPreset, type RenderProgress } from '@frame/io';
 import { command, type CommandContext } from './framework.js';
@@ -200,6 +200,9 @@ command({
     }
     const { content, lib, styles, assets } = library(state.assets);
     const renderer = await createNodeRenderer({ fontsDir: path.join(content, 'fonts'), images: mediaImages(p!.store) });
+    // Parallel rasterisation on machines with spare cores (NFR-05); FRAME_RENDER_THREADS=0 turns it off.
+    const threads = ctx.io.env.FRAME_RENDER_THREADS !== undefined ? Number(ctx.io.env.FRAME_RENDER_THREADS) : poolSize();
+    const pool = threads > 0 ? await createRasterPool({ fontsDir: path.join(content, 'fonts'), size: threads, images: mediaImages(p!.store) }) : undefined;
     const ac = new AbortController();
     const onSig = () => ac.abort();
     process.once('SIGINT', onSig);
@@ -210,7 +213,7 @@ command({
         burnInCaptions: ctx.args['no-captions'] !== true && state.project.captions.enabled && state.project.captions.burnIn,
         ...(family ? { family } : {}),
         ...(ctx.args.crf !== undefined ? { quality: { crf: ctx.args.crf as number } } : {}),
-        out, assets, assetExists: (ref) => lib.has(ref), mediaExists: (h) => p!.store.verifyMedia(h), styles, renderer,
+        out, assets, assetExists: (ref) => lib.has(ref), mediaExists: (h) => p!.store.verifyMedia(h), styles, renderer, ...(pool ? { pool } : {}),
         resolveAudio: (src) => (src.kind === 'media' ? p!.store.findMedia(src.hash) ?? bundledMediaFile(contentDir(), src.hash) : undefined),
         force: ctx.args.force === true,
         onProgress: progressLine(ctx),
@@ -221,6 +224,7 @@ command({
     } finally {
       process.off('SIGINT', onSig);
       renderer.dispose();
+      await pool?.close();
     }
   },
   human: (r) => (r.dryRun ? `Dry run: would export ${r.scenes.length} scene(s) with ${r.preset} to ${r.out}` : [`Exported ${r.output}`, `${r.durationS.toFixed(2)} s, ${r.frames} frames, ${r.settings.width}×${r.settings.height}`, r.loudness ? `Loudness ${r.loudness.integrated ?? '—'} LUFS, peak ${r.loudness.samplePeakDb ?? '—'} dBFS` : '', r.fixtureAudio ? 'Contains fixture audio — not real speech.' : '', ...r.warnings.map((w: string) => `warning: ${w}`)].filter(Boolean).join('\n')),
