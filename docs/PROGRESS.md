@@ -79,7 +79,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | FR-BLD-02 | In progress | BuilderProperties.tsx; accessories (C1), skin details (A13), makeup (A14) and identity options (A20) now in the library | Sections — Facial hair and patterns wait for content; voice auditions pending |
 | FR-BLD-03 | Done | Builder preview uses the export renderer in both families and every view; turnaround sheet; “Compare” saved vs. draft | Live preview |
 | FR-BLD-04 | Done | Builder test bar: any expression, any action, lip-sync test with mouth readout | Testing |
-| FR-BLD-05 | In progress | Randomise (parts, build, colours); “Describe a character” states its prerequisite | Randomise and suggest — Constraint choices (life stage, palette) in the UI pending |
+| FR-BLD-05 | Done | Randomise within constraints chosen in Identity ▸ Randomise (keep life stage, build, colours; only parts drawn for the project's style family), deterministic per seed (apps/studio/test/builder.test.ts); “Describe a character” states its prerequisite (no language model configured) | Randomise and suggest — the description path needs a configured model |
 | FR-BLD-06 | Done | Studio e2e builder save; leave-with-changes confirmation; Export… .framechar | Save |
 | FR-BLD-07 | Done | Looks: new, duplicate, rename, default, delete; garments, colours, per-garment options (sleeves, hood, front) and patterns (pattern, scale, rotation, colours) per look; wardrobe.test.ts | Looks — Patterns (B6) and per-garment options pending |
 | FR-BLD-08 | Done | POST /characters/check (core/character-check.ts); builder footer and drill-down dialog | Rig check — Views, styles, mouth shapes, action compatibility, per-part contract problems |

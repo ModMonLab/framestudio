@@ -16,7 +16,7 @@ import type { Renderer } from '@frame/render';
 import { blit, getRenderer, getStyles } from '../lib/preview.js';
 import { api, type CharacterCheckResult } from '../lib/api.js';
 import { useStudio } from '../lib/store.js';
-import { changedNodes, draftSpec, initDraft, randomise, sameDraft, clone, GARMENT_SLOTS, type Draft } from '../lib/builder.js';
+import { changedNodes, draftSpec, initDraft, randomise, sameDraft, clone, GARMENT_SLOTS, type Draft, type RandomiseKeep } from '../lib/builder.js';
 import { BuilderProperties, loadKind, useKind, type PropsContext } from './BuilderProperties.js';
 import { useCtx } from './Workspace.js';
 
@@ -246,6 +246,8 @@ export function Builder({ scene: sceneId, instance }: { scene: string; instance:
   };
   const skins = useKind('skin', pid);
   const bodies = useKind('body', pid);
+  const lifeStages = useKind('stage', pid);
+  const [keep, setKeep] = useState<RandomiseKeep>({ lifeStage: true, body: false, palette: false, family: true });
   const exps = useKind('exp', pid);
   const acts = useKind('act', pid);
   // assetVersion: names in the tree appear as the asset cache fills.
@@ -282,12 +284,14 @@ export function Builder({ scene: sceneId, instance }: { scene: string; instance:
 
   const doRandomise = () => {
     if (!draft) return;
+    const drawn = (ref: string) => !keep.family || (assets.manifest(ref)?.families ?? []).includes(family as never);
     const opts = {
-      parts: Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, (v ?? []).map((x) => x.ref)])),
+      parts: Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, (v ?? []).map((x) => x.ref).filter(drawn)])),
       skins: (skins ?? []).map((s) => (assets.manifest(s.ref)?.data as { skinTone?: { base: string } } | undefined)?.skinTone?.base).filter((x): x is string => !!x),
       hairColors: ((assets.manifest(Object.keys(draft.data.controls).find((k) => k.startsWith('hair-ctl.')) ?? '')?.data as { control?: { presets?: string[] } } | undefined)?.control?.presets) ?? [],
-      bodies: (bodies ?? []).map((b) => b.ref),
-      keep: { lifeStage: true, body: false, palette: false },
+      bodies: (bodies ?? []).map((b) => b.ref).filter(drawn),
+      lifeStages: (lifeStages ?? []).map((x) => x.ref),
+      keep,
     };
     edit((d) => Object.assign(d, randomise(d, opts, seed)));
     setSeed((s) => s + 1);
@@ -296,6 +300,7 @@ export function Builder({ scene: sceneId, instance }: { scene: string; instance:
   const ctx: PropsContext | undefined = draft ? {
     pid, draft, edit, family, manifest: resolve, look, setLook: setLookId,
     versionInfo: { current: library ? 'Library character' : `Version ${versionN}${dirty ? ' · edited' : ''}`, usedIn, next: nextLabel, library },
+    randomise: { keep, setKeep, run: doRandomise },
     sectionOpen: (k) => sections[k] ?? true,
     toggleSection: (k, o) => setSections((s) => ({ ...s, [k]: o })),
   } : undefined;

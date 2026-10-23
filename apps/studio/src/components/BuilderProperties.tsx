@@ -4,12 +4,12 @@
  * (FR-ARC-06); empty categories say so instead of showing placeholder controls (UI-06).
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import { Play, Square } from 'lucide-react';
+import { Play, Shuffle, Square } from 'lucide-react';
 import type { CharacterData, LookData } from '@frame/core';
 import type { AssetManifest } from '@frame/schema';
 import { Button, Chip, EmptyState, IconButton, RadioList, Section, Segmented, Select, SliderRow, StatusBadge, SwatchGrid, TextArea, TextField, TileGrid, ToggleRow, type EditPhase } from '@frame/ui';
 import { api } from '../lib/api.js';
-import { ARMS, BODY_DEFAULTS, GARMENT_SLOTS, LEGS, TORSO, newLookId, type Draft } from '../lib/builder.js';
+import { ARMS, BODY_DEFAULTS, GARMENT_SLOTS, LEGS, TORSO, newLookId, type Draft, type RandomiseKeep } from '../lib/builder.js';
 
 export interface LibraryItem {
   ref: string;
@@ -53,6 +53,8 @@ export interface PropsContext {
   look: LookData | undefined;
   setLook: (id: string) => void;
   versionInfo: { current: string; usedIn: string; next: string; library: boolean };
+  /** Randomise within constraints (FR-BLD-05). */
+  randomise?: { keep: RandomiseKeep; setKeep: (k: RandomiseKeep) => void; run: () => void };
   sectionOpen: (key: string) => boolean;
   toggleSection: (key: string, open: boolean) => void;
 }
@@ -331,8 +333,17 @@ export function BuilderProperties({ node, c }: { node: string; c: PropsContext }
           </Sec>
           <Sec k="id.describe" title="Start from a description" c={c}>
             <Button disabled disabledReason="Needs a configured language model (Settings → Assistance); none is configured, so describe the character with the sections below">Describe a character…</Button>
-            <Note>“Randomise” in the preview toolbar varies parts, build and colours; identity, looks and voice stay.</Note>
           </Sec>
+          {c.randomise && (
+            <Sec k="id.random" title="Randomise" c={c}>
+              <ToggleRow label="Keep life stage" checked={c.randomise.keep.lifeStage} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, lifeStage: v })} />
+              <ToggleRow label="Keep build" checked={c.randomise.keep.body} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, body: v })} />
+              <ToggleRow label="Keep colours" description="Skin and hair colour" checked={c.randomise.keep.palette} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, palette: v })} />
+              <ToggleRow label={`Only parts drawn for ${c.family === 'illustrated' ? 'Illustrated' : 'Flat'}`} checked={c.randomise.keep.family} onChange={(v) => c.randomise!.setKeep({ ...c.randomise!.keep, family: v })} />
+              <Button icon={<Shuffle size={14} />} onClick={c.randomise.run}>Randomise</Button>
+              <Note>Varies parts and whatever is not kept; name, looks and voice stay. Undo restores the previous character.</Note>
+            </Sec>
+          )}
           <Sec k="id.stage" title="Life stage" summary={c.manifest(d.lifeStage)?.name} c={c}>
             <LifeStage c={c} />
             <Note>Life stage sets head-to-body proportions; fine-tune them under Body.</Note>
