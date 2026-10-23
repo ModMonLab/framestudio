@@ -560,16 +560,33 @@ function gazeDirection(scene: Scene, inst: Instance, target: string | { x: numbe
 
 /* ------------------------------------------------------------------ props and set pieces */
 
+/**
+ * Extra animation drivers for prop art: a turn every four seconds (`anim.spinS` as the sine and `anim.spinC1` as the cosine
+ * less one, so art at rest needs no drivers; for wheels, fans and globes), a ticking second hand (`anim.tickS`/`anim.tickC1`), a flicker that is mostly on
+ * (`anim.flicker`, ±1 for opacity) and a three-step cycle (`anim.cycle0..2`, ±1, two seconds each, for traffic lights).
+ */
+export function propClock(s: number, seed: number): Record<string, number> {
+  const turn = 2 * Math.PI * (s / 4 + (seed % 100) / 100);
+  const tick = (2 * Math.PI * Math.floor(s)) / 60;
+  const step = Math.floor(s / 2) % 3;
+  const n = Math.sin(s * 37.1 + seed) * Math.sin(s * 11.3 + seed * 0.7);
+  return {
+    'anim.spinS': Math.sin(turn), 'anim.spinC1': Math.cos(turn) - 1, 'anim.tickS': Math.sin(tick), 'anim.tickC1': Math.cos(tick) - 1,
+    'anim.flicker': n > 0.55 ? -1 : 1, 'anim.cycle0': step === 0 ? 1 : -1, 'anim.cycle1': step === 1 ? 1 : -1, 'anim.cycle2': step === 2 ? 1 : -1,
+  };
+}
+
 function drawPropArt(data: PartData, family: StyleFamily, state: string, colors: Record<string, string>, style: FamilyStyle, t: number, seed: number): Item[] {
   const fam = data.families[family] ?? data.families.flat ?? data.families.illustrated;
   const art: ViewArt | undefined = fam?.views.front;
   if (!art) return [];
   const palette = buildPalette({ ...(data.colors ?? {}), ...colors }, style);
   const s = sec(t);
-  const params: Record<string, number> = { 'anim.sin': Math.sin(2 * Math.PI * s * 0.5 + (seed % 100) / 16), 'anim.phase': (s * 0.5 + (seed % 100) / 100) % 1, 'anim.fast': Math.sin(2 * Math.PI * s * 2.3 + (seed % 37)) };
+  const params: Record<string, number> = { 'anim.sin': Math.sin(2 * Math.PI * s * 0.5 + (seed % 100) / 16), 'anim.phase': (s * 0.5 + (seed % 100) / 100) % 1, 'anim.fast': Math.sin(2 * Math.PI * s * 2.3 + (seed % 37)), ...propClock(s, seed) };
   const map: Mapper = (u, v) => [u, v];
   const items: Item[] = [];
-  const stateMap: Record<string, string> = { state };
+  // A prop with no state set shows its first (default) state.
+  const stateMap: Record<string, string> = { state: state === 'default' ? data.options?.state?.[0] ?? state : state };
   for (const layer of art.layers) {
     if (layer.when && !Object.entries(layer.when).every(([k, v]) => (Array.isArray(v) ? v.includes(stateMap[k] ?? '') : stateMap[k] === v))) continue;
     const byId = new Map<string, string>();

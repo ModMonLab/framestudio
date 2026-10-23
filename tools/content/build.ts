@@ -14,11 +14,14 @@ import { bodyPart, feetPart, handsPart, HAND_POSES } from './parts/body.js';
 import { hairPart } from './parts/hair.js';
 import { FACIAL_HAIR, FRINGE_STYLES, facialHairPart, fringePart } from './parts/facial-hair.js';
 import { OVERLAY_IDS, overlayPart } from './parts/overlays.js';
+import { LAYERS, PRESET_LOOKS } from './wardrobe-looks.js';
 import { bottomPart, shoePart, topPart } from './parts/wardrobe.js';
 import { BOTTOMS, DRESSES, OUTERS, SHOES, TOPS } from './catalog-specs.js';
 import { ACTIONS, EXPRESSIONS } from './performance-specs.js';
 import { CAST, castData } from './cast-specs.js';
-import { COFFEE_KIT_PARTS, PROPS, propPart, kitPartsData } from './parts/props.js';
+import { COFFEE_KIT_PARTS, PROPS as KIT_PROPS, propPart, kitPartsData } from './parts/props.js';
+import { CATALOG_PROPS_A } from './parts/props-catalog.js';
+import { CATALOG_PROPS_B } from './parts/props-catalog2.js';
 import { BUBBLES, CAPTION_STYLES, GRAPHICS, WORLD_TEXT } from './text-specs.js';
 import { OUTPUT_PRESETS } from './output-specs.js';
 import { renderSound, SR } from './sounds.js';
@@ -54,6 +57,8 @@ const MORE_KITS: Record<string, { parts: KitParts; marks: Mark[]; ambience?: str
 };
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+
+const PROPS = { ...KIT_PROPS, ...CATALOG_PROPS_A, ...CATALOG_PROPS_B };
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const outDir = path.join(repo, 'content/assets');
@@ -222,6 +227,8 @@ function build(list: CatalogList, item: CatalogItem): Built | undefined {
     case 'acc': return ACCESSORIES[s] ? partBuilt(accessoryPart(s)) : undefined;
     case 'skin-detail': return SKIN_DETAILS[s] ? partBuilt(skinDetailPart(s)) : undefined;
     case 'overlay': return OVERLAY_IDS.includes(s) ? partBuilt(overlayPart(s)) : undefined;
+    case 'look': return PRESET_LOOKS[s] ? { data: { look: PRESET_LOOKS[s] }, dependencies: [...PRESET_LOOKS[s]!.garments, ...PRESET_LOOKS[s]!.accessories] } : undefined;
+    case 'layer': return LAYERS[s] ? { data: { layer: LAYERS[s] } } : undefined;
     case 'makeup': return MAKEUP[s] ? partBuilt(makeupPart(s)) : undefined;
     case 'shoe': return SHOES[s] ? partBuilt(shoePart(SHOES[s]!)) : undefined;
     case 'hand': return HAND_POSES[s] ? { data: { handPose: s, set: 'base.hands@1' }, families: ['flat', 'illustrated'], views: ALL_VIEWS, dependencies: ['base.hands@1'], capabilities: ['rig.biped@1'] } : undefined;

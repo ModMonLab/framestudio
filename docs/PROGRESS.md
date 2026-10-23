@@ -219,7 +219,7 @@ The Notes column starts with the requirement's short title from the SRS.
 | API-02 | Done | workflow.ts stores audio as project media before alignment; slice.test.ts | Frame stores all generated audio as project media immediately after do |
 | API-03 | In progress | Studio delivery controls from capabilities | The capability report is authoritative for UI controls (FR-VOI-08) — Range/voice-design screens to follow the same rule |
 | API-04 | Done | fixture engine; every response fixture:true; Studio/CLI/report label “not real speech” | A **fixture worker** implementing the same API with deterministic cann |
-| CAT-01 | In progress | docs/catalog/coverage.md | Completeness — 446 / 1254 items have manifests |
+| CAT-01 | In progress | docs/catalog/coverage.md | Completeness — 1238 / 1254 items have manifests; Q1 starter voices (16) need the Voice Worker |
 | CAT-02 | In progress | coverage.md families/views columns | Families and views — Authored items carry both families and four views or exemptions; per-list status in the report |
 | CAT-03 | Done (bundled items) | Every authored character part passes the static rig check; the action compatibility matrix covers 34 actions × 278 items (9 452 pairs), 0 incompatible (limit 2 %); regenerated with `pnpm catalog:compat` and verified by tools/test/action-compat.test.ts | Rig contract — re-run as the catalog grows (M5) |
 | CAT-04 | In progress | coverage report renders every previewable item in both families (pnpm catalog:coverage) | Manifests and previews — 426 of 446 manifests have rendered previews; hand poses need a close-up hand preview; body bases differ too subtly (art) |
@@ -281,12 +281,11 @@ The Notes column starts with the requirement's short title from the SRS.
 
 ## Catalog coverage
 Report: [docs/catalog/coverage.md](catalog/coverage.md) (`pnpm catalog:coverage`). **Green: 0 / 1254 (0 %)**;
-manifests present for 862 / 1254 (68.7 %). Nothing is green yet because no item has passed human visual review (CAT-06). All authored character parts pass
-the static rig check (FR-AST-08); 426 of 446 manifests render previews in both families (hand poses pending). Lists with authored content:
-A1–A20 face/body parts, controls, skin details, makeup and identity options (A11 facial hair pending), B1–B5 wardrobe, C1 accessories (40),
-E1 expressions (83), F1 actions (34 of 118), D1 cast (14), H1 props (11 of 142), I1 kits (16), J1 atmosphere (42 of 54), K1 effects (24 of 38),
-K2 transitions (17 of 18), N1 music (20), N2 cues (12), N3 ambience (20), N4 SFX (60), O1 text and graphics (36), P1 templates (16), R1 output presets (12).
-Pending lists: A11 facial hair, B6 patterns, F1 actions (84), H1 props (131), J1 (12), K1 (14), K2 (1), L1 sets, Q1 starter voices (needs the worker).
+manifests present for 1238 / 1254 (98.7 %). Nothing is green yet because no item has passed human visual review (CAT-06). All authored character parts pass
+the static rig check (FR-AST-08). Every list is authored except Q1 starter voices (16), which need the Voice Worker on the reference machine.
+Latest additions: A10 fringes and A11 facial hair (tools/test/facial-hair.test.ts), E2 overlays, F1 actions (118; tools/test/f1-actions.test.ts),
+G1 recipes, H1 props (142; tools/test/h1-props.test.ts — states, seat/grip/lie anchors, sound cues, animated loops), B7 preset looks, I3 layers,
+J1 atmosphere (54), K1 effects (38) and K2 transitions (18).
 
 ## Next actions (ordered)
 1. Keep CI green. Pull requests run typecheck, lint, unit, visual and worker on Linux (a few minutes); the browser suite (slice) and Windows/macOS run on main, by hand, or with the `full-ci` label. Run the Studio e2e locally before pushing, and push in batches.
@@ -294,12 +293,8 @@ Pending lists: A11 facial hair, B6 patterns, F1 actions (84), H1 props (131), J1
    of AC-06..10/22/23 with real takes, including `frame lipsync accuracy` on generated, recorded and uploaded takes
    of the AC-09 corpus; an AC-13 run by a real agent from a written brief; a listening review of all synthesised sound
    and a visual review of content (CAT-06) (docs/acceptance/owner-checklist.md).
-3. M3/M4 small remainders: scrub with audio (FR-TML-05), pinch zoom (FR-TML-08), a Props group in the timeline
-   (FR-TML-01), projects from packages (FR-PRJ-01), clipboard (FR-PER-07).
-4. M5 content: F1 actions (84), H1 props (131), A11 facial hair, B6 patterns, J1/K1/K2 remainders, L1 sets, Q1
-   starter voices (with the worker).
-5. M2 remainder: rigging pivot adjustment and hand-pose supply (FR-IMP-03); thumbnails for mouth shapes, eye/brow
-   states and controls (FR-AST-07); builder constraint choices and patterns (FR-BLD-05/07).
+3. M5 content: Q1 starter voices (with the worker); human visual review of all content (CAT-06).
+4. M6: NFR measurements (performance, determinism), security and privacy audit, accessibility and i18n checks.
 
 ## Open decisions and blockers
 - Decision 0006: FR-VOI-03 interpretation (range bank via VoiceDesign + similarity check) — validated only by AC-03 on the reference machine.

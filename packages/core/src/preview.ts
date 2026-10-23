@@ -43,7 +43,7 @@ function mostDifferent(presets: string[], from: string): string | undefined {
 
 /** Kinds that have a visual preview; others (output presets, controls without art) return undefined. */
 export function previewable(kind: string): boolean {
-  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'skin-detail' || kind === 'makeup' || kind === 'identity' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'overlay' || kind === 'eyestate' || kind === 'browstate' || kind === 'face-ctl' || kind === 'eye-ctl' || kind === 'hair-ctl' || kind === 'prop' || kind === 'kit' || kind === 'txt' || kind === 'pattern' || kind === 'set';
+  return kind === 'chr' || kind in PART_KEYS || GARMENT_KINDS.has(kind) || kind === 'skin' || kind === 'body' || kind === 'skin-detail' || kind === 'makeup' || kind === 'identity' || kind === 'exp' || kind === 'act' || kind === 'mouthshape' || kind === 'overlay' || kind === 'look' || kind === 'eyestate' || kind === 'browstate' || kind === 'face-ctl' || kind === 'eye-ctl' || kind === 'hair-ctl' || kind === 'prop' || kind === 'kit' || kind === 'txt' || kind === 'pattern' || kind === 'set';
 }
 
 const PREVIEW_USER_ID = 'user.00000000-0000-4000-8000-0000000000ff';
@@ -59,7 +59,9 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
   const addCharacter = (asset: string, look: string, view = 'three') =>
     apply([{ name: 'instance.add', params: { scene, kind: 'character', asset, name: 'Preview', transform: { x: 960, y: 1000 }, character: { look, view, posture: 'standing', auto: { idle: false, listening: false, blinks: false, talkingGestures: false } } } }]).commands[0]!.params.id as string;
 
-  if (m.kind === 'prop') {
+  // Worn props (a stethoscope, a party hat) are parts on the rig: they preview on the character like accessories.
+  const worn = m.kind === 'prop' && typeof (m.data as { slot?: unknown }).slot === 'string' && (m.data as { slot: string }).slot !== 'prop';
+  if (m.kind === 'prop' && !worn) {
     const id = apply([{ name: 'instance.add', params: { scene, kind: 'prop', asset: ref, name: m.name, transform: { x: 960, y: 800 } } }]).commands[0]!.params.id as string;
     return { state: s.state, scene, t: 0, framing: 'full', subject: id };
   }
@@ -85,7 +87,7 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
   const base = previewCharacter.manifest.data as CharacterData;
   let charRef = previewCharacter.ref;
   const control = (m.data as { control?: { type: string; target?: string; default?: number | string; range?: [number, number]; options?: string[]; presets?: string[] } }).control;
-  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin' || m.kind === 'body' || m.kind === 'skin-detail' || m.kind === 'makeup' || m.kind === 'identity' || m.kind === 'pattern' || control) {
+  if (m.kind in PART_KEYS || GARMENT_KINDS.has(m.kind) || m.kind === 'skin' || m.kind === 'body' || m.kind === 'skin-detail' || m.kind === 'makeup' || m.kind === 'identity' || m.kind === 'pattern' || m.kind === 'look' || worn || control) {
     // A project-local copy of the preview character wearing the item.
     const data: CharacterData = JSON.parse(JSON.stringify(base));
     if (m.kind in PART_KEYS) data.parts[PART_KEYS[m.kind]!] = ref;
@@ -96,6 +98,12 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
     }
     else if (m.kind === 'skin-detail' || m.kind === 'makeup') data.details = [ref];
     else if (m.kind === 'identity') data.rigVariant = ref;
+    else if (m.kind === 'look') {
+      // A preset look (B7) worn as the preview character's look.
+      const p = (m.data as { look?: { garments: string[]; accessories: string[]; colors: Record<string, string> } }).look;
+      const look = data.looks.find((l) => l.id === data.defaultLook) ?? data.looks[0]!;
+      if (p) Object.assign(look, { garments: [...p.garments], accessories: [...p.accessories], colors: { ...p.colors } });
+    }
     else if (control) {
       // A control shown away from its default (FR-AST-07): a slider at its far end, the last option, another colour.
       const value = control.type === 'slider' ? (control.range?.[1] ?? 100)
@@ -113,7 +121,7 @@ export function previewSetup(ref: string, m: AssetManifest, previewCharacter: { 
     else {
       const look = data.looks.find((l) => l.id === data.defaultLook) ?? data.looks[0]!;
       const replaced = m.kind === 'dress' ? new Set(['top', 'bottom', 'dress']) : new Set([m.kind]);
-      if (m.kind === 'acc') look.accessories = [ref];
+      if (m.kind === 'acc' || worn) look.accessories = [ref];
       else look.garments = [...look.garments.filter((g) => !replaced.has(g.split('.')[0]!)), ref];
     }
     const copy = { ...previewCharacter.manifest, id: PREVIEW_USER_ID, version: 1, data } as AssetManifest;

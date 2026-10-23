@@ -107,10 +107,23 @@ export function motionClips(scene: Scene, inst: Instance, actionOf: ActionLookup
       continue;
     }
     const a = c.asset ? actionOf(c.asset) : undefined;
+    if (a?.turn) {
+      out.push({ clip: c, turn: a.turn });
+      continue;
+    }
     if (!a?.locomotion) continue;
-    const pts = targetPoints(scene, c);
+    let pts = targetPoints(scene, c);
+    let from = pos;
+    if (!pts && a.entrance) {
+      // Off the nearest side edge of the stage (beyond the frame).
+      const off: Pt = [pos[0] < scene.stage.width / 2 ? -scene.stage.width * 0.12 : scene.stage.width * 1.12, pos[1]];
+      if (a.entrance === 'enter') {
+        from = off;
+        pts = [pos];
+      } else pts = [off];
+    }
     if (!pts) continue;
-    const shape = pathShape([pos, ...pts], !!c.params.curve);
+    const shape = pathShape([from, ...pts], !!c.params.curve);
     out.push({ clip: c, action: a, shape });
     pos = shape.pts[shape.pts.length - 1]!;
   }
@@ -148,6 +161,16 @@ export function motionAt(scene: Scene, inst: Instance, t: number, actionOf: Acti
   for (const m of motionClips(scene, inst, actionOf)) {
     const c = m.clip;
     if (t < c.start) break;
+    if (m.turn === 'around') {
+      // Turn around in place: through the front view, facing the other way from halfway.
+      const u = (t - c.start) / Math.max(1, c.end - c.start);
+      if (t >= c.end) {
+        flip = !flip;
+        continue;
+      }
+      const v = u < 0.5 ? turnView(view, 'front', u * 2) : turnView('front', view, (u - 0.5) * 2);
+      return { x, y, flip: u < 0.5 ? flip : !flip, distance: 0, moving: false, view: v };
+    }
     if (m.turn !== undefined) {
       if (m.turn === 'left') flip = true;
       else if (m.turn === 'right') flip = false;

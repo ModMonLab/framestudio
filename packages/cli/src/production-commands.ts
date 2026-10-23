@@ -473,7 +473,7 @@ for (const verb of ['add', 'set'] as const) {
     args: [
       { name: 'character', description: 'Character id or ref', positional: true, required: true },
       { name: 'look', description: 'Look id', positional: true, required: true },
-      { name: 'values', description: 'key=value pairs: name, garments (refs, comma separated), accessories, colors.<slot>=#RRGGBB', positional: true, variadic: true },
+      { name: 'values', description: 'key=value pairs: preset (a look.* id), name, garments (refs, comma separated), accessories, colors.<slot>=#RRGGBB', positional: true, variadic: true },
       { name: 'update', description: 'Switch usages to the new version: project' },
     ],
     examples: ['frame char look add user.1234@2 evening name=Evening colors.top=#202840'],
@@ -489,7 +489,12 @@ for (const verb of ['add', 'set'] as const) {
       const look = { ...JSON.parse(JSON.stringify(base)), id, ...(existing ? {} : { name: id }) };
       const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : String(v).split(',').map((x) => x.trim()).filter(Boolean));
       for (const [k, v] of Object.entries(keyValues(ctx.args.values))) {
-        if (k === 'name') look.name = String(v);
+        if (k === 'preset') {
+          // A preset look (Catalog B7) replaces the garments, accessories and colours.
+          const pre = (libraryOf(ctx, state).manifest(String(v).includes('@') ? String(v) : `${v}@1`)?.data as { look?: { garments: string[]; accessories: string[]; colors: Record<string, string> } } | undefined)?.look;
+          if (!pre) throw new FrameError('NOT_FOUND', `${v} is not a preset look`, undefined, 'See `frame assets search type:look`.');
+          Object.assign(look, { garments: [...pre.garments], accessories: [...pre.accessories], colors: { ...pre.colors } });
+        } else if (k === 'name') look.name = String(v);
         else if (k === 'garments' || k === 'accessories') look[k] = list(v);
         else if (k.startsWith('colors.')) look.colors = { ...look.colors, [k.slice(7)]: String(v) };
         else throw new FrameError('USAGE', `Unknown look field ${k}`, undefined, 'Use name, garments, accessories or colors.<slot>.');

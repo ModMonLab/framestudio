@@ -216,6 +216,19 @@ const GARMENT_SWATCHES = ['#2B2D33', '#3F5F8F', '#4F8F87', '#3E5953', '#7B5EA8',
 function Looks({ c }: { c: PropsContext }) {
   const looks = c.draft.data.looks;
   const look = c.look;
+  const presets = useKind('look', c.pid);
+  // A preset look (Catalog B7) starts a new look with its garments; it is then edited like any other.
+  const addPreset = (ref: string) => {
+    const p = (c.manifest(ref)?.data as { look?: { garments: string[]; accessories: string[]; colors: Record<string, string> } } | undefined)?.look;
+    const name = c.manifest(ref)?.name ?? 'Look';
+    if (!p) return;
+    let id = '';
+    c.edit((d) => {
+      id = newLookId(d.data.looks, name);
+      d.data.looks.push({ id, name, garments: [...p.garments], accessories: [...p.accessories], colors: { ...p.colors } });
+    });
+    c.setLook(id);
+  };
   const [name, setName] = useState(look?.name ?? '');
   useEffect(() => setName(look?.name ?? ''), [look?.id, look?.name]);
   const add = (from?: LookData) => {
@@ -232,6 +245,7 @@ function Looks({ c }: { c: PropsContext }) {
       <RadioList label="Looks" value={look?.id} onChange={c.setLook} items={looks.map((l) => ({ value: l.id, label: l.name, meta: `${l.id === c.draft.data.defaultLook ? 'Default · ' : ''}${l.garments.length} item${l.garments.length === 1 ? '' : 's'}` }))} />
       <div className="st-buttons">
         <Button onClick={() => add()}>New look</Button>
+        {presets && presets.length > 0 && <span className="st-tb-select"><Select label="Add a preset look" placeholder="From a preset…" value={undefined} onChange={addPreset} options={presets.map((x) => ({ value: x.ref, label: x.name }))} /></span>}
         <Button onClick={() => look && add(look)} disabled={!look} disabledReason="Choose a look">Duplicate</Button>
         <Button onClick={() => look && c.edit((d) => { d.data.defaultLook = look.id; })} disabled={!look || look.id === c.draft.data.defaultLook} disabledReason={look ? 'Already the default look' : 'Choose a look'}>Set as default</Button>
         <Button

@@ -77,6 +77,13 @@ export interface ActionData {
    * clip's `params.accessory`) is taken off into the action's hand, put back on, or put away.
    */
   accessory?: { op: 'remove' | 'wear' | 'stow'; match: string; at: number };
+  /** Turns the character around in place over the clip (faces the other way afterwards). */
+  turn?: 'around';
+  /**
+   * Locomotion that walks on from the nearest stage edge to where the character stands (`enter`), or off to it
+   * (`exit`), when the clip has no path or mark of its own.
+   */
+  entrance?: 'enter' | 'exit';
 }
 
 export function ease(e: Ease | undefined, x: number): number {

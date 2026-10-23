@@ -84,6 +84,8 @@ describe('frame CLI command groups (FR-CLI-05)', () => {
     expect(set.json.result.ref).toMatch(/@2$/);
     const look = await frame(['char', 'look', 'add', set.json.result.ref, 'evening', 'name=Evening', 'colors.top=#202840'], cwd);
     expect(look.code, JSON.stringify(look.json)).toBe(0);
+    const office = await frame(['char', 'look', 'add', look.json.result.ref, 'office', 'preset=look.office'], cwd);
+    expect(office.code, JSON.stringify(office.json)).toBe(0);
     const sheet = await frame(['char', 'sheet', look.json.result.ref, '--out', 'robin.png', '--width', '640'], cwd);
     expect(sheet.code, JSON.stringify(sheet.json)).toBe(0);
     const png = fs.readFileSync(path.join(cwd, 'robin.png'));

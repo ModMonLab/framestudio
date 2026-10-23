@@ -45,7 +45,7 @@ interface RigBuildBody {
 
 export const SERVER_VERSION = '0.1.0';
 /** Bump when thumbnail framing or rendering changes so cached thumbnails are rebuilt. */
-const THUMB_VERSION = 3; // 3: eye and hair controls, eye and brow states, hair-control previews on the library's preview hair
+const THUMB_VERSION = 4; // 4: worn props on the character, props in their default state
 
 export interface ServerOptions {
   contentDir: string;

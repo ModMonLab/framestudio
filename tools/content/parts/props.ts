@@ -24,28 +24,28 @@ export class PropDrawer {
   private line(slot: string) {
     return this.ill ? { stroke: { c: `${slot}.line`, w: 1.4 } } : {};
   }
-  rect(x: number, y: number, w: number, h: number, slot: string, o: { r?: number; flat?: boolean; when?: When; id?: string; opacity?: number; clip?: string } = {}) {
+  rect(x: number, y: number, w: number, h: number, slot: string, o: { r?: number; flat?: boolean; when?: When; id?: string; opacity?: number; clip?: string; opParam?: string } = {}) {
     const r = Math.min(o.r ?? 0, w / 2, h / 2);
     const pts: PS[] = r > 0
       ? [[x + r, y], [x + w - r, y], [x + w, y + r], [x + w, y + h - r], [x + w - r, y + h], [x + r, y + h], [x, y + h - r], [x, y + r]]
       : [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
     const path = r > 0 ? this.a.smooth(pts, true, 0.35) : this.a.path([['M', pts[0]!], ['L', pts[1]!], ['L', pts[2]!], ['L', pts[3]!], ['Z']]);
-    this.push({ ...(o.id ? { id: o.id } : {}), path, fill: o.flat ? slot : this.fill(slot, y, y + h, x + w / 2), ...(o.flat ? {} : this.line(slot)), ...(o.opacity !== undefined ? { opacity: o.opacity } : {}), ...(o.clip ? { clip: o.clip } : {}) }, o.when);
+    this.push({ ...(o.id ? { id: o.id } : {}), path, fill: o.flat ? slot : this.fill(slot, y, y + h, x + w / 2), ...(o.flat ? {} : this.line(slot)), ...(o.opacity !== undefined ? { opacity: o.opacity } : {}), ...(o.opParam ? { opacityParam: o.opParam } : {}), ...(o.clip ? { clip: o.clip } : {}) }, o.when);
     return this;
   }
-  ellipse(cx: number, cy: number, rx: number, ry: number, slot: string, o: { flat?: boolean; when?: When; opacity?: number; id?: string; d?: Record<string, [number, number]>; clip?: string } = {}) {
-    this.push({ ...(o.id ? { id: o.id } : {}), ellipse: { c: this.a.pt([cx, cy, o.d ?? {}]), rx, ry }, fill: o.flat ? slot : this.fill(slot, cy - ry, cy + ry, cx), ...(o.flat ? {} : this.line(slot)), ...(o.opacity !== undefined ? { opacity: o.opacity } : {}), ...(o.clip ? { clip: o.clip } : {}) }, o.when);
+  ellipse(cx: number, cy: number, rx: number, ry: number, slot: string, o: { flat?: boolean; when?: When; opacity?: number; id?: string; d?: Record<string, [number, number]>; clip?: string; opParam?: string } = {}) {
+    this.push({ ...(o.id ? { id: o.id } : {}), ellipse: { c: this.a.pt([cx, cy, o.d ?? {}]), rx, ry }, fill: o.flat ? slot : this.fill(slot, cy - ry, cy + ry, cx), ...(o.flat ? {} : this.line(slot)), ...(o.opacity !== undefined ? { opacity: o.opacity } : {}), ...(o.opParam ? { opacityParam: o.opParam } : {}), ...(o.clip ? { clip: o.clip } : {}) }, o.when);
     return this;
   }
-  poly(pts: PS[], slot: string, o: { smooth?: number; flat?: boolean; when?: When; opacity?: number; id?: string; clip?: string; blend?: ShapeDef['blend'] } = {}) {
+  poly(pts: PS[], slot: string, o: { smooth?: number; flat?: boolean; when?: When; opacity?: number; id?: string; clip?: string; blend?: ShapeDef['blend']; opParam?: string } = {}) {
     const ys = pts.map((p) => p[1]);
     const path = o.smooth ? this.a.smooth(pts, true, o.smooth) : this.a.path([['M', pts[0]!], ...pts.slice(1).map((p) => ['L', p] as ['L', PS]), ['Z']]);
-    this.push({ ...(o.id ? { id: o.id } : {}), path, fill: o.flat ? slot : this.fill(slot, Math.min(...ys), Math.max(...ys)), ...(o.flat ? {} : this.line(slot)), ...(o.opacity !== undefined ? { opacity: o.opacity } : {}), ...(o.clip ? { clip: o.clip } : {}), ...(o.blend ? { blend: o.blend } : {}) }, o.when);
+    this.push({ ...(o.id ? { id: o.id } : {}), path, fill: o.flat ? slot : this.fill(slot, Math.min(...ys), Math.max(...ys)), ...(o.flat ? {} : this.line(slot)), ...(o.opacity !== undefined ? { opacity: o.opacity } : {}), ...(o.opParam ? { opacityParam: o.opParam } : {}), ...(o.clip ? { clip: o.clip } : {}), ...(o.blend ? { blend: o.blend } : {}) }, o.when);
     return this;
   }
-  stroke(pts: PS[], slot: string, w: number, o: { when?: When; opacity?: number; smooth?: boolean } = {}) {
+  stroke(pts: PS[], slot: string, w: number, o: { when?: When; opacity?: number; smooth?: boolean; opParam?: string } = {}) {
     const path = o.smooth ? this.a.smooth(pts, false, 0.8) : this.a.path([['M', pts[0]!], ...pts.slice(1).map((p) => ['L', p] as ['L', PS])]);
-    this.push({ path, stroke: { c: slot, w }, ...(o.opacity !== undefined ? { opacity: o.opacity } : {}) }, o.when);
+    this.push({ path, stroke: { c: slot, w }, ...(o.opacity !== undefined ? { opacity: o.opacity } : {}), ...(o.opParam ? { opacityParam: o.opParam } : {}) }, o.when);
     return this;
   }
   /** One-tone shade (Flat) or soft multiply shadow (Illustrated) clipped to a shape id. */
@@ -75,7 +75,8 @@ export interface PropSpec {
   sounds?: Record<string, string>;
   /** [x, y, w, h] in stage units for selection/hit testing. */
   bounds: [number, number, number, number];
-  anchors?: Record<string, [number, number]>;
+  /** Named points ([x, y]); image and text slots as [x, y, w, h]; `seatFacing` names the way a seat faces. */
+  anchors?: Record<string, [number, number] | [number, number, number, number] | string>;
   depth?: 'mid' | 'front' | 'back' | 'ground';
   capabilities?: string[];
 }

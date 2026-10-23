@@ -1,8 +1,8 @@
 # Catalog coverage report (CAT-10)
 
-Generated 2026-10-22 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
+Generated 2026-10-23 by `pnpm catalog:coverage` — do not edit. Release requires 100 % green.
 
-**Green: 0 / 1254 (0 %)** · manifests present: 862 / 1254 (68.7 %)
+**Green: 0 / 1254 (0 %)** · manifests present: 1238 / 1254 (98.7 %)
 
 An item is green when it has a manifest, both families and all four views (or documented exemptions) where they apply, passes the validators (schema and, for character-attached items, the rig check), has previews in both families, is approved in visual review (CAT-06) and carries a redistributable, commercial-use licence with provenance.
 
@@ -20,8 +20,8 @@ An item is green when it has a manifest, both families and all four views (or do
 | A8 Ears | `ears` | 8 | 8 | 0 |
 | A9 Hairstyles | `hair` | 40 | 40 | 0 |
 | A9b Hair controls | `hair-ctl` | 10 | 10 | 0 |
-| A10 Fringes | `fringe` | 8 | 0 | 0 |
-| A11 Facial hair | `facial-hair` | 15 | 0 | 0 |
+| A10 Fringes | `fringe` | 8 | 8 | 0 |
+| A11 Facial hair | `facial-hair` | 15 | 15 | 0 |
 | A12 Skin tones | `skin` | 24 | 24 | 0 |
 | A13 Skin details and overlays | `skin-detail` | 20 | 20 | 0 |
 | A14 Makeup | `makeup` | 12 | 12 | 0 |
@@ -36,22 +36,22 @@ An item is green when it has a manifest, both families and all four views (or do
 | B3 Bottoms | `bottom` | 13 | 13 | 0 |
 | B4 Dresses and full outfits | `dress` | 14 | 14 | 0 |
 | B5 Footwear | `shoe` | 12 | 12 | 0 |
-| B6 Fabric patterns | `pattern` | 14 | 0 | 0 |
-| B7 Preset looks | `look` | 14 | 0 | 0 |
+| B6 Fabric patterns | `pattern` | 14 | 14 | 0 |
+| B7 Preset looks | `look` | 14 | 14 | 0 |
 | C1 Accessories | `acc` | 40 | 40 | 0 |
 | D1 Bundled cast | `chr` | 14 | 14 | 0 |
 | E1 Expressions | `exp` | 83 | 83 | 0 |
-| E2 Facial overlays | `overlay` | 14 | 0 | 0 |
-| F1 Performance clips | `act` | 118 | 34 | 0 |
-| G1 Performance recipes | `rcp` | 24 | 18 | 0 |
-| H1 Props | `prop` | 142 | 11 | 0 |
+| E2 Facial overlays | `overlay` | 14 | 14 | 0 |
+| F1 Performance clips | `act` | 118 | 118 | 0 |
+| G1 Performance recipes | `rcp` | 24 | 24 | 0 |
+| H1 Props | `prop` | 142 | 142 | 0 |
 | I1 Location kits | `kit` | 16 | 16 | 0 |
-| I2 Ready-made sets | `set` | 32 | 0 | 0 |
-| I3 Environment layers | `layer` | 10 | 0 | 0 |
-| J1 Scene atmosphere | `atmo` | 54 | 42 | 0 |
-| K1 Motion and visual effects | `fx` | 38 | 24 | 0 |
-| K2 Transitions | `tr` | 18 | 17 | 0 |
-| M1 Camera language | `cam` | 49 | 40 | 0 |
+| I2 Ready-made sets | `set` | 32 | 32 | 0 |
+| I3 Environment layers | `layer` | 10 | 10 | 0 |
+| J1 Scene atmosphere | `atmo` | 54 | 54 | 0 |
+| K1 Motion and visual effects | `fx` | 38 | 38 | 0 |
+| K2 Transitions | `tr` | 18 | 18 | 0 |
+| M1 Camera language | `cam` | 49 | 49 | 0 |
 | N1 Music | `music` | 20 | 20 | 0 |
 | N2 Musical cues and stings | `cue` | 12 | 12 | 0 |
 | N3 Ambience | `amb` | 20 | 20 | 0 |
@@ -59,7 +59,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | O1 Text, graphics and finishing | `txt` | 36 | 36 | 0 |
 | P1 Production templates | `tpl` | 16 | 16 | 0 |
 | Q1 Starter voices | `voice` | 16 | 0 | 0 |
-| Q2 Delivery presets | `delivery` | 12 | 0 | 0 |
+| Q2 Delivery presets | `delivery` | 12 | 12 | 0 |
 | R1 Output presets | `out` | 12 | 12 | 0 |
 
 ## Items
@@ -221,29 +221,29 @@ An item is green when it has a manifest, both families and all four views (or do
 | `hair-ctl.greying` | n/a | n/a | ok | n/a | pending | ok |
 | `hair-ctl.flyaways` | n/a | n/a | ok | n/a | pending | ok |
 | `hair-ctl.sway` | n/a | n/a | ok | n/a | pending | ok |
-| `fringe.none` | — | — | — | — | — | — (no manifest) |
-| `fringe.straight` | — | — | — | — | — | — (no manifest) |
-| `fringe.side-swept` | — | — | — | — | — | — (no manifest) |
-| `fringe.curtain` | — | — | — | — | — | — (no manifest) |
-| `fringe.wispy` | — | — | — | — | — | — (no manifest) |
-| `fringe.choppy` | — | — | — | — | — | — (no manifest) |
-| `fringe.curled` | — | — | — | — | — | — (no manifest) |
-| `fringe.long-over-eye` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.none` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.stubble` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.short-beard` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.full-beard` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.long-beard` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.goatee` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.van-dyke` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.chin-strap` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.mutton-chops` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.moustache` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.handlebar` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.pencil-moustache` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.horseshoe` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.soul-patch` | — | — | — | — | — | — (no manifest) |
-| `facial-hair.sideburns` | — | — | — | — | — | — (no manifest) |
+| `fringe.none` | ok (flat, illustrated) | ok (0) | ok | ok | pending | ok |
+| `fringe.straight` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `fringe.side-swept` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `fringe.curtain` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `fringe.wispy` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `fringe.choppy` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `fringe.curled` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `fringe.long-over-eye` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.none` | ok (flat, illustrated) | ok (0) | ok | ok | pending | ok |
+| `facial-hair.stubble` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.short-beard` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.full-beard` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.long-beard` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.goatee` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.van-dyke` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.chin-strap` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.mutton-chops` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.moustache` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.handlebar` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.pencil-moustache` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.horseshoe` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.soul-patch` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `facial-hair.sideburns` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
 | `skin.porcelain` | missing (—) | n/a | ok | ok | pending | ok |
 | `skin.ivory` | missing (—) | n/a | ok | ok | pending | ok |
 | `skin.sand` | missing (—) | n/a | ok | ok | pending | ok |
@@ -436,34 +436,34 @@ An item is green when it has a manifest, both families and all four views (or do
 | `shoe.work-boots` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `shoe.heels` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `shoe.wedges` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `pattern.solid` | — | — | — | — | — | — (no manifest) |
-| `pattern.stripes` | — | — | — | — | — | — (no manifest) |
-| `pattern.pinstripe` | — | — | — | — | — | — (no manifest) |
-| `pattern.checks` | — | — | — | — | — | — (no manifest) |
-| `pattern.plaid` | — | — | — | — | — | — (no manifest) |
-| `pattern.houndstooth` | — | — | — | — | — | — (no manifest) |
-| `pattern.polka-dots` | — | — | — | — | — | — (no manifest) |
-| `pattern.floral` | — | — | — | — | — | — (no manifest) |
-| `pattern.camouflage` | — | — | — | — | — | — (no manifest) |
-| `pattern.denim-texture` | — | — | — | — | — | — (no manifest) |
-| `pattern.knit-texture` | — | — | — | — | — | — (no manifest) |
-| `pattern.leopard` | — | — | — | — | — | — (no manifest) |
-| `pattern.paisley` | — | — | — | — | — | — (no manifest) |
-| `pattern.custom-print` | — | — | — | — | — | — (no manifest) |
-| `look.everyday` | — | — | — | — | — | — (no manifest) |
-| `look.on-air` | — | — | — | — | — | — (no manifest) |
-| `look.office` | — | — | — | — | — | — (no manifest) |
-| `look.executive` | — | — | — | — | — | — (no manifest) |
-| `look.evening` | — | — | — | — | — | — (no manifest) |
-| `look.sporty` | — | — | — | — | — | — (no manifest) |
-| `look.outdoor` | — | — | — | — | — | — (no manifest) |
-| `look.student` | — | — | — | — | — | — (no manifest) |
-| `look.teacher` | — | — | — | — | — | — (no manifest) |
-| `look.doctor` | — | — | — | — | — | — (no manifest) |
-| `look.barista` | — | — | — | — | — | — (no manifest) |
-| `look.news-anchor` | — | — | — | — | — | — (no manifest) |
-| `look.sleepwear` | — | — | — | — | — | — (no manifest) |
-| `look.rainy-day` | — | — | — | — | — | — (no manifest) |
+| `pattern.solid` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.stripes` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.pinstripe` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.checks` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.plaid` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.houndstooth` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.polka-dots` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.floral` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.camouflage` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.denim-texture` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.knit-texture` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.leopard` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.paisley` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `pattern.custom-print` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `look.everyday` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.on-air` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.office` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.executive` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.evening` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.sporty` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.outdoor` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.student` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.teacher` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.doctor` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.barista` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.news-anchor` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.sleepwear` | missing (—) | missing (0) | ok | ok | pending | ok |
+| `look.rainy-day` | missing (—) | missing (0) | ok | ok | pending | ok |
 | `acc.round-glasses` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `acc.rectangular-glasses` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `acc.cat-eye-glasses` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
@@ -601,304 +601,304 @@ An item is green when it has a manifest, both families and all four views (or do
 | `exp.focused` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
 | `exp.dreamy` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
 | `exp.mischievous` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
-| `overlay.blush` | — | — | — | — | — | — (no manifest) |
-| `overlay.heavy-blush` | — | — | — | — | — | — (no manifest) |
-| `overlay.tears` | — | — | — | — | — | — (no manifest) |
-| `overlay.tear-streams` | — | — | — | — | — | — (no manifest) |
-| `overlay.sweat-drop` | — | — | — | — | — | — (no manifest) |
-| `overlay.stress-lines` | — | — | — | — | — | — (no manifest) |
-| `overlay.anger-vein` | — | — | — | — | — | — (no manifest) |
-| `overlay.shadowed-eyes` | — | — | — | — | — | — (no manifest) |
-| `overlay.sparkle-eyes` | — | — | — | — | — | — (no manifest) |
-| `overlay.heart-eyes` | — | — | — | — | — | — (no manifest) |
-| `overlay.dizzy-eyes` | — | — | — | — | — | — (no manifest) |
-| `overlay.sick-green` | — | — | — | — | — | — (no manifest) |
-| `overlay.pale` | — | — | — | — | — | — (no manifest) |
-| `overlay.steam-from-ears` | — | — | — | — | — | — (no manifest) |
+| `overlay.blush` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.heavy-blush` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.tears` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.tear-streams` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.sweat-drop` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.stress-lines` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.anger-vein` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.shadowed-eyes` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.sparkle-eyes` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.heart-eyes` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.dizzy-eyes` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.sick-green` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.pale` | ok (flat, illustrated) | ok (3) | ok | ok | pending | ok |
+| `overlay.steam-from-ears` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.breathe` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.shift-weight` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.look-around` | — | — | — | — | — | — (no manifest) |
-| `act.fidget-hands` | — | — | — | — | — | — (no manifest) |
-| `act.tap-foot` | — | — | — | — | — | — (no manifest) |
+| `act.look-around` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.fidget-hands` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.tap-foot` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.arms-crossed` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.hands-in-pockets` | — | — | — | — | — | — (no manifest) |
+| `act.hands-in-pockets` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.seated-relaxed` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.seated-lean-in` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.impatient` | — | — | — | — | — | — (no manifest) |
+| `act.impatient` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.calm-talk` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.emphatic-talk` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.explain-with-hands` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.list-on-fingers` | — | — | — | — | — | — (no manifest) |
+| `act.list-on-fingers` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.beat-gesture` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.open-palms` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.hand-to-chest` | — | — | — | — | — | — (no manifest) |
-| `act.chopping-emphasis` | — | — | — | — | — | — (no manifest) |
-| `act.rolling-hand` | — | — | — | — | — | — (no manifest) |
-| `act.presenting` | — | — | — | — | — | — (no manifest) |
-| `act.storytelling-sweep` | — | — | — | — | — | — (no manifest) |
-| `act.whisper-lean` | — | — | — | — | — | — (no manifest) |
-| `act.rant` | — | — | — | — | — | — (no manifest) |
-| `act.counter-argument` | — | — | — | — | — | — (no manifest) |
+| `act.hand-to-chest` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.chopping-emphasis` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.rolling-hand` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.presenting` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.storytelling-sweep` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.whisper-lean` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.rant` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.counter-argument` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.point-at` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.point-up` | — | — | — | — | — | — (no manifest) |
-| `act.point-away` | — | — | — | — | — | — (no manifest) |
-| `act.point-at-self` | — | — | — | — | — | — (no manifest) |
-| `act.beckon` | — | — | — | — | — | — (no manifest) |
-| `act.gesture-toward` | — | — | — | — | — | — (no manifest) |
-| `act.direct-over-there` | — | — | — | — | — | — (no manifest) |
-| `act.thumb-over-shoulder` | — | — | — | — | — | — (no manifest) |
+| `act.point-up` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.point-away` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.point-at-self` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.beckon` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.gesture-toward` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.direct-over-there` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.thumb-over-shoulder` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.wave-hello` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.wave-goodbye` | — | — | — | — | — | — (no manifest) |
-| `act.thumbs-up` | — | — | — | — | — | — (no manifest) |
-| `act.thumbs-down` | — | — | — | — | — | — (no manifest) |
-| `act.ok-sign` | — | — | — | — | — | — (no manifest) |
-| `act.shush` | — | — | — | — | — | — (no manifest) |
-| `act.salute` | — | — | — | — | — | — (no manifest) |
-| `act.peace-sign` | — | — | — | — | — | — (no manifest) |
-| `act.facepalm` | — | — | — | — | — | — (no manifest) |
+| `act.wave-goodbye` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.thumbs-up` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.thumbs-down` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.ok-sign` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.shush` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.salute` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.peace-sign` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.facepalm` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.shrug` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.cross-fingers` | — | — | — | — | — | — (no manifest) |
-| `act.fist-pump` | — | — | — | — | — | — (no manifest) |
+| `act.cross-fingers` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.fist-pump` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.nod` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.slow-nod` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.head-shake` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.head-tilt` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.mm-hmm` | — | — | — | — | — | — (no manifest) |
-| `act.lean-back` | — | — | — | — | — | — (no manifest) |
-| `act.chin-rest` | — | — | — | — | — | — (no manifest) |
-| `act.take-notes` | — | — | — | — | — | — (no manifest) |
-| `act.follow-speaker` | — | — | — | — | — | — (no manifest) |
-| `act.hold-back-laugh` | — | — | — | — | — | — (no manifest) |
-| `act.double-take` | — | — | — | — | — | — (no manifest) |
-| `act.flinch` | — | — | — | — | — | — (no manifest) |
-| `act.recoil` | — | — | — | — | — | — (no manifest) |
-| `act.jump-scare` | — | — | — | — | — | — (no manifest) |
-| `act.gasp-with-hands` | — | — | — | — | — | — (no manifest) |
-| `act.laugh` | — | — | — | — | — | — (no manifest) |
-| `act.belly-laugh` | — | — | — | — | — | — (no manifest) |
-| `act.cringe` | — | — | — | — | — | — (no manifest) |
-| `act.head-in-hands` | — | — | — | — | — | — (no manifest) |
-| `act.slump` | — | — | — | — | — | — (no manifest) |
-| `act.celebrate` | — | — | — | — | — | — (no manifest) |
-| `act.spit-take` | — | — | — | — | — | — (no manifest) |
-| `act.collapse-onto-table` | — | — | — | — | — | — (no manifest) |
-| `act.freeze` | — | — | — | — | — | — (no manifest) |
-| `act.chin-stroke` | — | — | — | — | — | — (no manifest) |
-| `act.scratch-head` | — | — | — | — | — | — (no manifest) |
-| `act.look-up-thinking` | — | — | — | — | — | — (no manifest) |
-| `act.tap-temple` | — | — | — | — | — | — (no manifest) |
-| `act.pace-thinking` | — | — | — | — | — | — (no manifest) |
-| `act.eureka-point` | — | — | — | — | — | — (no manifest) |
-| `act.look-at` | — | — | — | — | — | — (no manifest) |
-| `act.look-away` | — | — | — | — | — | — (no manifest) |
-| `act.glance-and-return` | — | — | — | — | — | — (no manifest) |
-| `act.avoid-eye-contact` | — | — | — | — | — | — (no manifest) |
-| `act.scan-room` | — | — | — | — | — | — (no manifest) |
-| `act.stare-down` | — | — | — | — | — | — (no manifest) |
+| `act.mm-hmm` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.lean-back` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.chin-rest` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.take-notes` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.follow-speaker` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.hold-back-laugh` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.double-take` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.flinch` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.recoil` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.jump-scare` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.gasp-with-hands` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.laugh` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.belly-laugh` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.cringe` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.head-in-hands` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.slump` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.celebrate` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.spit-take` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.collapse-onto-table` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.freeze` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.chin-stroke` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.scratch-head` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.look-up-thinking` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.tap-temple` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.pace-thinking` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.eureka-point` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.look-at` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.look-away` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.glance-and-return` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.avoid-eye-contact` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.scan-room` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.stare-down` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.walk` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.brisk-walk` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.sneak` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.run` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.stroll` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.limp` | — | — | — | — | — | — (no manifest) |
+| `act.limp` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.march` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.enter` | — | — | — | — | — | — (no manifest) |
-| `act.exit` | — | — | — | — | — | — (no manifest) |
-| `act.turn-around` | — | — | — | — | — | — (no manifest) |
-| `act.stop-and-look` | — | — | — | — | — | — (no manifest) |
-| `act.trip` | — | — | — | — | — | — (no manifest) |
+| `act.enter` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.exit` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.turn-around` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.stop-and-look` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.trip` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.sit-down` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.stand-up` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.lean-on-surface` | — | — | — | — | — | — (no manifest) |
-| `act.crouch` | — | — | — | — | — | — (no manifest) |
-| `act.kneel` | — | — | — | — | — | — (no manifest) |
-| `act.lie-down` | — | — | — | — | — | — (no manifest) |
-| `act.get-up` | — | — | — | — | — | — (no manifest) |
-| `act.slouch` | — | — | — | — | — | — (no manifest) |
-| `act.hold` | — | — | — | — | — | — (no manifest) |
+| `act.lean-on-surface` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.crouch` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.kneel` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.lie-down` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.get-up` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.slouch` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.hold` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.pick-up` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.put-down` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.drink-from-mug` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.type` | — | — | — | — | — | — (no manifest) |
+| `act.type` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.use-phone` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.read` | — | — | — | — | — | — (no manifest) |
-| `act.write` | — | — | — | — | — | — (no manifest) |
+| `act.read` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.write` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.hand-over` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.receive` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.open-door` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.close-door` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.adjust-glasses` | — | — | — | — | — | — (no manifest) |
-| `act.press-button` | — | — | — | — | — | — (no manifest) |
+| `act.adjust-glasses` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.press-button` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `act.push-wheelchair` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
-| `act.roll-forward` | — | — | — | — | — | — (no manifest) |
-| `act.sign-hello` | — | — | — | — | — | — (no manifest) |
-| `act.sign-thank-you` | — | — | — | — | — | — (no manifest) |
+| `act.roll-forward` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.sign-hello` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
+| `act.sign-thank-you` | ok (flat, illustrated) | ok (4) | ok | ok | pending | ok |
 | `rcp.embarrassed-reply` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.reveal-an-object` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.question-and-reaction` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.interruption` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.awkward-silence` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.agree-and-disagree` | n/a | n/a | ok | n/a | pending | ok |
-| `rcp.handshake` | — | — | — | — | — | — (no manifest) |
-| `rcp.hug` | — | — | — | — | — | — (no manifest) |
-| `rcp.high-five` | — | — | — | — | — | — (no manifest) |
+| `rcp.handshake` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.hug` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.high-five` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.hand-over-object` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.comedic-beat` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.dramatic-reveal` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.double-take-gag` | n/a | n/a | ok | n/a | pending | ok |
-| `rcp.victory-moment` | — | — | — | — | — | — (no manifest) |
+| `rcp.victory-moment` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.sad-realisation` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.nervous-answer` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.sarcastic-reply` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.thinking-out-loud` | n/a | n/a | ok | n/a | pending | ok |
-| `rcp.entrance` | — | — | — | — | — | — (no manifest) |
-| `rcp.exit-in-a-huff` | — | — | — | — | — | — (no manifest) |
+| `rcp.entrance` | n/a | n/a | ok | n/a | pending | ok |
+| `rcp.exit-in-a-huff` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.listen-and-nod` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.explain-a-point` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.phone-call` | n/a | n/a | ok | n/a | pending | ok |
 | `rcp.coffee-break` | n/a | n/a | ok | n/a | pending | ok |
 | `prop.round-table` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.desk` | — | — | — | — | — | — (no manifest) |
-| `prop.office-chair` | — | — | — | — | — | — (no manifest) |
+| `prop.desk` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.office-chair` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.studio-chair` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.armchair` | — | — | — | — | — | — (no manifest) |
-| `prop.sofa` | — | — | — | — | — | — (no manifest) |
-| `prop.stool` | — | — | — | — | — | — (no manifest) |
-| `prop.bench` | — | — | — | — | — | — (no manifest) |
-| `prop.bed` | — | — | — | — | — | — (no manifest) |
-| `prop.bookshelf` | — | — | — | — | — | — (no manifest) |
-| `prop.cabinet` | — | — | — | — | — | — (no manifest) |
-| `prop.coffee-table` | — | — | — | — | — | — (no manifest) |
-| `prop.kitchen-counter` | — | — | — | — | — | — (no manifest) |
-| `prop.bar-stool` | — | — | — | — | — | — (no manifest) |
-| `prop.lectern` | — | — | — | — | — | — (no manifest) |
-| `prop.whiteboard` | — | — | — | — | — | — (no manifest) |
-| `prop.classroom-desk` | — | — | — | — | — | — (no manifest) |
-| `prop.dining-table` | — | — | — | — | — | — (no manifest) |
-| `prop.wardrobe` | — | — | — | — | — | — (no manifest) |
-| `prop.reception-desk` | — | — | — | — | — | — (no manifest) |
+| `prop.armchair` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.sofa` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.stool` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.bench` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.bed` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.bookshelf` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.cabinet` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.coffee-table` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.kitchen-counter` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.bar-stool` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.lectern` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.whiteboard` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.classroom-desk` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.dining-table` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.wardrobe` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.reception-desk` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.desk-microphone` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.boom-microphone` | — | — | — | — | — | — (no manifest) |
+| `prop.boom-microphone` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.podcast-headphones` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.laptop` | — | — | — | — | — | — (no manifest) |
-| `prop.desktop-monitor` | — | — | — | — | — | — (no manifest) |
+| `prop.laptop` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.desktop-monitor` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.phone` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.tablet` | — | — | — | — | — | — (no manifest) |
-| `prop.tv` | — | — | — | — | — | — (no manifest) |
-| `prop.camera-on-tripod` | — | — | — | — | — | — (no manifest) |
-| `prop.ring-light` | — | — | — | — | — | — (no manifest) |
-| `prop.game-controller` | — | — | — | — | — | — (no manifest) |
-| `prop.keyboard` | — | — | — | — | — | — (no manifest) |
-| `prop.speaker` | — | — | — | — | — | — (no manifest) |
-| `prop.radio` | — | — | — | — | — | — (no manifest) |
-| `prop.projector-screen` | — | — | — | — | — | — (no manifest) |
+| `prop.tablet` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.tv` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.camera-on-tripod` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.ring-light` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.game-controller` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.keyboard` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.speaker` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.radio` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.projector-screen` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.mug` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.coffee-cup-to-go` | — | — | — | — | — | — (no manifest) |
-| `prop.water-glass` | — | — | — | — | — | — (no manifest) |
-| `prop.wine-glass` | — | — | — | — | — | — (no manifest) |
-| `prop.plate-of-food` | — | — | — | — | — | — (no manifest) |
-| `prop.coffee-machine` | — | — | — | — | — | — (no manifest) |
-| `prop.kettle` | — | — | — | — | — | — (no manifest) |
-| `prop.toaster` | — | — | — | — | — | — (no manifest) |
-| `prop.fridge` | — | — | — | — | — | — (no manifest) |
-| `prop.cereal-box` | — | — | — | — | — | — (no manifest) |
-| `prop.pizza-box` | — | — | — | — | — | — (no manifest) |
-| `prop.fruit-bowl` | — | — | — | — | — | — (no manifest) |
-| `prop.book` | — | — | — | — | — | — (no manifest) |
-| `prop.notebook` | — | — | — | — | — | — (no manifest) |
-| `prop.pen` | — | — | — | — | — | — (no manifest) |
-| `prop.clipboard` | — | — | — | — | — | — (no manifest) |
-| `prop.folder` | — | — | — | — | — | — (no manifest) |
-| `prop.stack-of-papers` | — | — | — | — | — | — (no manifest) |
-| `prop.envelope` | — | — | — | — | — | — (no manifest) |
-| `prop.briefcase` | — | — | — | — | — | — (no manifest) |
-| `prop.calculator` | — | — | — | — | — | — (no manifest) |
-| `prop.stapler` | — | — | — | — | — | — (no manifest) |
-| `prop.desk-lamp` | — | — | — | — | — | — (no manifest) |
-| `prop.wall-clock` | — | — | — | — | — | — (no manifest) |
-| `prop.calendar` | — | — | — | — | — | — (no manifest) |
-| `prop.sticky-notes` | — | — | — | — | — | — (no manifest) |
-| `prop.trophy` | — | — | — | — | — | — (no manifest) |
+| `prop.coffee-cup-to-go` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.water-glass` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.wine-glass` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.plate-of-food` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.coffee-machine` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.kettle` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.toaster` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.fridge` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.cereal-box` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.pizza-box` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.fruit-bowl` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.book` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.notebook` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.pen` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.clipboard` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.folder` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.stack-of-papers` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.envelope` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.briefcase` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.calculator` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.stapler` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.desk-lamp` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.wall-clock` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.calendar` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.sticky-notes` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.trophy` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.potted-plant` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.large-plant` | — | — | — | — | — | — (no manifest) |
-| `prop.flower-vase` | — | — | — | — | — | — (no manifest) |
-| `prop.picture-frame` | — | — | — | — | — | — (no manifest) |
-| `prop.poster` | — | — | — | — | — | — (no manifest) |
-| `prop.neon-sign` | — | — | — | — | — | — (no manifest) |
+| `prop.large-plant` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.flower-vase` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.picture-frame` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.poster` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.neon-sign` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.on-air-sign` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.rug` | — | — | — | — | — | — (no manifest) |
-| `prop.curtains` | — | — | — | — | — | — (no manifest) |
+| `prop.rug` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.curtains` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.floor-lamp` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.candle` | — | — | — | — | — | — (no manifest) |
-| `prop.fireplace` | — | — | — | — | — | — (no manifest) |
-| `prop.aquarium` | — | — | — | — | — | — (no manifest) |
-| `prop.globe` | — | — | — | — | — | — (no manifest) |
-| `prop.clock-radio` | — | — | — | — | — | — (no manifest) |
-| `prop.mirror` | — | — | — | — | — | — (no manifest) |
+| `prop.candle` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.fireplace` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.aquarium` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.globe` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.clock-radio` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.mirror` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.door` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.window` | — | — | — | — | — | — (no manifest) |
-| `prop.light-switch` | — | — | — | — | — | — (no manifest) |
-| `prop.stairs` | — | — | — | — | — | — (no manifest) |
-| `prop.elevator-doors` | — | — | — | — | — | — (no manifest) |
-| `prop.fence` | — | — | — | — | — | — (no manifest) |
-| `prop.street-lamp` | — | — | — | — | — | — (no manifest) |
-| `prop.park-bench` | — | — | — | — | — | — (no manifest) |
-| `prop.bus-stop` | — | — | — | — | — | — (no manifest) |
-| `prop.traffic-light` | — | — | — | — | — | — (no manifest) |
-| `prop.tree` | — | — | — | — | — | — (no manifest) |
-| `prop.bush` | — | — | — | — | — | — (no manifest) |
-| `prop.rock` | — | — | — | — | — | — (no manifest) |
-| `prop.mailbox` | — | — | — | — | — | — (no manifest) |
-| `prop.trash-can` | — | — | — | — | — | — (no manifest) |
-| `prop.bicycle` | — | — | — | — | — | — (no manifest) |
-| `prop.car` | — | — | — | — | — | — (no manifest) |
-| `prop.scooter` | — | — | — | — | — | — (no manifest) |
-| `prop.umbrella` | — | — | — | — | — | — (no manifest) |
-| `prop.football` | — | — | — | — | — | — (no manifest) |
-| `prop.basketball` | — | — | — | — | — | — (no manifest) |
-| `prop.tennis-racket` | — | — | — | — | — | — (no manifest) |
-| `prop.dumbbell` | — | — | — | — | — | — (no manifest) |
-| `prop.yoga-mat` | — | — | — | — | — | — (no manifest) |
-| `prop.skateboard` | — | — | — | — | — | — (no manifest) |
-| `prop.guitar` | — | — | — | — | — | — (no manifest) |
-| `prop.keyboard-instrument` | — | — | — | — | — | — (no manifest) |
-| `prop.drum-kit` | — | — | — | — | — | — (no manifest) |
-| `prop.violin` | — | — | — | — | — | — (no manifest) |
-| `prop.microphone-stand` | — | — | — | — | — | — (no manifest) |
-| `prop.gift-box` | — | — | — | — | — | — (no manifest) |
-| `prop.balloons` | — | — | — | — | — | — (no manifest) |
-| `prop.birthday-cake` | — | — | — | — | — | — (no manifest) |
-| `prop.confetti-cannon` | — | — | — | — | — | — (no manifest) |
-| `prop.party-hat` | — | — | — | — | — | — (no manifest) |
+| `prop.window` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.light-switch` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.stairs` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.elevator-doors` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.fence` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.street-lamp` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.park-bench` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.bus-stop` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.traffic-light` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.tree` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.bush` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.rock` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.mailbox` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.trash-can` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.bicycle` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.car` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.scooter` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.umbrella` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.football` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.basketball` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.tennis-racket` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.dumbbell` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.yoga-mat` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.skateboard` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.guitar` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.keyboard-instrument` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.drum-kit` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.violin` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.microphone-stand` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.gift-box` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.balloons` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.birthday-cake` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.confetti-cannon` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.party-hat` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `prop.stethoscope` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `prop.hospital-bed` | — | — | — | — | — | — (no manifest) |
-| `prop.first-aid-kit` | — | — | — | — | — | — (no manifest) |
-| `prop.pill-bottle` | — | — | — | — | — | — (no manifest) |
-| `prop.magnifying-glass` | — | — | — | — | — | — (no manifest) |
-| `prop.detective-notebook` | — | — | — | — | — | — (no manifest) |
-| `prop.evidence-board` | — | — | — | — | — | — (no manifest) |
-| `prop.flashlight` | — | — | — | — | — | — (no manifest) |
-| `prop.key` | — | — | — | — | — | — (no manifest) |
-| `prop.treasure-chest` | — | — | — | — | — | — (no manifest) |
-| `prop.magic-wand` | — | — | — | — | — | — (no manifest) |
-| `prop.potion-bottle` | — | — | — | — | — | — (no manifest) |
-| `prop.crystal-ball` | — | — | — | — | — | — (no manifest) |
-| `prop.sword` | — | — | — | — | — | — (no manifest) |
-| `prop.shield` | — | — | — | — | — | — (no manifest) |
-| `prop.backpack` | — | — | — | — | — | — (no manifest) |
-| `prop.suitcase` | — | — | — | — | — | — (no manifest) |
-| `prop.map` | — | — | — | — | — | — (no manifest) |
-| `prop.camera` | — | — | — | — | — | — (no manifest) |
-| `prop.passport` | — | — | — | — | — | — (no manifest) |
-| `prop.shopping-bag` | — | — | — | — | — | — (no manifest) |
-| `prop.cash-register` | — | — | — | — | — | — (no manifest) |
-| `prop.price-tag` | — | — | — | — | — | — (no manifest) |
-| `prop.shopping-cart` | — | — | — | — | — | — (no manifest) |
-| `prop.megaphone` | — | — | — | — | — | — (no manifest) |
-| `prop.trophy-cup` | — | — | — | — | — | — (no manifest) |
-| `prop.podium` | — | — | — | — | — | — (no manifest) |
-| `prop.stage-spotlight` | — | — | — | — | — | — (no manifest) |
-| `prop.red-carpet` | — | — | — | — | — | — (no manifest) |
+| `prop.hospital-bed` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.first-aid-kit` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.pill-bottle` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.magnifying-glass` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.detective-notebook` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.evidence-board` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.flashlight` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.key` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.treasure-chest` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.magic-wand` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.potion-bottle` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.crystal-ball` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.sword` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.shield` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.backpack` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.suitcase` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.map` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.camera` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.passport` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.shopping-bag` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.cash-register` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.price-tag` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.shopping-cart` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.megaphone` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.trophy-cup` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.podium` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.stage-spotlight` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
+| `prop.red-carpet` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.podcast-studio` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.living-room` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.kitchen` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
@@ -915,48 +915,48 @@ An item is green when it has a manifest, both families and all four views (or do
 | `kit.gym` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.train-interior` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
 | `kit.fantasy-forest` | ok (flat, illustrated) | n/a | ok | ok | pending | ok |
-| `set.two-host-podcast` | — | — | — | — | — | — (no manifest) |
-| `set.solo-podcast` | — | — | — | — | — | — (no manifest) |
-| `set.four-person-panel` | — | — | — | — | — | — (no manifest) |
-| `set.sofa-chat` | — | — | — | — | — | — (no manifest) |
-| `set.movie-night` | — | — | — | — | — | — (no manifest) |
-| `set.breakfast-table` | — | — | — | — | — | — (no manifest) |
-| `set.cooking-show` | — | — | — | — | — | — (no manifest) |
-| `set.open-plan-office` | — | — | — | — | — | — (no manifest) |
-| `set.meeting-room` | — | — | — | — | — | — (no manifest) |
-| `set.bosss-office` | — | — | — | — | — | — (no manifest) |
-| `set.lecture` | — | — | — | — | — | — (no manifest) |
-| `set.group-work` | — | — | — | — | — | — (no manifest) |
-| `set.counter-order` | — | — | — | — | — | — (no manifest) |
-| `set.window-table` | — | — | — | — | — | — (no manifest) |
-| `set.anchor-desk` | — | — | — | — | — | — (no manifest) |
-| `set.weather-wall` | — | — | — | — | — | — (no manifest) |
-| `set.shopfront` | — | — | — | — | — | — (no manifest) |
-| `set.crosswalk` | — | — | — | — | — | — (no manifest) |
-| `set.lakeside-bench` | — | — | — | — | — | — (no manifest) |
-| `set.picnic` | — | — | — | — | — | — (no manifest) |
-| `set.late-night-desk` | — | — | — | — | — | — (no manifest) |
-| `set.bedside` | — | — | — | — | — | — (no manifest) |
-| `set.ward` | — | — | — | — | — | — (no manifest) |
-| `set.corridor` | — | — | — | — | — | — (no manifest) |
-| `set.keynote` | — | — | — | — | — | — (no manifest) |
-| `set.award-show` | — | — | — | — | — | — (no manifest) |
-| `set.reading-corner` | — | — | — | — | — | — (no manifest) |
-| `set.weights-area` | — | — | — | — | — | — (no manifest) |
-| `set.commuter-seats` | — | — | — | — | — | — (no manifest) |
-| `set.forest-clearing` | — | — | — | — | — | — (no manifest) |
-| `set.ruined-temple` | — | — | — | — | — | — (no manifest) |
-| `set.info-desk` | — | — | — | — | — | — (no manifest) |
-| `layer.sky` | — | — | — | — | — | — (no manifest) |
-| `layer.distant-background` | — | — | — | — | — | — (no manifest) |
-| `layer.background` | — | — | — | — | — | — (no manifest) |
-| `layer.main-setting` | — | — | — | — | — | — (no manifest) |
-| `layer.floor` | — | — | — | — | — | — (no manifest) |
-| `layer.set-pieces` | — | — | — | — | — | — (no manifest) |
-| `layer.characters` | — | — | — | — | — | — (no manifest) |
-| `layer.props` | — | — | — | — | — | — (no manifest) |
-| `layer.foreground` | — | — | — | — | — | — (no manifest) |
-| `layer.atmosphere-overlay` | — | — | — | — | — | — (no manifest) |
+| `set.two-host-podcast` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.solo-podcast` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.four-person-panel` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.sofa-chat` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.movie-night` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.breakfast-table` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.cooking-show` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.open-plan-office` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.meeting-room` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.bosss-office` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.lecture` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.group-work` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.counter-order` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.window-table` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.anchor-desk` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.weather-wall` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.shopfront` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.crosswalk` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.lakeside-bench` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.picnic` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.late-night-desk` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.bedside` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.ward` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.corridor` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.keynote` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.award-show` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.reading-corner` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.weights-area` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.commuter-seats` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.forest-clearing` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.ruined-temple` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `set.info-desk` | ok (flat, illustrated) | n/a | ok | invalid | pending | ok |
+| `layer.sky` | missing (—) | n/a | ok | missing | pending | ok |
+| `layer.distant-background` | missing (—) | n/a | ok | missing | pending | ok |
+| `layer.background` | missing (—) | n/a | ok | missing | pending | ok |
+| `layer.main-setting` | missing (—) | n/a | ok | missing | pending | ok |
+| `layer.floor` | missing (—) | n/a | ok | missing | pending | ok |
+| `layer.set-pieces` | missing (—) | n/a | ok | missing | pending | ok |
+| `layer.characters` | missing (—) | n/a | ok | missing | pending | ok |
+| `layer.props` | missing (—) | n/a | ok | missing | pending | ok |
+| `layer.foreground` | missing (—) | n/a | ok | missing | pending | ok |
+| `layer.atmosphere-overlay` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.light-rain` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.heavy-rain` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.storm-with-lightning` | missing (—) | n/a | ok | missing | pending | ok |
@@ -967,7 +967,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | `atmo.wind-with-leaves` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.wind-with-debris` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.hail` | missing (—) | n/a | ok | missing | pending | ok |
-| `atmo.heat-haze` | — | — | — | — | — | — (no manifest) |
+| `atmo.heat-haze` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.dust-motes` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.fireflies` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.floating-petals` | missing (—) | n/a | ok | missing | pending | ok |
@@ -991,18 +991,18 @@ An item is green when it has a manifest, both families and all four views (or do
 | `atmo.vignette` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.god-rays` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.drifting-clouds` | missing (—) | n/a | ok | missing | pending | ok |
-| `atmo.traffic` | — | — | — | — | — | — (no manifest) |
-| `atmo.crowd-silhouettes` | — | — | — | — | — | — (no manifest) |
-| `atmo.swaying-trees` | — | — | — | — | — | — (no manifest) |
-| `atmo.water-ripples` | — | — | — | — | — | — (no manifest) |
-| `atmo.city-lights` | — | — | — | — | — | — (no manifest) |
-| `atmo.screens-and-monitors` | — | — | — | — | — | — (no manifest) |
-| `atmo.ceiling-fan` | — | — | — | — | — | — (no manifest) |
-| `atmo.blurred-plants` | — | — | — | — | — | — (no manifest) |
-| `atmo.curtain-edge` | — | — | — | — | — | — (no manifest) |
+| `atmo.traffic` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.crowd-silhouettes` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.swaying-trees` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.water-ripples` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.city-lights` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.screens-and-monitors` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.ceiling-fan` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.blurred-plants` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.curtain-edge` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.rain-on-glass` | missing (—) | n/a | ok | missing | pending | ok |
-| `atmo.window-frame` | — | — | — | — | — | — (no manifest) |
-| `atmo.crowd-heads` | — | — | — | — | — | — (no manifest) |
+| `atmo.window-frame` | missing (—) | n/a | ok | missing | pending | ok |
+| `atmo.crowd-heads` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.warm-grade` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.cool-grade` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.noir` | missing (—) | n/a | ok | missing | pending | ok |
@@ -1011,26 +1011,26 @@ An item is green when it has a manifest, both families and all four views (or do
 | `atmo.high-contrast` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.desaturated` | missing (—) | n/a | ok | missing | pending | ok |
 | `atmo.retro-vhs` | missing (—) | n/a | ok | missing | pending | ok |
-| `fx.anticipation` | — | — | — | — | — | — (no manifest) |
-| `fx.squash-and-stretch` | — | — | — | — | — | — (no manifest) |
-| `fx.overshoot-and-settle` | — | — | — | — | — | — (no manifest) |
-| `fx.bounce` | — | — | — | — | — | — (no manifest) |
-| `fx.ease-presets` | — | — | — | — | — | — (no manifest) |
-| `fx.wobble` | — | — | — | — | — | — (no manifest) |
-| `fx.jiggle` | — | — | — | — | — | — (no manifest) |
-| `fx.follow-through` | — | — | — | — | — | — (no manifest) |
-| `fx.smear-frame` | — | — | — | — | — | — (no manifest) |
+| `fx.anticipation` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.squash-and-stretch` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.overshoot-and-settle` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.bounce` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.ease-presets` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.wobble` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.jiggle` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.follow-through` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.smear-frame` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.impact-flash` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.impact-star` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.dust-puff` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.shockwave-ring` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.screen-flash` | missing (—) | n/a | ok | missing | pending | ok |
-| `fx.hit-pause` | — | — | — | — | — | — (no manifest) |
+| `fx.hit-pause` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.speed-lines` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.radial-focus-lines` | missing (—) | n/a | ok | missing | pending | ok |
-| `fx.swoosh-trail` | — | — | — | — | — | — (no manifest) |
-| `fx.motion-blur-streak` | — | — | — | — | — | — (no manifest) |
-| `fx.afterimage` | — | — | — | — | — | — (no manifest) |
+| `fx.swoosh-trail` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.motion-blur-streak` | missing (—) | n/a | ok | missing | pending | ok |
+| `fx.afterimage` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.dash-puff` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.question-mark` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.exclamation` | missing (—) | n/a | ok | missing | pending | ok |
@@ -1048,7 +1048,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | `fx.dramatic-silhouette` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.tint` | missing (—) | n/a | ok | missing | pending | ok |
 | `fx.freeze-frame` | missing (—) | n/a | ok | missing | pending | ok |
-| `fx.split-tone` | — | — | — | — | — | — (no manifest) |
+| `fx.split-tone` | missing (—) | n/a | ok | missing | pending | ok |
 | `tr.cut` | missing (—) | n/a | ok | missing | pending | ok |
 | `tr.fade-to-black` | missing (—) | n/a | ok | missing | pending | ok |
 | `tr.fade-to-white` | missing (—) | n/a | ok | missing | pending | ok |
@@ -1062,7 +1062,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | `tr.iris-in` | missing (—) | n/a | ok | missing | pending | ok |
 | `tr.iris-out` | missing (—) | n/a | ok | missing | pending | ok |
 | `tr.zoom-blur` | missing (—) | n/a | ok | missing | pending | ok |
-| `tr.page-turn` | — | — | — | — | — | — (no manifest) |
+| `tr.page-turn` | missing (—) | n/a | ok | missing | pending | ok |
 | `tr.ink-splash` | missing (—) | n/a | ok | missing | pending | ok |
 | `tr.glitch` | missing (—) | n/a | ok | missing | pending | ok |
 | `tr.whip-blur` | missing (—) | n/a | ok | missing | pending | ok |
@@ -1092,7 +1092,7 @@ An item is green when it has a manifest, both families and all four views (or do
 | `cam.truck` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.follow-subject` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.reframe-between-subjects` | n/a | n/a | ok | n/a | pending | ok |
-| `cam.rack-focus-blur` | — | — | — | — | — | — (no manifest) |
+| `cam.rack-focus-blur` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.crash-zoom` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.whip-pan` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.shake-light` | n/a | n/a | ok | n/a | pending | ok |
@@ -1102,14 +1102,14 @@ An item is green when it has a manifest, both families and all four views (or do
 | `cam.handheld-drift` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.snap-zoom` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.bounce-zoom` | n/a | n/a | ok | n/a | pending | ok |
-| `cam.hard-cut` | — | — | — | — | — | — (no manifest) |
-| `cam.match-cut` | — | — | — | — | — | — (no manifest) |
-| `cam.jump-cut` | — | — | — | — | — | — (no manifest) |
-| `cam.reaction-cut` | — | — | — | — | — | — (no manifest) |
-| `cam.cutaway` | — | — | — | — | — | — (no manifest) |
-| `cam.split-screen` | — | — | — | — | — | — (no manifest) |
-| `cam.picture-in-picture` | — | — | — | — | — | — (no manifest) |
-| `cam.freeze-with-title` | — | — | — | — | — | — (no manifest) |
+| `cam.hard-cut` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.match-cut` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.jump-cut` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.reaction-cut` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.cutaway` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.split-screen` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.picture-in-picture` | n/a | n/a | ok | n/a | pending | ok |
+| `cam.freeze-with-title` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.dramatic-reveal-shot` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.comedic-beat-shot` | n/a | n/a | ok | n/a | pending | ok |
 | `cam.interview-two-shot` | n/a | n/a | ok | n/a | pending | ok |
@@ -1296,18 +1296,18 @@ An item is green when it has a manifest, both families and all four views (or do
 | `voice.detective` | — | — | — | — | — | — (no manifest) |
 | `voice.narrator` | — | — | — | — | — | — (no manifest) |
 | `voice.announcer` | — | — | — | — | — | — (no manifest) |
-| `delivery.neutral` | — | — | — | — | — | — (no manifest) |
-| `delivery.warm` | — | — | — | — | — | — (no manifest) |
-| `delivery.upbeat` | — | — | — | — | — | — (no manifest) |
-| `delivery.nervous` | — | — | — | — | — | — (no manifest) |
-| `delivery.angry` | — | — | — | — | — | — (no manifest) |
-| `delivery.sad` | — | — | — | — | — | — (no manifest) |
-| `delivery.whisper` | — | — | — | — | — | — (no manifest) |
-| `delivery.sarcastic` | — | — | — | — | — | — (no manifest) |
-| `delivery.excited` | — | — | — | — | — | — (no manifest) |
-| `delivery.deadpan` | — | — | — | — | — | — (no manifest) |
-| `delivery.shouting` | — | — | — | — | — | — (no manifest) |
-| `delivery.teasing` | — | — | — | — | — | — (no manifest) |
+| `delivery.neutral` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.warm` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.upbeat` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.nervous` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.angry` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.sad` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.whisper` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.sarcastic` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.excited` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.deadpan` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.shouting` | n/a | n/a | ok | n/a | pending | ok |
+| `delivery.teasing` | n/a | n/a | ok | n/a | pending | ok |
 | `out.landscape-hd` | n/a | n/a | ok | n/a | pending | ok |
 | `out.landscape-720p` | n/a | n/a | ok | n/a | pending | ok |
 | `out.landscape-4k` | n/a | n/a | ok | n/a | pending | ok |
