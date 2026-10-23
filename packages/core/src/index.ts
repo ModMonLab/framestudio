@@ -57,3 +57,4 @@ export * from './rigging-props.js';
 export * from './compat.js';
 export * from './part-save.js';
 export * from './place.js';
+export * from './action-compat.js';

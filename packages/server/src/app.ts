@@ -997,6 +997,22 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
   });
   // Asset details (FR-AST-05): versions with their changes, where the asset is used in the project, licence and
   // provenance, and the rig check for parts (FR-AST-08).
+  // The published action compatibility matrix (FR-AST-08, CAT-03): for an action, the items it does not work with; for
+  // an item, the actions. Null when the asset is not in the matrix (e.g. a project's own part).
+  let compatMatrix: { actions: string[]; items: string[]; incompatible: { action: string; item: string; reasons: string[] }[] } | null | undefined;
+  const actionCompatFor = (ref: string, kind: string) => {
+    if (compatMatrix === undefined) {
+      try {
+        compatMatrix = JSON.parse(fs.readFileSync(path.join(o.contentDir, 'action-compat.json'), 'utf8'));
+      } catch {
+        compatMatrix = null;
+      }
+    }
+    const mx = compatMatrix;
+    if (!mx) return null;
+    if (kind === 'act') return mx.actions.includes(ref) ? { checked: mx.items.length, incompatible: mx.incompatible.filter((x) => x.action === ref).map((x) => ({ ref: x.item, reasons: x.reasons })) } : null;
+    return mx.items.includes(ref) ? { checked: mx.actions.length, incompatible: mx.incompatible.filter((x) => x.item === ref).map((x) => ({ ref: x.action, reasons: x.reasons })) } : null;
+  };
   app.get<{ Querystring: { ref: string; project?: string } }>('/api/library/details', async (req, reply) => {
     try {
       const p = req.query.project ? hub.get(req.query.project) : undefined;
@@ -1012,6 +1028,7 @@ export async function createServer(o: ServerOptions): Promise<FrameServer> {
         versions: lib.versions(m.id).map((v) => ({ version: v.version, ref: `${v.id}@${v.version}`, changes: v.changes ?? null, date: v.provenance.date, draft: v.tags.includes('draft') })),
         usages: p ? assetUsages(p.open.state, m.id) : [],
         rigCheck: part ? rigCheck(part) : null,
+        actionCompat: actionCompatFor(req.query.ref, m.kind),
       };
     } catch (e) {
       return sendError(reply, e);

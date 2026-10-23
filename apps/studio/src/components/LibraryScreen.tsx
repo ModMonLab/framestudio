@@ -22,6 +22,7 @@ interface Details {
   versions: { version: number; ref: string; changes: string | null; date: string; draft: boolean }[];
   usages: { ref: string; scene: string; sceneName: string; kind: string; id: string; name: string }[];
   rigCheck: { severity: string; family?: string; view?: string; message: string }[] | null;
+  actionCompat?: { checked: number; incompatible: { ref: string; reasons: string[] }[] } | null;
 }
 
 const PART_KINDS = new Set(['head', 'eyes', 'brow', 'nose', 'mouth', 'ears', 'hair', 'fringe', 'facial-hair', 'feet', 'top', 'outer', 'bottom', 'dress', 'shoe', 'acc', 'skin-detail', 'makeup']);
@@ -199,6 +200,13 @@ export function LibraryScreen() {
               {details.rigCheck && (
                 <Section title="Rig check" summary={details.rigCheck.some((i) => i.severity === 'error') ? 'Problems' : 'Passed'} open={sec('rig')} onToggle={(o) => tog('rig', o)}>
                   {details.rigCheck.length ? <ul className="st-problems">{details.rigCheck.map((i, n) => <li key={n}>{i.severity}: {[i.family, i.view].filter(Boolean).join(' · ')} {i.message}</li>)}</ul> : <p>Follows the part contract in both families and every view.</p>}
+                </Section>
+              )}
+              {details.actionCompat && (
+                <Section title="Action compatibility" summary={details.actionCompat.incompatible.length ? `${details.actionCompat.incompatible.length} of ${details.actionCompat.checked}` : 'All'} open={sec('compat')} onToggle={(o) => tog('compat', o)}>
+                  {details.actionCompat.incompatible.length
+                    ? <ul className="st-problems">{details.actionCompat.incompatible.map((x) => <li key={x.ref}><b>{x.ref}</b>: {x.reasons.join('; ')}</li>)}</ul>
+                    : <p>Works with all {details.actionCompat.checked} {details.manifest.kind === 'act' ? 'character items' : 'actions'} in the library (action compatibility matrix).</p>}
                 </Section>
               )}
             </div>
